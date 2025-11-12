@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import '../Controllers/auth_controller.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -10,7 +11,6 @@ class LoginScreen extends StatefulWidget {
 }
 
 class LoginScreenState extends State<LoginScreen> {
-  final AuthController authController = Get.find<AuthController>();
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
@@ -20,20 +20,20 @@ class LoginScreenState extends State<LoginScreen> {
 
   String? _validateUsername(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Por favor ingresa tu username';
+      return translate('login.username_required');
     }
     if (value.length < 3) {
-      return 'El username debe tener al menos 3 caracteres';
+      return translate('login.username_min_length');
     }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Por favor ingresa tu contraseña';
+      return translate('login.password_required');
     }
     if (value.length < 6) {
-      return 'La contraseña debe tener al menos 6 caracteres';
+      return translate('login.password_min_length');
     }
     return null;
   }
@@ -77,9 +77,9 @@ class LoginScreenState extends State<LoginScreen> {
           child: const Icon(Icons.event, color: Colors.white, size: 32),
         ),
         const SizedBox(height: 24),
-        const Text(
-          'Bienvenido\nde vuelta',
-          style: TextStyle(
+        Text(
+          translate('login.title'),
+          style: const TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w800,
             color: Colors.black87,
@@ -88,7 +88,7 @@ class LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Inicia sesión en tu cuenta',
+          translate('login.subtitle'),
           style: TextStyle(
             fontSize: 16,
             color: Colors.grey.shade600,
@@ -112,11 +112,11 @@ class LoginScreenState extends State<LoginScreen> {
             child: TextFormField(
               controller: usernameController,
               style: const TextStyle(fontSize: 16),
-              decoration: const InputDecoration(
-                labelText: 'Username',
+              decoration: InputDecoration(
+                labelText: translate('login.username'),
                 border: InputBorder.none,
-                prefixIcon: Icon(Icons.person_outline, color: Colors.grey),
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                prefixIcon: const Icon(Icons.person_outline, color: Colors.grey),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
               validator: _validateUsername,
             ),
@@ -133,7 +133,7 @@ class LoginScreenState extends State<LoginScreen> {
               obscureText: _obscurePassword,
               style: const TextStyle(fontSize: 16),
               decoration: InputDecoration(
-                labelText: 'Contraseña',
+                labelText: translate('login.password'),
                 border: InputBorder.none,
                 prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
                 suffixIcon: IconButton(
@@ -175,9 +175,9 @@ class LoginScreenState extends State<LoginScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Text(
-                      'Iniciar Sesión',
-                      style: TextStyle(
+                  : Text(
+                      translate('login.login_button'),
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -194,14 +194,14 @@ class LoginScreenState extends State<LoginScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          '¿No tienes cuenta? ',
+          translate('login.no_account'),
           style: TextStyle(color: Colors.grey.shade600),
         ),
         GestureDetector(
           onTap: () => Get.toNamed('/register'),
-          child: const Text(
-            'Regístrate aquí',
-            style: TextStyle(
+          child: Text(
+            translate('login.register_link'),
+            style: const TextStyle(
               color: Color(0xFF667EEA),
               fontWeight: FontWeight.w600,
             ),
@@ -214,25 +214,44 @@ class LoginScreenState extends State<LoginScreen> {
   void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() => isLoading = true);
-      final result = await authController.login(
-        usernameController.text,
-        passwordController.text,
-      );
-      setState(() => isLoading = false);
+      print('Iniciando login con usuario: ${usernameController.text}');
       
-      if (result['success'] == true) {
-        Get.offAllNamed('/home');
-        _showSuccessSnackbar();
-      } else {
-        _showErrorSnackbar(result['message']);
+      try {
+        // Verificar si AuthController existe
+        if (Get.isRegistered<AuthController>()) {
+          final authController = Get.find<AuthController>();
+          final result = await authController.login(
+            usernameController.text,
+            passwordController.text,
+          );
+          print('Resultado del login: $result');
+          setState(() => isLoading = false);
+         
+          if (result['success'] == true) {
+            print('Login exitoso, navegando a home...');
+            Get.offAllNamed('/home');
+            _showSuccessSnackbar();
+          } else {
+            print('Error en login: ${result['message']}');
+            _showErrorSnackbar(result['message']);
+          }
+        } else {
+          print('AuthController no está registrado');
+          setState(() => isLoading = false);
+          _showErrorSnackbar('Error de configuración de la aplicación');
+        }
+      } catch (e) {
+        print('Error obteniendo AuthController: $e');
+        setState(() => isLoading = false);
+        _showErrorSnackbar('Error interno de la aplicación: $e');
       }
     }
   }
 
   void _showSuccessSnackbar() {
     Get.snackbar(
-      '¡Éxito!',
-      'Sesión iniciada correctamente',
+      translate('common.success'),
+      translate('login.success_message'),
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.green,
       colorText: Colors.white,
@@ -243,7 +262,7 @@ class LoginScreenState extends State<LoginScreen> {
 
   void _showErrorSnackbar(String message) {
     Get.snackbar(
-      'Error',
+      translate('common.error'),
       message,
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.red,

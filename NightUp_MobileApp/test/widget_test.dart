@@ -7,13 +7,20 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 
-import 'package:NightUp_MobileApp/main.dart';
+import 'package:nightup_mobile_app/main.dart';
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    // Create a mock localization delegate for testing
+    var delegate = await LocalizationDelegate.create(
+      fallbackLocale: 'es',
+      supportedLocales: ['es', 'en'],
+    );
+
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(MyApp(delegate));
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);

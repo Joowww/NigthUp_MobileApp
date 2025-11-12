@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import '../Controllers/auth_controller.dart';
 import '../Models/user.dart';
 import 'package:password_strength_checker/password_strength_checker.dart';
@@ -24,10 +25,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return Colors.grey.shade200;
     }
   }
+  
   final ValueNotifier<PasswordStrength?> passwordStrengthNotifier = ValueNotifier<PasswordStrength?>(null);
   final AuthController authController = Get.find<AuthController>();
   final TextEditingController usernameController = TextEditingController();
-  final TextEditingController gmailController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
   final TextEditingController birthdayController = TextEditingController();
@@ -40,26 +42,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _showSuccessDialog() {
     Get.dialog(
       AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 30),
-            SizedBox(width: 10),
-            Text('¡Registro Exitoso!'),
+            const Icon(Icons.check_circle, color: Colors.green, size: 30),
+            const SizedBox(width: 10),
+            Text(translate('common.success')),
           ],
         ),
-        content: const Text(
-          'Tu cuenta ha sido creada correctamente. Ahora puedes iniciar sesión.',
-          style: TextStyle(fontSize: 16),
-        ),
+        content: Text(translate('register.success_message')),
         actions: [
           TextButton(
             onPressed: () {
               Get.back();
               Get.back();
             },
-            child: const Text(
-              'Continuar',
-              style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+            child: Text(
+              translate('common.continue'),
+              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -71,10 +70,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String? _validateUsername(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Por favor ingresa un username';
+      return translate('validation.required');
     }
     if (value.length < 3) {
-      return 'El username debe tener al menos 3 caracteres';
+      return translate('validation.min_length', args: {'length': '3'});
     }
     if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
       return 'Solo se permiten letras, números y guiones bajos';
@@ -85,8 +84,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget _buildPasswordRequirements(String password) {
     final requirements = [
       {
-        'label': 'Al menos 12 caracteres',
-        'valid': password.length >= 12,
+        'label': translate('validation.min_length', args: {'length': '6'}),
+        'valid': password.length >= 6,
       },
       {
         'label': 'Al menos 1 letra minúscula',
@@ -99,10 +98,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       {
         'label': 'Al menos 1 dígito',
         'valid': RegExp(r'[0-9]').hasMatch(password),
-      },
-      {
-        'label': 'Al menos 1 carácter especial',
-        'valid': RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(password),
       },
     ];
     return Column(
@@ -134,30 +129,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  String? _validateGmail(String? value) {
+  String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Por favor ingresa tu gmail';
+      return translate('validation.required');
     }
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-      return 'Por favor ingresa un gmail válido';
+      return translate('validation.invalid_email');
     }
     return null;
   }
 
-
   String? _validateConfirmPassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Por favor confirma tu contraseña';
+      return translate('validation.required');
     }
     if (value != passwordController.text) {
-      return 'Las contraseñas no coinciden';
+      return translate('validation.password_mismatch');
     }
     return null;
   }
 
   String? _validateBirthday(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Por favor ingresa tu fecha de nacimiento';
+      return translate('validation.required');
     }
     if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) {
       return 'Formato de fecha incorrecto. Usa YYYY-MM-DD';
@@ -208,12 +202,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  String _generateStrongPassword({int length = 14}) {
+    const String lower = 'abcdefghijklmnopqrstuvwxyz';
+    const String upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const String digits = '0123456789';
+    const String special = '!@#\$%^&*(),.?":{}|<>';
+    final String all = lower + upper + digits + special;
+    final rand = DateTime.now().microsecondsSinceEpoch;
+    final List<String> password = [];
+    password.add(lower[rand % lower.length]);
+    password.add(upper[(rand ~/ 2) % upper.length]);
+    password.add(digits[(rand ~/ 3) % digits.length]);
+    password.add(special[(rand ~/ 4) % special.length]);
+    for (int i = password.length; i < length; i++) {
+      password.add(all[(rand + i * 17) % all.length]);
+    }
+    password.shuffle();
+    return password.join();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Registro'),
+        title: Text(translate('register.title')),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
@@ -253,9 +266,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: const Icon(Icons.person_add, color: Colors.white, size: 32),
         ),
         const SizedBox(height: 24),
-        const Text(
-          'Crear Cuenta',
-          style: TextStyle(
+        Text(
+          translate('register.title'),
+          style: const TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w800,
             color: Colors.black87,
@@ -264,7 +277,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Completa tus datos para registrarte',
+          translate('register.subtitle'),
           style: TextStyle(
             fontSize: 16,
             color: Colors.grey.shade600,
@@ -281,16 +294,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         children: [
           _buildTextField(
             controller: usernameController,
-            label: 'Username',
+            label: translate('register.username'),
             icon: Icons.person_outline,
             validator: _validateUsername,
           ),
           const SizedBox(height: 16),
           _buildTextField(
-            controller: gmailController,
-            label: 'Gmail',
+            controller: emailController,
+            label: translate('register.email'),
             icon: Icons.email_outlined,
-            validator: _validateGmail,
+            validator: _validateEmail,
           ),
           const SizedBox(height: 16),
           Padding(
@@ -305,7 +318,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               setState(() {});
             },
             decoration: InputDecoration(
-              labelText: 'Contraseña',
+              labelText: translate('register.password'),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
@@ -404,7 +417,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 16),
           _buildPasswordField(
             controller: confirmPasswordController,
-            label: 'Confirmar Contraseña',
+            label: translate('register.confirm_password'),
             obscureText: _obscureConfirmPassword,
             onToggle: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
             validator: _validateConfirmPassword,
@@ -412,7 +425,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 16),
           _buildTextField(
             controller: birthdayController,
-            label: 'Fecha de Nacimiento (YYYY-MM-DD)',
+            label: '${translate('register.birthday')} (YYYY-MM-DD)',
             icon: Icons.cake_outlined,
             hintText: '2000-01-01',
             validator: _validateBirthday,
@@ -425,7 +438,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               onPressed: () {
                 final generated = _generateStrongPassword();
                 passwordController.text = generated;
-                passwordStrengthNotifier.value = PasswordStrength.calculate(text: generated);
+                passwordStrengthNotifier.value = _customPasswordStrength(generated);
                 setState(() {});
               },
               style: ElevatedButton.styleFrom(
@@ -459,25 +472,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       default:
         return 0.0;
     }
-  }
-
-  String _generateStrongPassword({int length = 14}) {
-    const String lower = 'abcdefghijklmnopqrstuvwxyz';
-    const String upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const String digits = '0123456789';
-    const String special = '!@#\$%^&*(),.?":{}|<>';
-    final String all = lower + upper + digits + special;
-    final rand = DateTime.now().microsecondsSinceEpoch;
-    final List<String> password = [];
-    password.add(lower[rand % lower.length]);
-    password.add(upper[(rand ~/ 2) % upper.length]);
-    password.add(digits[(rand ~/ 3) % digits.length]);
-    password.add(special[(rand ~/ 4) % special.length]);
-    for (int i = password.length; i < length; i++) {
-      password.add(all[(rand + i * 17) % all.length]);
-    }
-    password.shuffle();
-    return password.join();
   }
 
   Widget _buildTextField({
@@ -566,9 +560,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : const Text(
-                'Crear Cuenta',
-                style: TextStyle(
+            : Text(
+                translate('register.register_button'),
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -582,14 +576,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          '¿Ya tienes cuenta? ',
+          translate('register.has_account'),
           style: TextStyle(color: Colors.grey.shade600),
         ),
         GestureDetector(
           onTap: () => Get.back(),
-          child: const Text(
-            'Inicia Sesión',
-            style: TextStyle(
+          child: Text(
+            translate('register.login_link'),
+            style: const TextStyle(
               color: Color(0xFF667EEA),
               fontWeight: FontWeight.w600,
             ),
@@ -606,19 +600,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       User newUser = User(
         id: '',
         username: usernameController.text,
-        gmail: gmailController.text,
+        email: emailController.text,
         birthday: birthdayController.text,
-        password: passwordController.text,
+        role: 'user',
+        active: true,
+        events: [],
       );
 
-      final result = await authController.register(newUser);
+      final result = await authController.register(newUser, passwordController.text);
       setState(() => isLoading = false);
 
       if (result['success'] == true) {
         _showSuccessDialog();
       } else {
         Get.snackbar(
-          'Error',
+          translate('common.error'),
           result['message'],
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
@@ -629,8 +625,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } else {
       Get.snackbar(
-        'Error de validación',
-        'Por favor corrige los errores en el formulario',
+        translate('validation.error'),
+        translate('register.validation_error'),
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.orange,
         colorText: Colors.white,

@@ -1,11 +1,11 @@
-import 'package:NightUp_MobileApp/Controllers/user_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_translate/flutter_translate.dart';
+import '../Controllers/user_controller.dart';
 import '../Widgets/user_card.dart';
 import '../Widgets/navigation_bar.dart';
 
 class UserListScreen extends GetView<UserController> {
-
   const UserListScreen({super.key});
 
   @override
@@ -13,9 +13,22 @@ class UserListScreen extends GetView<UserController> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Usuarios'),
+        title: Text(translate('users.title')),
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.search, color: Colors.grey),
+            ),
+            onPressed: () {},
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -41,7 +54,7 @@ class UserListScreen extends GetView<UserController> {
                   Icon(Icons.people_outline, size: 80, color: Colors.grey.shade400),
                   const SizedBox(height: 16),
                   Text(
-                    'No hay usuarios disponibles',
+                    translate('users.no_users'),
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.grey.shade600,
@@ -63,15 +76,16 @@ class UserListScreen extends GetView<UserController> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          controller.fetchUsers();
+          controller.refreshUsers();
           Get.snackbar(
-            'Actualizado',
-            'Lista de usuarios actualizada',
+            translate('common.success'),
+            translate('users.refreshed'),
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green,
             colorText: Colors.white,
             borderRadius: 12,
-          );},
+          );
+        },
         backgroundColor: const Color(0xFF667EEA),
         child: const Icon(Icons.refresh, color: Colors.white),
       ),

@@ -1,132 +1,175 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
-import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../Controllers/auth_controller.dart';
 
 class AuthInterceptor extends http.BaseClient {
   final http.Client _inner = http.Client();
-  final AuthController _auth = Get.find<AuthController>();
+  final AuthController _authController = Get.find<AuthController>();
 
   static const String baseUri = 'http://localhost:3000/api';
 
-  Future<bool>? _refreshing;
+  Completer<bool>? _refreshing;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    // Añade token si hay
-    request.headers['Content-Type'] = 'application/json';
-    request.headers['Accept'] = 'application/json';
-    final token = _auth.token;
-    print('el token es $token');
+    // Añade token si está disponible
+    final token = _authController.token;
     if (token != null && token.isNotEmpty) {
-      
       request.headers['Authorization'] = 'Bearer $token';
     }
 
+    request.headers['Content-Type'] = 'application/json';
+    request.headers['Accept'] = 'application/json';
+
+    print('🔄 [INTERCEPTOR] Sending request to: ${request.url}');
+    print('🔄 [INTERCEPTOR] Headers: ${request.headers}');
+
     var response = await _inner.send(request);
 
-    // Si expira, refresca y reintenta 1 vez
+    // Si el token expiró, intentar refrescar
     if (response.statusCode == 401) {
-      final ok = await _refreshToken();
-      if (ok) {
-        final retried = await _retry(request);
-        return retried;
+      print('🔄 [INTERCEPTOR] Token expired, attempting refresh...');
+      final success = await _refreshAccessToken();
+      if (success) {
+        // Reintentar la request original con el nuevo token
+        final newToken = _authController.token;
+        if (newToken != null && newToken.isNotEmpty) {
+          request.headers['Authorization'] = 'Bearer $newToken';
+          return await _inner.send(request);
+        }
+      } else {
+        // Si el refresh falla, hacer logout
+        _authController.logout();
+        Get.offAllNamed('/login');
       }
     }
 
     return response;
   }
 
-  Future<http.StreamedResponse> _retry(http.BaseRequest original) async {
-    // Reconstruye la Request con el nuevo token
-    final newReq = _cloneRequestWithNewToken(original, _auth.token);
-    return _inner.send(newReq);
-  }
-
-  http.BaseRequest _cloneRequestWithNewToken(http.BaseRequest original, String? newToken) {
-    if (original is http.Request) {
-      final r = http.Request(original.method, original.url);
-      r.headers.addAll(original.headers);
-      if (newToken != null && newToken.isNotEmpty) {
-        r.headers['Authorization'] = 'Bearer $newToken';
-      }
-      r.bodyBytes = original.bodyBytes;
-      return r;
-    } else if (original is http.MultipartRequest) {
-      final r = http.MultipartRequest(original.method, original.url);
-      r.headers.addAll(original.headers);
-      if (newToken != null && newToken.isNotEmpty) {
-        r.headers['Authorization'] = 'Bearer $newToken';
-      }
-      r.fields.addAll(original.fields);
-      r.files.addAll(original.files);
-      return r;
-    } else {
-      // Caso genérico
-      final r = http.Request(original.method, original.url);
-      r.headers.addAll(original.headers);
-      if (newToken != null && newToken.isNotEmpty) {
-        r.headers['Authorization'] = 'Bearer $newToken';
-      }
-      return r;
+  Future<bool> _refreshAccessToken() async {
+    if (_refreshing != null) {
+      return await _refreshing!.future;
     }
-  }
 
-  Future<bool> _refreshToken() async {
-    if (_refreshing != null) return await _refreshing!;
-    final completer = Completer<bool>();
-    _refreshing = completer.future;
+    _refreshing = Completer<bool>();
 
     try {
-      final refreshToken = _auth.refreshToken;
-      final userId = _auth.currentUser.value?.id; 
+      final refreshToken = _authController.refreshToken;
+      final userId = _authController.currentUser.value?.id;
 
       if (refreshToken == null || refreshToken.isEmpty || userId == null) {
-        completer.complete(false);
+        print('❌ [INTERCEPTOR] No refresh token or user ID available');
+        _refreshing!.complete(false);
         _refreshing = null;
         return false;
       }
 
-      final res = await http.post(
-        Uri.parse('$baseUri/user/refresh'),
+      print('🔄 [INTERCEPTOR] Refreshing token for user: $userId');
+
+      final response = await http.post(
+        Uri.parse('$baseUri/user/auth/refresh'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'refreshToken': refreshToken, 
-          'userId': userId,             
+          'refreshToken': refreshToken,
+          'userId': userId,
         }),
       );
 
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final newAccess = data['token'] as String?;
-        final newRefresh = data['refreshToken'] as String?;
+      print('🔄 [INTERCEPTOR] Refresh response: ${response.statusCode} - ${response.body}');
 
-        if (newAccess == null || newAccess.isEmpty) {
-          completer.complete(false);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final newToken = data['token'] as String?;
+
+        if (newToken != null && newToken.isNotEmpty) {
+          _authController.token = newToken;
+          
+          // Actualizar en SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('token', newToken);
+
+          _refreshing!.complete(true);
           _refreshing = null;
-          return false;
+          return true;
         }
-
-        _auth.token = newAccess;
-        if (newRefresh != null && newRefresh.isNotEmpty) {
-          _auth.refreshToken = newRefresh;
-        }
-        completer.complete(true);
-        _refreshing = null;
-        return true;
-      } else {
-        _auth.logout();
-        Get.offAllNamed('/login');
-        completer.complete(false);
-        _refreshing = null;
-        return false;
       }
+
+      _refreshing!.complete(false);
+      _refreshing = null;
+      return false;
     } catch (e) {
-      // Error de red
-      completer.complete(false);
+      print('❌ [INTERCEPTOR] Error refreshing token: $e');
+      _refreshing!.complete(false);
       _refreshing = null;
       return false;
     }
+  }
+
+  // Métodos auxiliares para compatibilidad
+  @override
+  Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
+    return await _sendUnstreamed('GET', url, headers);
+  }
+
+  @override
+  Future<http.Response> post(Uri url,
+      {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
+    return await _sendUnstreamed('POST', url, headers, body, encoding);
+  }
+
+  @override
+  Future<http.Response> put(Uri url,
+      {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
+    return await _sendUnstreamed('PUT', url, headers, body, encoding);
+  }
+
+  @override
+  Future<http.Response> patch(Uri url,
+      {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
+    return await _sendUnstreamed('PATCH', url, headers, body, encoding);
+  }
+
+  @override
+  Future<http.Response> delete(Uri url,
+      {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
+    return await _sendUnstreamed('DELETE', url, headers, body, encoding);
+  }
+
+  Future<http.Response> _sendUnstreamed(
+      String method, Uri url, Map<String, String>? headers,
+      [Object? body, Encoding? encoding]) async {
+    var request = http.Request(method, url);
+    
+    if (headers != null) {
+      request.headers.addAll(headers);
+    }
+    
+    // Añadir token si está disponible
+    final token = _authController.token;
+    if (token != null && token.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    
+    request.headers['Content-Type'] = 'application/json';
+    request.headers['Accept'] = 'application/json';
+
+    if (body != null) {
+      if (body is String) {
+        request.body = body;
+      } else if (body is List) {
+        request.bodyBytes = body.cast<int>();
+      } else if (body is Map) {
+        request.body = jsonEncode(body);
+      } else {
+        throw ArgumentError('Invalid request body "$body".');
+      }
+    }
+
+    var streamedResponse = await send(request);
+    return await http.Response.fromStream(streamedResponse);
   }
 }

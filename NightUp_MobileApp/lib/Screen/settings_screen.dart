@@ -4,7 +4,7 @@ import '../Controllers/auth_controller.dart';
 import '../Widgets/navigation_bar.dart';
 
 class SettingsScreen extends StatelessWidget {
-  final AuthController authController = Get.find<AuthController>();
+  AuthController get authController => Get.find<AuthController>();
   
   SettingsScreen({super.key});
 
@@ -81,10 +81,10 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  authController.currentUser.value?.gmail ?? 'email@ejemplo.com',
+                  authController.currentUser.value?.email ?? 'email@ejemplo.com',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                 ),
               ],
@@ -103,7 +103,7 @@ class SettingsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -170,7 +170,7 @@ class SettingsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -225,7 +225,7 @@ class SettingsScreen extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: const Color(0xFF667EEA).withOpacity(0.1),
+          color: const Color(0xFF667EEA).withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: const Color(0xFF667EEA)),

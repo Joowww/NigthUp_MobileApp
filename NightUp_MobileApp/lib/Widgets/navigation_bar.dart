@@ -12,7 +12,7 @@ class CustomNavBar extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -53,8 +53,8 @@ class CustomNavBar extends StatelessWidget {
       icon: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: currentIndex == index 
-              ? const Color(0xFF667EEA).withOpacity(0.1)
+          color: currentIndex == index
+              ? const Color(0xFF667EEA).withValues(alpha: 0.1)
               : Colors.transparent,
           shape: BoxShape.circle,
         ),
@@ -65,21 +65,20 @@ class CustomNavBar extends StatelessWidget {
   }
 
   void _onItemTapped(int index) {
-
     if (index == currentIndex) return;
 
     switch (index) {
       case 0:
-        Get.toNamed('/home');
+        Get.offAllNamed('/home');
         break;
       case 1:
-        Get.toNamed('/eventos');
+        Get.offAllNamed('/eventos');
         break;
       case 2:
-        Get.toNamed('/users');
+        Get.offAllNamed('/users');
         break;
       case 3:
-        Get.toNamed('/settings');
+        Get.offAllNamed('/settings');
         break;
     }
   }

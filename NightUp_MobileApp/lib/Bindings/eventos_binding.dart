@@ -1,5 +1,5 @@
-import 'package:NightUp_MobileApp/Controllers/eventos_controller.dart';
-import 'package:NightUp_MobileApp/Services/eventos_services.dart';
+import 'package:nightup_mobile_app/Controllers/eventos_controller.dart';
+import 'package:nightup_mobile_app/Services/eventos_services.dart';
 import 'package:get/get.dart';
 
 class EventosBinding extends Bindings {

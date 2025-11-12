@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../Models/eventos.dart';
 import 'package:get/get.dart';
+import '../Models/eventos.dart';
 
 class EventosCard extends StatelessWidget {
   final Evento evento;
@@ -47,7 +47,7 @@ class EventosCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        evento.schedule,
+                        evento.formattedDate,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade600,
@@ -55,7 +55,7 @@ class EventosCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        evento.address,
+                        evento.location,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade500,
@@ -66,20 +66,33 @@ class EventosCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.deepPurple.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${evento.apuntados.length}',
-                    style: const TextStyle(
-                      color: Colors.deepPurple,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      evento.formattedPrice,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: evento.isFull ? Colors.red.shade50 : Colors.deepPurple.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        evento.participantsCount,
+                        style: TextStyle(
+                          color: evento.isFull ? Colors.red : Colors.deepPurple,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

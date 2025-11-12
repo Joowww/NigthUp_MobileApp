@@ -1,13 +1,14 @@
-import 'package:NightUp_MobileApp/Models/user.dart';
-import 'package:NightUp_MobileApp/Services/user_services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../Models/user.dart';
+import '../Services/user_services.dart';
 import '../Controllers/auth_controller.dart';
 
 class UserController extends GetxController {
   var isLoading = true.obs;
   var userList = <User>[].obs;
   var selectedUser = Rxn<User>();
+  var userStats = <String, dynamic>{}.obs;
   final UserServices _userServices;
 
   UserController(this._userServices);
@@ -15,6 +16,7 @@ class UserController extends GetxController {
   @override
   void onInit() {
     fetchUsers();
+    fetchUserStats();
     super.onInit();
   }
 
@@ -22,15 +24,19 @@ class UserController extends GetxController {
     try {
       isLoading(true);
       var users = await _userServices.fetchUsers();
-      if (users.isNotEmpty) {
-        userList.assignAll(users);
-      }
+      userList.assignAll(users);
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        "No se pudieron cargar los usuarios: ${e.toString()}",
+        snackPosition: SnackPosition.BOTTOM,
+      );
     } finally {
       isLoading(false);
     }
   }
 
-  fetchUserById(String id) async {
+  Future<void> fetchUserById(String id) async {
     try {
       isLoading(true);
       var user = await _userServices.fetchUserById(id);
@@ -46,32 +52,38 @@ class UserController extends GetxController {
     }
   }
 
-  void updateUser(String id, User updatedUser) async {
+  Future<void> fetchUserStats() async {
+    try {
+      final result = await _userServices.getUserStats();
+      if (result['success'] == true) {
+        userStats.value = result['stats'] ?? {};
+      }
+    } catch (e) {
+      print('Error fetching user stats: $e');
+    }
+  }
+
+  Future<void> updateUserProfile(Map<String, dynamic> userData) async {
     try {
       isLoading(true);
-      var user = await _userServices.updateUser(id, updatedUser);
+      final authController = Get.find<AuthController>();
+      final currentUserId = authController.currentUser.value?.id;
       
-      final AuthController authController = Get.find<AuthController>();
-      if (authController.currentUser.value?.id == id) {
-        authController.currentUser.value = user;
+      if (currentUserId != null) {
+        final updatedUser = await _userServices.updateUserProfile(currentUserId, userData);
+        authController.currentUser.value = updatedUser;
+        Get.snackbar(
+          "Éxito",
+          "Perfil actualizado correctamente",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
       }
-      
-      final index = userList.indexWhere((u) => u.id == id);
-      if (index != -1) {
-        userList[index] = user;
-      }
-      
-      Get.snackbar(
-        "¡Éxito!",
-        "Usuario actualizado correctamente",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
     } catch (e) {
       Get.snackbar(
-        "Error al actualizar",
-        "No se pudo actualizar el usuario: ${e.toString()}",
+        "Error",
+        "No se pudo actualizar el perfil: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
@@ -79,5 +91,10 @@ class UserController extends GetxController {
     } finally {
       isLoading(false);
     }
+  }
+
+  void refreshUsers() {
+    fetchUsers();
+    fetchUserStats();
   }
 }

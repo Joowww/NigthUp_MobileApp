@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import '../Models/eventos.dart';
 import '../Controllers/eventos_controller.dart';
-import 'package:get/get.dart';
+import '../Controllers/auth_controller.dart';
 
 class EventosDetailScreen extends GetView<EventoController> {
   final String eventoId;
@@ -19,14 +21,18 @@ class EventosDetailScreen extends GetView<EventoController> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Detalles del Evento'),
+        title: Text(translate('events.details')),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () {},
+          ),
+        ],
       ),
-
       body: Obx(() {
-
         if (controller.isLoading.value) {
           return const Center(
             child: Column(
@@ -60,7 +66,12 @@ class EventosDetailScreen extends GetView<EventoController> {
       }),
     );
   }
+
   Widget _buildEventoDetail(Evento evento) {
+    final AuthController authController = Get.find<AuthController>();
+    final currentUserId = authController.currentUser.value?.id;
+    final isParticipant = evento.participants.contains(currentUserId);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -89,12 +100,24 @@ class EventosDetailScreen extends GetView<EventoController> {
               color: Colors.black87,
             ),
           ),
+          const SizedBox(height: 8),
+          Text(
+            evento.category,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(height: 24),
 
           _buildInfoCard(evento),
           const SizedBox(height: 20),
 
           _buildParticipantsCard(evento),
+          const SizedBox(height: 20),
+
+          _buildActionButtons(evento, isParticipant),
         ],
       ),
     );
@@ -109,7 +132,7 @@ class EventosDetailScreen extends GetView<EventoController> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -119,24 +142,24 @@ class EventosDetailScreen extends GetView<EventoController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Información del Evento',
-            style: TextStyle(
+          Text(
+            translate('events.event_info'),
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: Colors.black87,
             ),
           ),
           const SizedBox(height: 16),
-          _buildDetailRow(Icons.schedule, 'Horario:', evento.schedule),
+          _buildDetailRow(Icons.schedule, '${translate('events.schedule')}:', evento.formattedDate),
           const SizedBox(height: 12),
-          _buildDetailRow(Icons.location_on, 'Dirección:', evento.address),
+          _buildDetailRow(Icons.location_on, '${translate('events.location')}:', evento.location),
           const SizedBox(height: 12),
-          _buildDetailRow(
-            Icons.people,
-            'Participantes:',
-            '${evento.apuntados.length} personas',
-          ),
+          _buildDetailRow(Icons.people, '${translate('events.capacity')}:', evento.participantsCount),
+          const SizedBox(height: 12),
+          _buildDetailRow(Icons.attach_money, '${translate('events.price')}:', evento.formattedPrice),
+          const SizedBox(height: 12),
+          _buildDetailRow(Icons.description, '${translate('events.description')}:', evento.description),
         ],
       ),
     );
@@ -151,7 +174,7 @@ class EventosDetailScreen extends GetView<EventoController> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -161,16 +184,16 @@ class EventosDetailScreen extends GetView<EventoController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Participantes',
-            style: TextStyle(
+          Text(
+            '${translate('events.participants')} (${evento.participants.length})',
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: Colors.black87,
             ),
           ),
           const SizedBox(height: 12),
-          if (evento.apuntados.isEmpty)
+          if (evento.participants.isEmpty)
             Text(
               'Aún no hay participantes',
               style: TextStyle(
@@ -180,7 +203,7 @@ class EventosDetailScreen extends GetView<EventoController> {
             )
           else
             Column(
-              children: evento.apuntados.map((participante) {
+              children: evento.participants.take(10).map((participant) {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(12),
@@ -194,7 +217,7 @@ class EventosDetailScreen extends GetView<EventoController> {
                         radius: 16,
                         backgroundColor: const Color(0xFF667EEA),
                         child: Text(
-                          participante[0].toUpperCase(),
+                          participant.substring(0, 1).toUpperCase(),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -205,7 +228,7 @@ class EventosDetailScreen extends GetView<EventoController> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          participante,
+                          participant,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
@@ -217,8 +240,98 @@ class EventosDetailScreen extends GetView<EventoController> {
                 );
               }).toList(),
             ),
+          if (evento.participants.length > 10)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                '+ ${evento.participants.length - 10} más participantes',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionButtons(Evento evento, bool isParticipant) {
+    final AuthController authController = Get.find<AuthController>();
+
+    return Row(
+      children: [
+        if (!isParticipant && !evento.isFull)
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => controller.joinEvent(evento.id),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF667EEA),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.add),
+              label: Text(translate('events.join')),
+            ),
+          ),
+        if (isParticipant)
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => controller.leaveEvent(evento.id),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade50,
+                foregroundColor: Colors.red,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.exit_to_app),
+              label: Text(translate('events.leave')),
+            ),
+          ),
+        if (evento.isFull && !isParticipant)
+          Expanded(
+            child: ElevatedButton(
+              onPressed: null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey.shade300,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Evento Lleno',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        const SizedBox(width: 12),
+        if (authController.isAdmin || authController.isManager)
+          IconButton(
+            onPressed: () {
+              // TODO: Implement edit event
+              Get.snackbar(
+                'Próximamente',
+                'Edición de eventos disponible pronto',
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.orange.shade50,
+              foregroundColor: Colors.orange,
+              padding: const EdgeInsets.all(16),
+            ),
+            icon: const Icon(Icons.edit),
+          ),
+      ],
     );
   }
 

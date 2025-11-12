@@ -1,59 +1,92 @@
-import 'package:NightUp_MobileApp/Models/user.dart';
 import 'dart:convert';
 import 'package:get/get.dart';
 import '../Interceptor/auth_interceptor.dart';
+import '../Models/user.dart';
 
 class UserServices {
   final String baseUrl = 'http://localhost:3000/api/user';
-  final AuthInterceptor _client = Get.put(AuthInterceptor());
-  UserServices();
+  final AuthInterceptor _client = Get.find<AuthInterceptor>();
 
   Future<List<User>> fetchUsers() async {
-    final response = await _client.get(Uri.parse(baseUrl));
-
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
-      List<User> users =
-          body.map((dynamic item) => User.fromJson(item)).toList();
-      return users;
-    } else {
-      throw Exception('Failed to load users');
+    try {
+      print('🔄 [USER SERVICE] Fetching users...');
+      final response = await _client.get(Uri.parse(baseUrl));
+      
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final List<dynamic> usersData = data['users'] ?? [];
+        
+        List<User> users = usersData.map((dynamic item) => User.fromJson(item)).toList();
+        print('✅ [USER SERVICE] Successfully fetched ${users.length} users');
+        return users;
+      } else {
+        print('❌ [USER SERVICE] Failed to load users: ${response.statusCode}');
+        throw Exception('Failed to load users: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ [USER SERVICE] Error in fetchUsers: $e');
+      throw Exception('Error loading users: $e');
     }
   }
+
   Future<User> fetchUserById(String id) async {
     try {
-      
+      print('🔄 [USER SERVICE] Fetching user by ID: $id');
       final response = await _client.get(Uri.parse('$baseUrl/$id'));
+      
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
+        print('✅ [USER SERVICE] Successfully fetched user: ${data['username']}');
         return User.fromJson(data);
       } else {
-        throw Exception('Error al cargar el usuario: ${response.statusCode}');
+        print('❌ [USER SERVICE] Error loading user: ${response.statusCode}');
+        throw Exception('Error loading user: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error in fetchUserById: $e');
-      throw Exception('Error al cargar el usuario: $e');
+      print('❌ [USER SERVICE] Error in fetchUserById: $e');
+      throw Exception('Error loading user: $e');
     }
   }
 
-
-  Future<User> updateUser(String id, User user) async {
+  Future<User> updateUserProfile(String userId, Map<String, dynamic> userData) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$baseUrl/$id'),
-        body: jsonEncode(user.toJson()),
-        headers: {'Content-Type': 'application/json'},
+      print('🔄 [USER SERVICE] Updating user profile: $userId');
+      final response = await _client.patch(
+        Uri.parse('$baseUrl/$userId'),
+        body: json.encode(userData),
       );
-
+      
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-        return User.fromJson(data);
+        final user = data['user'] ?? data;
+        print('✅ [USER SERVICE] Successfully updated user profile');
+        return User.fromJson(user);
       } else {
-        throw Exception('Error al actualizar el usuario: ${response.statusCode}');
+        print('❌ [USER SERVICE] Failed to update user: ${response.statusCode}');
+        throw Exception('Failed to update user: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error in updateUser: $e');
-      throw Exception('Error al actualizar el usuario: $e');
+      print('❌ [USER SERVICE] Error in updateUserProfile: $e');
+      throw Exception('Error updating user: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> getUserStats() async {
+    try {
+      print('🔄 [USER SERVICE] Fetching user stats...');
+      final response = await _client.get(Uri.parse('$baseUrl/number-of-users'));
+      
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        print('✅ [USER SERVICE] Successfully fetched user stats');
+        return {'success': true, 'stats': data};
+      } else {
+        print('❌ [USER SERVICE] Failed to load stats: ${response.statusCode}');
+        return {'success': false, 'message': 'Failed to load stats'};
+      }
+    } catch (e) {
+      print('❌ [USER SERVICE] Error in getUserStats: $e');
+      return {'success': false, 'message': 'Error loading stats: $e'};
     }
   }
 }

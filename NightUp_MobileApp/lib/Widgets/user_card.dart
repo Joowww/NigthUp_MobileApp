@@ -48,7 +48,7 @@ class UserCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        user.gmail,
+                        user.email,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade600,

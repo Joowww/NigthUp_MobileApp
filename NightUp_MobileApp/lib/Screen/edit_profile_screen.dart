@@ -5,15 +5,15 @@ import '../Controllers/user_controller.dart';
 import '../Models/user.dart';
 
 class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({Key? key}) : super(key: key);
+  const EditProfileScreen({super.key});
 
   @override
   _EditProfileScreenState createState() => _EditProfileScreenState();
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final AuthController authController = Get.find<AuthController>();
-  final UserController userController = Get.find<UserController>();
+  AuthController get authController => Get.find<AuthController>();
+  UserController get userController => Get.find<UserController>();
   
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController gmailController = TextEditingController();
@@ -28,7 +28,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final currentUser = authController.currentUser.value;
     if (currentUser != null) {
       usernameController.text = currentUser.username;
-      gmailController.text = currentUser.gmail;
+      gmailController.text = currentUser.email;
       birthdayController.text = currentUser.birthday;
     }
   }
@@ -73,15 +73,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       User updatedUser = User(
         id: authController.currentUser.value!.id,
         username: usernameController.text,
-        gmail: gmailController.text,
+        email: gmailController.text,
         birthday: birthdayController.text,
-        password: null, 
+        role: authController.currentUser.value!.role,
+        active: authController.currentUser.value!.active,
+        events: authController.currentUser.value!.events,
       );
 
       try {
-        userController.updateUser(updatedUser.id, updatedUser);
+        await userController.updateUserProfile({
+          'username': updatedUser.username,
+          'email': updatedUser.email,
+          'birthday': updatedUser.birthday,
+        });
         Get.back(); 
-      } catch (e) {
       } finally {
         setState(() => isLoading = false);
       }

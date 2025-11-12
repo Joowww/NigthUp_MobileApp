@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import '../Controllers/auth_controller.dart';
-import '../Widgets/navigation_bar.dart';
+import '../controllers/eventos_controller.dart';
+import '../controllers/user_controller.dart';
+import '../widgets/navigation_bar.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   void _showLogoutConfirmation() {
     Get.dialog(
       AlertDialog(
-        title: const Text('Cerrar Sesión'),
-        content: const Text('¿Estás seguro de que quieres cerrar sesión?'),
+        title: Text(translate('alerts.logout_title')),
+        content: Text(translate('alerts.logout_message')),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('Cancelar'),
+            child: Text(translate('common.cancel')),
           ),
           TextButton(
             onPressed: () {
@@ -23,16 +26,16 @@ class HomeScreen extends StatelessWidget {
               authController.logout();
               Get.offAllNamed('/login');
               Get.snackbar(
-                'Sesión Cerrada',
-                'Has cerrado sesión correctamente',
+                translate('alerts.logout_success'),
+                '',
                 snackPosition: SnackPosition.BOTTOM,
                 backgroundColor: Colors.blue,
                 colorText: Colors.white,
               );
             },
-            child: const Text(
-              'Cerrar Sesión',
-              style: TextStyle(color: Colors.blue),
+            child: Text(
+              translate('settings.logout'),
+              style: const TextStyle(color: Colors.blue),
             ),
           ),
         ],
@@ -43,29 +46,29 @@ class HomeScreen extends StatelessWidget {
   void _showDeleteAccountConfirmation() {
     Get.dialog(
       AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.warning, color: Colors.red),
-            SizedBox(width: 10),
-            Text('Eliminar Cuenta'),
+            const Icon(Icons.warning, color: Colors.red),
+            const SizedBox(width: 10),
+            Text(translate('alerts.delete_account_title')),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('¿Estás seguro de que quieres eliminar tu cuenta?'),
-            SizedBox(height: 10),
+            Text(translate('alerts.delete_account_message')),
+            const SizedBox(height: 10),
             Text(
-              'Esta acción no se puede deshacer. Se perderán todos tus datos permanentemente.',
-              style: TextStyle(color: Colors.red, fontSize: 12),
+              translate('alerts.delete_account_warning'),
+              style: const TextStyle(color: Colors.red, fontSize: 12),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('Cancelar'),
+            child: Text(translate('common.cancel')),
           ),
           TextButton(
             onPressed: () async {
@@ -76,7 +79,7 @@ class HomeScreen extends StatelessWidget {
               if (result['success'] == true) {
                 Get.offAllNamed('/login');
                 Get.snackbar(
-                  'Cuenta Eliminada',
+                  translate('alerts.account_deleted'),
                   result['message'],
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: Colors.green,
@@ -84,7 +87,7 @@ class HomeScreen extends StatelessWidget {
                 );
               } else {
                 Get.snackbar(
-                  'Error',
+                  translate('common.error'),
                   result['message'],
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: Colors.red,
@@ -92,9 +95,9 @@ class HomeScreen extends StatelessWidget {
                 );
               }
             },
-            child: const Text(
-              'Eliminar',
-              style: TextStyle(color: Colors.red),
+            child: Text(
+              translate('common.delete'),
+              style: const TextStyle(color: Colors.red),
             ),
           ),
         ],
@@ -105,22 +108,24 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AuthController authController = Get.find<AuthController>();
-    
+    final EventoController eventoController = Get.find<EventoController>();
+    final UserController userController = Get.find<UserController>();
+   
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: _buildAppBar(),
-      body: SingleChildScrollView( 
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
             _buildWelcomeCard(authController),
             const SizedBox(height: 24),
-            _buildQuickStats(),
+            _buildQuickStats(eventoController, userController),
             const SizedBox(height: 24),
             _buildQuickActions(),
             const SizedBox(height: 24),
             _buildUserInfo(authController),
-            const SizedBox(height: 20), 
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -130,7 +135,7 @@ class HomeScreen extends StatelessWidget {
 
   AppBar _buildAppBar() {
     return AppBar(
-      title: const Text('Inicio'),
+      title: Text(translate('home.title')),
       backgroundColor: Colors.white,
       elevation: 0,
       actions: [
@@ -162,7 +167,7 @@ class HomeScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF667EEA).withOpacity(0.3),
+            color: const Color(0xFF667EEA).withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -171,9 +176,9 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '¡Hola!',
-            style: TextStyle(
+          Text(
+            translate('home.welcome'),
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
               fontWeight: FontWeight.w700,
@@ -190,9 +195,9 @@ class HomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Bienvenido a tu aplicación de eventos',
+            'Bienvenido a NightUp - Tu aplicación de eventos nocturnos',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 16,
             ),
           ),
@@ -201,15 +206,25 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickStats() {
+  Widget _buildQuickStats(EventoController eventoController, UserController userController) {
     return Row(
       children: [
         Expanded(
-          child: _buildStatCard('Eventos', '12', Icons.event, Colors.blue),
+          child: _buildStatCard(
+            translate('events.title'),
+            eventoController.eventosList.length.toString(),
+            Icons.event,
+            Colors.blue,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _buildStatCard('Usuarios', '24', Icons.people, Colors.green),
+          child: _buildStatCard(
+            translate('users.title'),
+            userController.userList.length.toString(),
+            Icons.people,
+            Colors.green,
+          ),
         ),
       ],
     );
@@ -223,7 +238,7 @@ class HomeScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -235,7 +250,7 @@ class HomeScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 20),
@@ -265,9 +280,9 @@ class HomeScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Acciones rápidas',
-          style: TextStyle(
+        Text(
+          translate('home.quick_actions'),
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: Colors.black87,
@@ -278,7 +293,7 @@ class HomeScreen extends StatelessWidget {
           children: [
             Expanded(
               child: _buildActionButton(
-                'Ver Eventos',
+                translate('home.view_events'),
                 Icons.event_available,
                 Colors.blue,
                 () => Get.offAllNamed('/eventos'),
@@ -287,10 +302,32 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _buildActionButton(
-                'Usuarios',
+                translate('home.view_users'),
                 Icons.people_alt,
                 Colors.green,
                 () => Get.offAllNamed('/users'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                translate('business.title'),
+                Icons.business,
+                Colors.orange,
+                () => Get.offAllNamed('/business'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionButton(
+                translate('ratings.title'),
+                Icons.star,
+                Colors.purple,
+                () => Get.offAllNamed('/ratings'),
               ),
             ),
           ],
@@ -309,7 +346,7 @@ class HomeScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -320,7 +357,7 @@ class HomeScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 24),
@@ -350,7 +387,7 @@ class HomeScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -359,20 +396,22 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Información del Usuario',
-            style: TextStyle(
+          Text(
+            translate('home.user_info'),
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: Colors.black87,
             ),
           ),
           const SizedBox(height: 16),
-          _buildInfoRow(Icons.person, 'Usuario:', auth.currentUser.value?.username ?? 'N/A'),
+          _buildInfoRow(Icons.person, '${translate('users.username')}:', auth.currentUser.value?.username ?? 'N/A'),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.email, 'Email:', auth.currentUser.value?.gmail ?? 'N/A'),
+          _buildInfoRow(Icons.email, '${translate('users.email')}:', auth.currentUser.value?.email ?? 'N/A'),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.cake, 'Cumpleaños:', auth.currentUser.value?.birthday ?? 'N/A'),
+          _buildInfoRow(Icons.cake, '${translate('users.birthday')}:', auth.currentUser.value?.birthday ?? 'N/A'),
+          const SizedBox(height: 12),
+          _buildInfoRow(Icons.verified_user, '${translate('users.role')}:', auth.currentUser.value?.displayRole ?? 'N/A'),
           const SizedBox(height: 20),
           Row(
             children: [
@@ -388,7 +427,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   icon: const Icon(Icons.logout, size: 18),
-                  label: const Text('Cerrar Sesión'),
+                  label: Text(translate('settings.logout')),
                 ),
               ),
               const SizedBox(width: 12),
@@ -404,7 +443,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   icon: const Icon(Icons.delete_forever, size: 18),
-                  label: const Text('Eliminar Cuenta'),
+                  label: Text(translate('settings.delete_account')),
                 ),
               ),
             ],
