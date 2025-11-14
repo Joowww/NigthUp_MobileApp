@@ -1,91 +1,73 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter/cupertino.dart';
-
-import 'Bindings/initial_binding.dart';
-import 'Screen/login_screen.dart';
-import 'Screen/register_screen.dart';
-import 'Screen/home.dart';
-import 'Screen/eventos_list.dart';
-import 'Screen/user_list.dart';
-import 'Screen/settings_screen.dart';
-import 'Screen/eventos_detail.dart';
-import 'Screen/user_detail.dart';
-import 'Screen/edit_profile_screen.dart';
+import 'app/routes/app_pages.dart';
+import 'app/routes/app_routes.dart';
+import 'app/themes/app_theme.dart';
+import 'core/services/storage_service.dart';
+import 'core/services/api_service.dart';
+import 'modules/auth/controllers/auth_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Configurar internacionalización
-  var delegate = await LocalizationDelegate.create(
-    fallbackLocale: 'es',
-    supportedLocales: ['es', 'en'],
+  // Inicializar servicios
+  await StorageService().init();
+  ApiService().init();
+  
+  // Configurar orientación
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  
+  // Configurar barra de estado
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Colors.black,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
   );
 
-  runApp(MyApp(delegate));
+  // Inicializar traducción
+  var delegate = await LocalizationDelegate.create(
+    fallbackLocale: 'es',
+    supportedLocales: ['es', 'en', 'fr', 'de', 'it', 'pt'],
+  );
+
+  runApp(LocalizedApp(delegate, const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
-  final LocalizationDelegate delegate;
-
-  const MyApp(this.delegate, {super.key});
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return LocalizedApp(
-      delegate,
-      GetMaterialApp(
+    var localizationDelegate = LocalizedApp.of(context).delegate;
+
+    return LocalizationProvider(
+      state: LocalizationProvider.of(context).state,
+      child: GetMaterialApp(
         title: 'NightUp',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF667EEA),
-            brightness: Brightness.light,
-          ),
-          fontFamily: 'Inter',
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black87,
-            elevation: 0,
-            centerTitle: true,
-            titleTextStyle: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
-            ),
-          ),
-        ),
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.darkTheme,
         localizationsDelegates: [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
-          delegate
+          localizationDelegate,
         ],
-        supportedLocales: delegate.supportedLocales,
-        locale: delegate.currentLocale,
-        initialBinding: InitialBinding(),
-        home: const LoginScreen(),
-        getPages: [
-          GetPage(name: '/login', page: () => const LoginScreen()),
-          GetPage(name: '/register', page: () => const RegisterScreen()),
-          GetPage(name: '/home', page: () => const HomeScreen()),
-          GetPage(name: '/eventos', page: () => const EventosListScreen()),
-          GetPage(name: '/users', page: () => const UserListScreen()),
-          GetPage(name: '/settings', page: () => SettingsScreen()),
-          GetPage(name: '/profile', page: () => EditProfileScreen()),
-          GetPage(
-            name: '/evento/:id', 
-            page: () => EventosDetailScreen(eventoId: Get.parameters['id']!),
-          ),
-          GetPage(
-            name: '/user/:id', 
-            page: () => UserDetailScreen(userId: Get.parameters['id']!),
-          ),
-        ],
-        defaultTransition: Transition.cupertino,
-        debugShowCheckedModeBanner: false,
+        supportedLocales: localizationDelegate.supportedLocales,
+        locale: localizationDelegate.currentLocale,
+        initialRoute: AppRoutes.splash,
+        getPages: AppPages.routes,
+        initialBinding: BindingsBuilder(() {
+          Get.put(AuthController());
+        }),
       ),
     );
   }
