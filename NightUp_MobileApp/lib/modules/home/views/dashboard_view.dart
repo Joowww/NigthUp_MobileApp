@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../../../app/themes/app_colors.dart';
+import '../../../app/routes/app_routes.dart';
+import '../../../app/widgets/app_drawer.dart'; // <-- IMPORT AÑADIDO
 import '../controllers/home_controller.dart';
 import '../widgets/event_card.dart';
 import '../widgets/user_avatar_card.dart';
@@ -14,38 +16,75 @@ class DashboardView extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<HomeController>();
 
-    return RefreshIndicator(
-      onRefresh: controller.refreshData,
-      color: AppColors.neonPink,
-      backgroundColor: AppColors.darkCard,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 40),
-            
-            // Welcome Section
-            Obx(() => _buildWelcomeSection(controller)),
-            
-            const SizedBox(height: 30),
-            
-            // Stats Cards
-            _buildStatsSection(controller),
-            
-            const SizedBox(height: 30),
-            
-            // Featured Events Section
-            _buildFeaturedEventsSection(controller),
-            
-            const SizedBox(height: 30),
-            
-            // Recent Users Section (available for all users)
-            _buildRecentUsersSection(controller),
-            
-            const SizedBox(height: 100),
-          ],
+    return Scaffold(
+      backgroundColor: AppColors.darkBackground,
+      drawer: const AppDrawer(),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(
+              Icons.menu,
+              color: AppColors.neonPink,
+              size: 28,
+            ),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+        title: Text(
+          'NightUp',
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.notifications,
+              color: AppColors.neonGreen,
+            ),
+            onPressed: () {
+              // TODO: Implementar notificaciones
+            },
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: controller.refreshData,
+        color: AppColors.neonPink,
+        backgroundColor: AppColors.darkCard,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 40),
+
+              // Welcome Section
+              Obx(() => _buildWelcomeSection(controller)),
+
+              const SizedBox(height: 30),
+
+              // Stats Cards
+              _buildStatsSection(controller),
+
+              const SizedBox(height: 30),
+
+              // Featured Events Section
+              _buildFeaturedEventsSection(controller),
+
+              const SizedBox(height: 30),
+
+              // Recent Users Section
+              _buildRecentUsersSection(controller),
+
+              const SizedBox(height: 100),
+            ],
+          ),
         ),
       ),
     );
@@ -79,14 +118,14 @@ class DashboardView extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: user?.role == 'admin' 
-                ? AppColors.neonPink.withOpacity(0.2)
-                : AppColors.neonBlue.withOpacity(0.2),
+              color: user?.role == 'admin'
+                  ? AppColors.neonPink.withOpacity(0.2)
+                  : AppColors.neonBlue.withOpacity(0.2),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: user?.role == 'admin' 
-                  ? AppColors.neonPink
-                  : AppColors.neonBlue,
+                color: user?.role == 'admin'
+                    ? AppColors.neonPink
+                    : AppColors.neonBlue,
                 width: 1,
               ),
             ),
@@ -95,9 +134,9 @@ class DashboardView extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: user?.role == 'admin' 
-                  ? AppColors.neonPink
-                  : AppColors.neonBlue,
+                color: user?.role == 'admin'
+                    ? AppColors.neonPink
+                    : AppColors.neonBlue,
                 fontFamily: 'Poppins',
               ),
             ),
@@ -109,26 +148,26 @@ class DashboardView extends StatelessWidget {
 
   Widget _buildStatsSection(HomeController controller) {
     return Obx(() => Row(
-      children: [
-        Expanded(
-          child: StatsCard(
-            title: 'Eventos',
-            value: '${controller.totalEvents.value}',
-            icon: Icons.event,
-            color: AppColors.neonPink,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: StatsCard(
-            title: 'Participantes',
-            value: '${controller.totalUsers.value}',
-            icon: Icons.people,
-            color: AppColors.neonBlue,
-          ),
-        ),
-      ],
-    ));
+          children: [
+            Expanded(
+              child: StatsCard(
+                title: 'Eventos',
+                value: '${controller.totalEvents.value}',
+                icon: Icons.event,
+                color: AppColors.neonPink,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: StatsCard(
+                title: 'Participantes',
+                value: '${controller.totalUsers.value}',
+                icon: Icons.people,
+                color: AppColors.neonBlue,
+              ),
+            ),
+          ],
+        ));
   }
 
   Widget _buildFeaturedEventsSection(HomeController controller) {
@@ -166,7 +205,7 @@ class DashboardView extends StatelessWidget {
               child: CircularProgressIndicator(color: AppColors.neonPink),
             );
           }
-          
+
           if (controller.featuredEvents.isEmpty) {
             return Container(
               padding: const EdgeInsets.all(32),
@@ -189,9 +228,9 @@ class DashboardView extends StatelessWidget {
               ),
             );
           }
-          
+
           return SizedBox(
-            height: 255, // Aumentar un poco más para evitar overflow
+            height: 255,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: controller.featuredEvents.length,
@@ -200,9 +239,18 @@ class DashboardView extends StatelessWidget {
                 return Container(
                   width: 280,
                   margin: EdgeInsets.only(
-                    right: index == controller.featuredEvents.length - 1 ? 0 : 16,
+                    right:
+                        index == controller.featuredEvents.length - 1 ? 0 : 16,
                   ),
-                  child: EventCard(event: event),
+                  child: EventCard(
+                    event: event,
+                    onTap: () {
+                      Get.toNamed(
+                        AppRoutes.eventDetail,
+                        arguments: event.id,
+                      );
+                    },
+                  ),
                 );
               },
             ),
@@ -264,19 +312,25 @@ class DashboardView extends StatelessWidget {
               ),
             );
           }
-          
+
           return SizedBox(
-            height: 100,
+            height: 95,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: controller.recentUsers.length,
               itemBuilder: (context, index) {
                 final user = controller.recentUsers[index];
                 return Container(
                   margin: EdgeInsets.only(
-                    right: index == controller.recentUsers.length - 1 ? 0 : 16,
+                    right: index == controller.recentUsers.length - 1 ? 24 : 16,
                   ),
-                  child: UserAvatarCard(user: user),
+                  child: UserAvatarCard(
+                    user: user,
+                    onTap: () {
+                      Get.toNamed('/user-profile', parameters: {'userId': user.id});
+                    },
+                  ),
                 );
               },
             ),

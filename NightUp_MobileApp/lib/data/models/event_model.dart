@@ -29,6 +29,27 @@ class EventModel {
     required this.updatedAt,
   });
 
+  // Safe parsing helper methods
+  static int _parseInt(dynamic value, int defaultValue) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is double) return value.round();
+    if (value is String) {
+      return int.tryParse(value) ?? defaultValue;
+    }
+    return defaultValue;
+  }
+
+  static double _parseDouble(dynamic value, double defaultValue) {
+    if (value == null) return defaultValue;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? defaultValue;
+    }
+    return defaultValue;
+  }
+
   factory EventModel.fromJson(Map<String, dynamic> json) {
     // Parse participants - pueden ser strings o objetos
     List<String> participantsList = [];
@@ -90,8 +111,8 @@ class EventModel {
       schedule: scheduleDate,
       location: json['location'] ?? 'Ubicación no especificada',
       category: json['category'] ?? 'general',
-      capacity: json['capacity'] ?? 100, // Valor por defecto
-      price: (json['price'] ?? 0).toDouble(),
+      capacity: EventModel._parseInt(json['capacity'], 100), // Safe int parsing
+      price: EventModel._parseDouble(json['price'], 0.0),
       participants: participantsList,
       active: json['active'] ?? true,
       imageUrl: json['image_url'] ?? json['imageUrl'],

@@ -44,7 +44,7 @@ class UserRepository {
     }
   }
 
-  Future<UserModel> getUserById(int id) async {
+  Future<UserModel> getUserById(String id) async {
     try {
       final response = await _apiService.get('${ApiConstants.users}/$id');
       return UserModel.fromJson(response.data['data'] ?? response.data);
@@ -57,6 +57,44 @@ class UserRepository {
     try {
       final response = await _apiService.get(ApiConstants.profile);
       return UserModel.fromJson(response.data['data'] ?? response.data);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<UserModel> updateProfile({
+    String? username,
+    String? email,
+    String? birthday,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (username != null) data['username'] = username;
+      if (email != null) data['email'] = email;
+      if (birthday != null) data['birthday'] = birthday;
+
+      final response = await _apiService.patch(
+        ApiConstants.updateProfile,
+        data: data,
+      );
+      return UserModel.fromJson(response.data['data'] ?? response.data);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await _apiService.post(
+        ApiConstants.changePassword,
+        data: {
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        },
+      );
     } on DioException catch (e) {
       throw _handleError(e);
     }

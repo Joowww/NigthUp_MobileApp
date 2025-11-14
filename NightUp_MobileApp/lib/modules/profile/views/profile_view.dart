@@ -152,40 +152,6 @@ class ProfileView extends StatelessWidget {
                 }),
                 const SizedBox(height: 30),
                 
-                // Opciones
-                _buildSectionTitle(translate('profile.settings')),
-                const SizedBox(height: 12),
-                _buildOptionCard(
-                  icon: Icons.edit_outlined,
-                  title: translate('profile.edit_profile'),
-                  subtitle: translate('profile.edit_profile_subtitle'),
-                  color: AppColors.neonPink,
-                  onTap: () {
-                    // TODO: Implementar editar perfil
-                  },
-                ),
-                const SizedBox(height: 12),
-                _buildOptionCard(
-                  icon: Icons.lock_outline,
-                  title: translate('profile.change_password'),
-                  subtitle: translate('profile.change_password_subtitle'),
-                  color: AppColors.neonBlue,
-                  onTap: () {
-                    // TODO: Implementar cambiar contraseña
-                  },
-                ),
-                const SizedBox(height: 12),
-                _buildOptionCard(
-                  icon: Icons.language,
-                  title: translate('profile.language'),
-                  subtitle: translate('profile.language_subtitle'),
-                  color: AppColors.neonPurple,
-                  onTap: () {
-                    _showLanguageDialog(context);
-                  },
-                ),
-                const SizedBox(height: 30),
-                
                 // Cerrar sesión
                 _buildSectionTitle(translate('profile.account')),
                 const SizedBox(height: 12),
@@ -362,62 +328,6 @@ class ProfileView extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  void _showLanguageDialog(BuildContext context) {
-    final languages = {
-      'es': '🇪🇸 Español',
-      'en': '🇬🇧 English',
-      'fr': '🇫🇷 Français',
-      'de': '🇩🇪 Deutsch',
-      'it': '🇮🇹 Italiano',
-      'pt': '🇵🇹 Português',
-    };
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.darkCard,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          translate('profile.select_language'),
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: languages.entries.map((entry) {
-            return ListTile(
-              title: Text(
-                entry.value,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontFamily: 'Poppins',
-                ),
-              ),
-              onTap: () {
-                changeLocale(context, entry.key);
-                Get.back();
-                Get.snackbar(
-                  translate('profile.language_changed'),
-                  translate('profile.language_changed_message'),
-                  backgroundColor: AppColors.success.withOpacity(0.9),
-                  colorText: Colors.white,
-                  snackPosition: SnackPosition.BOTTOM,
-                  margin: const EdgeInsets.all(16),
-                  borderRadius: 12,
-                );
-              },
-            );
-          }).toList(),
         ),
       ),
     );

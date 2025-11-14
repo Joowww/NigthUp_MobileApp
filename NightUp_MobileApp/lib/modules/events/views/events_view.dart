@@ -5,6 +5,7 @@ import 'package:flutter_translate/flutter_translate.dart';
 import '../../../app/themes/app_colors.dart';
 import '../controllers/events_controller.dart';
 import '../../home/widgets/event_card.dart';
+import '../../../app/routes/app_routes.dart'; // Necesario para AppRoutes
 
 class EventsView extends StatelessWidget {
   const EventsView({Key? key}) : super(key: key);
@@ -57,7 +58,7 @@ class EventsView extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // Search bar simple
             SliverToBoxAdapter(
               child: Padding(
@@ -67,7 +68,9 @@ class EventsView extends StatelessWidget {
                   style: const TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(
                     hintText: translate('events.search_placeholder'),
-                    hintStyle: TextStyle(color: AppColors.textSecondary.withOpacity(0.7)),
+                    hintStyle: TextStyle(
+                      color: AppColors.textSecondary.withOpacity(0.7),
+                    ),
                     prefixIcon: const Icon(Icons.search, color: AppColors.neonBlue),
                     filled: true,
                     fillColor: AppColors.darkInput,
@@ -75,12 +78,15 @@ class EventsView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(15),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
                   ),
                 ),
               ),
             ),
-            
+
             // Lista de eventos
             Obx(() {
               if (controller.isLoading.value && controller.events.isEmpty) {
@@ -92,7 +98,7 @@ class EventsView extends StatelessWidget {
                   ),
                 );
               }
-              
+
               if (controller.filteredEvents.isEmpty) {
                 return SliverFillRemaining(
                   child: Center(
@@ -100,15 +106,17 @@ class EventsView extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          controller.events.isEmpty ? Icons.event_busy : Icons.search_off,
+                          controller.events.isEmpty
+                              ? Icons.event_busy
+                              : Icons.search_off,
                           size: 80,
                           color: AppColors.textSecondary.withOpacity(0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          controller.events.isEmpty 
-                            ? translate('events.no_events')
-                            : translate('events.no_search_results'),
+                          controller.events.isEmpty
+                              ? translate('events.no_events')
+                              : translate('events.no_search_results'),
                           style: const TextStyle(
                             fontSize: 18,
                             color: AppColors.textSecondary,
@@ -120,7 +128,7 @@ class EventsView extends StatelessWidget {
                   ),
                 );
               }
-              
+
               return SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 sliver: SliverList(
@@ -132,27 +140,28 @@ class EventsView extends StatelessWidget {
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 20),
                             child: Center(
-                              child: Obx(() => controller.isLoadingMore.value
-                                  ? const CircularProgressIndicator(
-                                      color: AppColors.neonPink,
-                                    )
-                                  : ElevatedButton(
-                                      onPressed: controller.loadMoreEvents,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.neonPurple,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 32,
-                                          vertical: 12,
+                              child: Obx(
+                                () => controller.isLoadingMore.value
+                                    ? const CircularProgressIndicator(
+                                        color: AppColors.neonPink,
+                                      )
+                                    : ElevatedButton(
+                                        onPressed: controller.loadMoreEvents,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.neonPurple,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 32,
+                                            vertical: 12,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          translate('events.load_more'),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontFamily: 'Poppins',
+                                          ),
                                         ),
                                       ),
-                                      child: Text(
-                                        translate('events.load_more'),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontFamily: 'Poppins',
-                                        ),
-                                      ),
-                                    ),
                               ),
                             ),
                           );
@@ -160,19 +169,26 @@ class EventsView extends StatelessWidget {
                           return const SizedBox();
                         }
                       }
-                      
+
                       final event = controller.filteredEvents[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: EventCard(
                           event: event,
+
+                          // 🔥 AÑADIDO: Navegación al detalle del evento
                           onTap: () {
-                            // TODO: Navegar a detalles del evento
+                            Get.toNamed(
+                              AppRoutes.eventDetail,
+                              arguments: event.id,
+                            );
                           },
+                          // 🔥 FIN DE AÑADIDO
+
                         ),
                       );
                     },
-                    childCount: controller.filteredEvents.length + 
+                    childCount: controller.filteredEvents.length +
                         (controller.hasMore.value ? 1 : 0),
                   ),
                 ),

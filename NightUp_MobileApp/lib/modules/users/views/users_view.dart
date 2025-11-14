@@ -5,6 +5,7 @@ import 'package:pull_to_refresh/pull_to_refresh.dart';
 import '../../../app/themes/app_colors.dart';
 import '../controllers/users_controllers.dart';
 import '../../../data/models/user_model.dart';
+import '../../../app/routes/app_routes.dart'; // <-- IMPORTANTE
 
 class UsersView extends StatelessWidget {
   const UsersView({Key? key}) : super(key: key);
@@ -27,7 +28,6 @@ class UsersView extends StatelessWidget {
         ),
         child: CustomScrollView(
           slivers: [
-            // AppBar
             SliverAppBar(
               expandedHeight: 200,
               floating: true,
@@ -77,16 +77,14 @@ class UsersView extends StatelessWidget {
                 ),
               ),
             ),
-            
-            // Search bar
+
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: _buildSearchBar(controller),
               ),
             ),
-            
-            // Lista de usuarios
+
             Obx(() {
               if (controller.isLoading.value && controller.users.isEmpty) {
                 return const SliverFillRemaining(
@@ -97,7 +95,7 @@ class UsersView extends StatelessWidget {
                   ),
                 );
               }
-              
+
               if (controller.filteredUsers.isEmpty) {
                 return SliverFillRemaining(
                   child: Center(
@@ -123,29 +121,28 @@ class UsersView extends StatelessWidget {
                   ),
                 );
               }
-              
+
               return SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      // Si es el último elemento y hay más usuarios, mostrar botón de cargar más
                       if (index == controller.filteredUsers.length) {
                         return Obx(() => controller.hasMore.value
                             ? _buildLoadMoreButton(controller)
                             : _buildEndMessage());
                       }
-                      
+
                       final user = controller.filteredUsers[index];
                       return _buildUserCard(user);
                     },
-                    childCount: controller.filteredUsers.length + 
-                               (controller.hasMore.value ? 1 : 1), // +1 para el botón o mensaje final
+                    childCount: controller.filteredUsers.length +
+                        (controller.hasMore.value ? 1 : 1),
                   ),
                 ),
               );
             }),
-            
+
             const SliverToBoxAdapter(
               child: SizedBox(height: 20),
             ),
@@ -194,6 +191,9 @@ class UsersView extends StatelessWidget {
     );
   }
 
+  // ------------------------------------------
+  // 🔥 AQUÍ VA EL CAMBIO: navegación a detalle
+  // ------------------------------------------
   Widget _buildUserCard(UserModel user) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -212,14 +212,19 @@ class UsersView extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
+
+          // 🚀 NAVEGACIÓN A DETALLE
           onTap: () {
-            // TODO: Navegar a detalle de usuario
+            Get.toNamed(
+              AppRoutes.userDetail,
+              arguments: user.id,
+            );
           },
+
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // Avatar
                 Container(
                   width: 60,
                   height: 60,
@@ -240,8 +245,7 @@ class UsersView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-                
-                // Información
+
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,8 +294,7 @@ class UsersView extends StatelessWidget {
                     ],
                   ),
                 ),
-                
-                // Botón ver más
+
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -315,7 +318,7 @@ class UsersView extends StatelessWidget {
   Widget _buildRoleBadge(String role) {
     Color color;
     IconData icon;
-    
+
     switch (role.toLowerCase()) {
       case 'admin':
         color = AppColors.error;
@@ -329,7 +332,7 @@ class UsersView extends StatelessWidget {
         color = AppColors.neonBlue;
         icon = Icons.person;
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -343,11 +346,7 @@ class UsersView extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 12,
-            color: color,
-          ),
+          Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
           Text(
             role.toUpperCase(),
@@ -365,44 +364,45 @@ class UsersView extends StatelessWidget {
 
   Widget _buildLoadMoreButton(UsersController controller) {
     return Obx(() => Container(
-      margin: const EdgeInsets.all(20),
-      child: controller.isLoadingMore.value
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.neonBlue,
-              ),
-            )
-          : ElevatedButton(
-              onPressed: controller.loadMoreUsers,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.darkCard,
-                foregroundColor: AppColors.neonBlue,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: AppColors.neonBlue.withOpacity(0.3),
-                    width: 1,
+          margin: const EdgeInsets.all(20),
+          child: controller.isLoadingMore.value
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.neonBlue,
+                  ),
+                )
+              : ElevatedButton(
+                  onPressed: controller.loadMoreUsers,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.darkCard,
+                    foregroundColor: AppColors.neonBlue,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: AppColors.neonBlue.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.refresh, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Cargar más usuarios (${controller.filteredUsers.length}/${controller.totalUsers.value})',
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                elevation: 0,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.refresh, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Cargar más usuarios (${controller.filteredUsers.length}/${controller.totalUsers.value})',
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-    ));
+        ));
   }
 
   Widget _buildEndMessage() {

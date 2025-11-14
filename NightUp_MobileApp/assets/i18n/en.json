@@ -99,5 +99,40 @@
     "delete": "Delete",
     "edit": "Edit",
     "search": "Search"
+  },
+  "business": {
+    "title": "Businesses",
+    "name": "Name",
+    "address": "Address",
+    "phone": "Phone",
+    "email": "Email",
+    "description": "Description",
+    "managers": "Managers"
+  },
+  "tags": {
+    "title": "Tags",
+    "name": "Name",
+    "description": "Description",
+    "color": "Color"
+  },
+  "interests": {
+    "title": "Interests",
+    "my_interests": "My interests",
+    "all_interests": "All interests",
+    "add": "Add interest",
+    "remove": "Remove interest"
+  },
+  "trust": {
+    "title": "Trust",
+    "rate": "Rate trust",
+    "level": "Trust level",
+    "context": "Context"
+  },
+  "ratings": {
+    "title": "Ratings",
+    "rate_event": "Rate event",
+    "your_rating": "Your rating",
+    "comment": "Comment",
+    "no_ratings": "No ratings yet"
   }
 }

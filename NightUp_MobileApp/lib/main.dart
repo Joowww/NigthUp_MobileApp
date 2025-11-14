@@ -8,6 +8,7 @@ import 'app/routes/app_routes.dart';
 import 'app/themes/app_theme.dart';
 import 'core/services/storage_service.dart';
 import 'core/services/api_service.dart';
+import 'core/services/user_service.dart';
 import 'modules/auth/controllers/auth_controller.dart';
 
 void main() async {
@@ -67,6 +68,7 @@ class MyApp extends StatelessWidget {
         getPages: AppPages.routes,
         initialBinding: BindingsBuilder(() {
           Get.put(AuthController());
+          Get.put(UserService());
         }),
       ),
     );

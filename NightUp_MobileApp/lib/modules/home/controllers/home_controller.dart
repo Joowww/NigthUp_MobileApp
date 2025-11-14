@@ -4,6 +4,7 @@ import '../../../data/models/user_model.dart';
 import '../../../data/repositories/event_repository.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../../app/helpers/auth_helper.dart';
 
 class HomeController extends GetxController {
   final EventRepository _eventRepository = EventRepository();
@@ -76,11 +77,19 @@ class HomeController extends GetxController {
   Future<void> loadRecentUsers() async {
     try {
       // Ahora todos los usuarios pueden ver la lista de usuarios
-      final result = await _userRepository.getUsers(limit: 10);
+      final result = await _userRepository.getUsers(limit: 13);
       final users = result['users'] as List<UserModel>;
       recentUsers.value = users;
     } catch (e) {
       print('Error loading recent users: $e');
+      String errorMsg = e.toString().toLowerCase();
+      
+      if (errorMsg.contains('token') && (errorMsg.contains('inválido') || errorMsg.contains('expirado') || errorMsg.contains('requerido'))) {
+        // Token issue - show dialog and redirect to login
+        AuthHelper.showTokenExpiredDialog();
+        return;
+      }
+      
       recentUsers.value = [];
     }
   }
@@ -98,6 +107,14 @@ class HomeController extends GetxController {
       activeUsers.value = userStats['active'] ?? 0;
     } catch (e) {
       print('Error loading stats: $e');
+      String errorMsg = e.toString().toLowerCase();
+      
+      if (errorMsg.contains('token') && (errorMsg.contains('inválido') || errorMsg.contains('expirado') || errorMsg.contains('requerido'))) {
+        // Token issue for user stats only - don't redirect, just log
+        print('Authentication required for user stats');
+        totalUsers.value = 0;
+        activeUsers.value = 0;
+      }
     }
   }
 

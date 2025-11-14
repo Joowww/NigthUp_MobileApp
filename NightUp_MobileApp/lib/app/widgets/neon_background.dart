@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../themes/app_colors.dart';
-import 'dart:math' as math;
 
 class NeonBackground extends StatelessWidget {
   final Widget child;

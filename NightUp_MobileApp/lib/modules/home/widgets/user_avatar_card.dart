@@ -17,14 +17,15 @@ class UserAvatarCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 80,
+        width: 75,
         margin: const EdgeInsets.only(right: 12),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Avatar con gradiente
             Container(
-              width: 70,
-              height: 70,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: AppColors.primaryGradient,
@@ -44,9 +45,9 @@ class UserAvatarCard extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    user.username[0].toUpperCase(),
+                    user.username.isNotEmpty ? user.username[0].toUpperCase() : '?',
                     style: const TextStyle(
-                      fontSize: 28,
+                      fontSize: 26,
                       fontWeight: FontWeight.bold,
                       color: AppColors.neonPink,
                       fontFamily: 'Poppins',
@@ -55,13 +56,13 @@ class UserAvatarCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             
             // Nombre
             Text(
               user.username,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w500,
                 fontFamily: 'Poppins',
@@ -69,6 +70,27 @@ class UserAvatarCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 1),
+            
+            // Rol
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: AppColors.neonPurple.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                user.role.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 8,
+                  color: AppColors.neonPurple,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Poppins',
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),

@@ -29,21 +29,16 @@ class EventRepository {
 
   Future<Map<String, dynamic>> getEvents({int skip = 0, int limit = 10}) async {
     try {
-      // Use public endpoint without authentication
       final response = await _publicDio.get(
         '${ApiConstants.events}?skip=$skip&limit=$limit',
       );
       
-      // Handle different response formats
       if (response.data is List) {
-        // If response is directly a list of events
         final events = <EventModel>[];
         for (var eventJson in (response.data as List)) {
           try {
             events.add(EventModel.fromJson(eventJson));
-          } catch (e) {
-            // Skip this event and continue with others
-          }
+          } catch (e) {}
         }
         
         print('Parsed ${events.length} events from direct list');
@@ -60,16 +55,13 @@ class EventRepository {
           'total': events.length,
         };
       } else if (response.data is Map<String, dynamic>) {
-        // If response has events and pagination structure
         final events = <EventModel>[];
         final eventsList = response.data['events'] ?? [];
         
         for (var eventJson in eventsList) {
           try {
             events.add(EventModel.fromJson(eventJson));
-          } catch (e) {
-            // Skip this event and continue with others
-          }
+          } catch (e) {}
         }
         
         final pagination = response.data['pagination'] ?? {};
@@ -104,7 +96,6 @@ class EventRepository {
 
   Future<Map<String, dynamic>> getEventStats() async {
     try {
-      // Use public endpoint without authentication
       final response = await _publicDio.get('${ApiConstants.events}/stats');
       return response.data;
     } on DioException catch (e) {
@@ -126,7 +117,6 @@ class EventRepository {
                                 (response.data is List ? response.data : []);
       return data.map((json) => EventModel.fromJson(json)).toList();
     } on DioException catch (e) {
-      // Si las rutas de eventos no están disponibles, retornar lista vacía
       print('Error loading my events: ${_handleError(e)}');
       return [];
     }
@@ -134,13 +124,46 @@ class EventRepository {
 
   Future<EventModel> getEventById(String id) async {
     try {
-      // Use public endpoint without authentication
       final response = await _publicDio.get('${ApiConstants.events}/$id');
-      return EventModel.fromJson(response.data['event'] ?? response.data['data'] ?? response.data);
+      return EventModel.fromJson(
+        response.data['event'] ?? response.data['data'] ?? response.data,
+      );
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
+
+  // ------------------------------------------------------------
+  //  NUEVAS FUNCIONES AÑADIDAS (join / leave)
+  // ------------------------------------------------------------
+
+  Future<void> joinEvent(String eventId) async {
+    try {
+      final response = await _apiService.post(
+        ApiConstants.joinEvent(eventId),
+        data: {},
+      );
+      print('Join event response: ${response.data}');
+    } on DioException catch (e) {
+      print('Join event error: ${e.response?.data}');
+      throw _handleError(e);
+    }
+  }
+
+  Future<void> leaveEvent(String eventId) async {
+    try {
+      final response = await _apiService.post(
+        ApiConstants.leaveEvent(eventId),
+        data: {},
+      );
+      print('Leave event response: ${response.data}');
+    } on DioException catch (e) {
+      print('Leave event error: ${e.response?.data}');
+      throw _handleError(e);
+    }
+  }
+
+  // ------------------------------------------------------------
 
   String _handleError(DioException e) {
     if (e.response != null) {

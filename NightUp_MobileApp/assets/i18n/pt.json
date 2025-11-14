@@ -99,5 +99,40 @@
     "delete": "Excluir",
     "edit": "Editar",
     "search": "Pesquisar"
+  },
+  "business": {
+    "title": "Negócios",
+    "name": "Nome",
+    "address": "Endereço",
+    "phone": "Telefone",
+    "email": "E-mail",
+    "description": "Descrição",
+    "managers": "Managers"
+  },
+  "tags": {
+    "title": "Tags",
+    "name": "Nome",
+    "description": "Descrição",
+    "color": "Cor"
+  },
+  "interests": {
+    "title": "Interesses",
+    "my_interests": "Meus interesses",
+    "all_interests": "Todos os interesses",
+    "add": "Adicionar interesse",
+    "remove": "Remover interesse"
+  },
+  "trust": {
+    "title": "Confiança",
+    "rate": "Avaliar confiança",
+    "level": "Nível de confiança",
+    "context": "Contexto"
+  },
+  "ratings": {
+    "title": "Avaliações",
+    "rate_event": "Avaliar evento",
+    "your_rating": "Sua avaliação",
+    "comment": "Comentário",
+    "no_ratings": "Ainda não há avaliações"
   }
 }

@@ -17,26 +17,32 @@ class ApiConstants {
   // Event Endpoints
   static const String events = '/event';
   static const String myEvents = '/event/my-events';
-  static const String joinEvent = '/event/{id}/join';
-  static const String leaveEvent = '/event/{id}/leave';
+  static String joinEvent(String eventId) => '/event/$eventId/join';
+  static String leaveEvent(String eventId) => '/event/$eventId/leave';
   
   // Business Endpoints
-  static const String businesses = '/businesses';
+  static const String businesses = '/business';
   
   // Rating Endpoints
-  static const String ratings = '/ratings';
-  static const String eventRatings = '/ratings/event/{id}';
+  static const String ratings = '/rating';
+  static const String eventRatings = '/rating/event/{id}';
   
   // Tag Endpoints
-  static const String tags = '/tags';
+  static const String tags = '/tag';
   
   // Interest Endpoints
-  static const String interests = '/interests';
-  static const String userInterests = '/user-interests';
+  static const String interests = '/user-interest';
+  static const String userInterests = '/user-interest';
+  static String userInterestsByUserId(String userId) => '/user-interest/user/$userId';
   
   // Trust Endpoints
-  static const String trust = '/trust';
-  static const String trustRatings = '/trust/ratings';
+  static const String trust = '/user-trust';
+  static const String trustRatings = '/user-trust/user/ratings';
+  static String trustUserRatings(String userId) => '/user-trust/user/ratings/$userId';
+  static String trustUserReceivedRatings(String userId) => '/user-trust/user/received/$userId';
+  static String trustUserGivenRatings(String userId) => '/user-trust/user/given/$userId';
+  static String updateTrust(String trustId) => '/user-trust/$trustId';
+  static String deleteTrust(String trustId) => '/user-trust/$trustId';
   
   // Headers
   static Map<String, String> getHeaders({String? token}) {

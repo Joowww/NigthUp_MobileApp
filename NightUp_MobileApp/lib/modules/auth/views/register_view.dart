@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import 'package:password_strength_checker/password_strength_checker.dart';
 import 'dart:math';
 import '../../../app/themes/app_colors.dart';
 import '../../../app/widgets/neon_background.dart';
