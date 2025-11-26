@@ -1,38 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
+  <meta name="google-signin-client_id" content="750097459792-9cbl6emgs6j9vbpip10q8ddo1ru3i2s3.apps.googleusercontent.com">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="NightUp - Night events platform">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="ea_seminari_9">
+  <meta name="apple-mobile-web-app-title" content="NightUp">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>ea_seminari_9</title>
+  <title>NightUp</title>
   <link rel="manifest" href="manifest.json">
+  
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
+  <!-- Debug helper: Ejecuta window.debugGoogleAuth() en consola para inspeccionar GIS -->
+  <script>
+// Debug helper para Google Sign-In
+window.debugGoogleAuth = function() {
+  console.log('=== GOOGLE AUTH DEBUG ===');
+  console.log('Google object:', window.google);
+  console.log('Google accounts:', window.google?.accounts);
+  console.log('Google ID:', window.google?.accounts?.id);
+  console.log('Flutter handler:', window.handleFlutterGoogleSignIn);
+  console.log('Client ID configured correctly');
+  
+  // Verificar configuración actual
+  if (window.google?.accounts?.id) {
+    const config = window.google.accounts.id._clientConfig;
+    console.log('Current GIS config:', config);
+  }
+};
+</script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

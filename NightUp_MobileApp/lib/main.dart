@@ -1,76 +1,56 @@
+// main.dart - CORREGIDO
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'app/routes/app_pages.dart';
-import 'app/routes/app_routes.dart';
-import 'app/themes/app_theme.dart';
-import 'core/services/storage_service.dart';
-import 'core/services/api_service.dart';
-import 'core/services/user_service.dart';
-import 'modules/auth/controllers/auth_controller.dart';
+import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'theme/app_theme.dart';
+import 'app.dart';
+import 'services/storage_service.dart';
+import 'services/api_service.dart'; // 👈 AÑADIR
+import 'controllers/auth_controller.dart';
+import 'controllers/interestSelection_controller.dart';
+import 'controllers/home_feed_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Inicializar servicios
-  await StorageService().init();
-  ApiService().init();
-  
-  // Configurar orientación
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-  
-  // Configurar barra de estado
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Colors.black,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
+  // Inicializar dependencias en orden correcto
+  await Get.putAsync<StorageService>(() => StorageService().init());
+  Get.put<http.Client>(http.Client());
+  Get.put<ApiService>(ApiService());
+  // Inicializar controladores principales
+  Get.put<AuthController>(AuthController());
+  Get.put<InterestSelectionController>(InterestSelectionController());
+  Get.put<HomeFeedController>(HomeFeedController());
 
-  // Inicializar traducción
   var delegate = await LocalizationDelegate.create(
     fallbackLocale: 'es',
-    supportedLocales: ['es', 'en', 'fr', 'de', 'it', 'pt'],
+    supportedLocales: ['es', 'en', 'de', 'fr', 'pt', 'it'],
+    basePath: 'assets/i18n/',
   );
-
-  runApp(LocalizedApp(delegate, const MyApp()));
+  
+  runApp(LocalizedApp(delegate, const NightUpApp()));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+class NightUpApp extends StatelessWidget {
+  const NightUpApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     var localizationDelegate = LocalizedApp.of(context).delegate;
-
-    return LocalizationProvider(
-      state: LocalizationProvider.of(context).state,
-      child: GetMaterialApp(
-        title: 'NightUp',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme,
-        localizationsDelegates: [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-          localizationDelegate,
-        ],
-        supportedLocales: localizationDelegate.supportedLocales,
-        locale: localizationDelegate.currentLocale,
-        initialRoute: AppRoutes.splash,
-        getPages: AppPages.routes,
-        initialBinding: BindingsBuilder(() {
-          Get.put(AuthController());
-          Get.put(UserService());
-        }),
-      ),
+    
+    return GetMaterialApp( 
+      title: 'NightUp',
+      theme: AppTheme.darkTheme,
+      debugShowCheckedModeBanner: false,
+      localizationsDelegates: [
+        localizationDelegate,
+        ...GlobalMaterialLocalizations.delegates,
+      ],
+      supportedLocales: localizationDelegate.supportedLocales,
+      locale: localizationDelegate.currentLocale,
+      home: const App(),
     );
   }
 }

@@ -10,21 +10,33 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
   
-  # UI & Animations
+  # CORE & UI
+  get: ^4.6.5
+  cached_network_image: ^3.3.0
   cupertino_icons: ^1.0.8
   shimmer: ^3.0.0
-  cached_network_image: ^3.3.0
   flutter_staggered_animations: ^1.1.1
   lottie: ^3.1.0
   animations: ^2.0.11
   
-  # Network
+  # MAPAS
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.1
+  table_calendar: ^3.0.9
+
+  # AUTH & NETWORK
+  firebase_auth: ^5.3.1
+  google_sign_in: ^6.2.1
+  firebase_core: ^3.7.0
+  http: ^1.1.0
   dio: ^5.4.0
+  socket_io_client: ^2.0.0
   pretty_dio_logger: ^1.3.1
-  
-  # State Management
-  get: ^4.6.5
+  # UTILS
+  geolocator: ^10.1.0
   
   # Storage
   shared_preferences: ^2.2.2
@@ -49,6 +61,14 @@ dependencies:
   url_launcher: ^6.2.4
   permission_handler: ^11.2.0
 
+  # NUEVAS PARA POSTS Y FEEDS
+  video_player: ^2.8.2
+  chewie: ^1.5.0
+  visibility_detector: ^0.4.0+2
+  photo_view: ^0.14.0
+  extended_image: ^7.0.1
+  like_button: ^2.0.7
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -60,6 +80,10 @@ flutter:
     - assets/i18n/
     - assets/images/
     - assets/animations/
+    - assets/images/default-avatar.png
+    - assets/images/default-cover.jpg
+    - assets/images/default-event.jpg
+    - assets/images/google.png
   
   fonts:
     - family: Poppins
