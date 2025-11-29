@@ -5,8 +5,11 @@ import '../services/storage_service.dart';
 import '../services/google_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:js' as js;
+import 'dart:convert';
 
 class AuthController extends GetxController {
+    // Controla si se debe mostrar la sugerencia de intereses tras renovar token
+    final RxBool showOnboardingSuggestion = false.obs;
   // ================== SERVICIOS ==================
   final ApiService _apiService = Get.find<ApiService>();
 
@@ -306,6 +309,8 @@ Future<Map<String, dynamic>> googleLoginWeb(String idToken) async { // ← Cambi
       await _saveAuthData();
 
       print('✅ Token refreshed successfully');
+      // Mostrar sugerencia de intereses tras renovar token
+      showOnboardingSuggestion.value = true;
       return true;
     } catch (e) {
       print('❌ Error refreshing token: $e');
@@ -369,6 +374,18 @@ Future<Map<String, dynamic>> googleLoginWeb(String idToken) async { // ← Cambi
     }
   }
 
+  Future<void> _clearAuthData() async {
+    try {
+      final storage = Get.find<StorageService>();
+      await storage.remove('token');
+      await storage.remove('refreshToken');
+      await storage.remove('user');
+      print('✅ Auth data cleared');
+    } catch (e) {
+      print('Error clearing auth data: $e');
+    }
+  }
+
   // ================== STORAGE ==================
   Future<void> _saveAuthData() async {
     try {
@@ -396,7 +413,15 @@ Future<Map<String, dynamic>> googleLoginWeb(String idToken) async { // ← Cambi
         _refreshToken.value = refreshToken ?? '';
         if (userData != null) {
           try {
-            _currentUser.value = User.fromJson(userData);
+            // Si userData es String, decodificarlo
+            if (userData is String) {
+              final decoded = jsonDecode(userData);
+              _currentUser.value = User.fromJson(decoded);
+            } else if (userData is Map<String, dynamic>) {
+              _currentUser.value = User.fromJson(userData);
+            } else {
+              print('User data format not recognized');
+            }
             print('✅ User data loaded: ${_currentUser.value?.username}');
           } catch (e) {
             print('Error parsing user data: $e');
@@ -406,22 +431,7 @@ Future<Map<String, dynamic>> googleLoginWeb(String idToken) async { // ← Cambi
     } catch (e) {
       print('Error loading auth data: $e');
     }
-  }
-
-  Future<void> _clearAuthData() async {
-    try {
-      final storage = Get.find<StorageService>();
-      await storage.remove('token');
-      await storage.remove('refreshToken');
-      await storage.remove('user');
-      print('✅ Auth data cleared');
-    } catch (e) {
-      print('Error clearing auth data: $e');
-    }
-  }
-
-  // ================== SECURITY QUESTIONS ==================
-  Future<SecurityQuestionResponse> getSecurityQuestions() async {
-    return await _apiService.getSecurityQuestions();
+    // The following block was invalid for a Future<void> return type and has been removed.
+    // If you need to check auth status, use the checkAuthStatus() method instead.
   }
 }

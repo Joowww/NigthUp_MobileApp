@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'dart:developer';
 import '../models/post.dart';
 import '../models/event.dart';
 import '../services/api_service.dart';
+import '../theme/colors.dart';
 
 class HomeFeedController extends GetxController with GetSingleTickerProviderStateMixin {
   final ApiService _apiService = Get.find<ApiService>();
@@ -18,11 +21,12 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
   var isLoadingFriends = true.obs;
   var currentPage = 0.obs;
 
+  // Variable para recordar la página actual cuando volvemos de detalles
+  var lastViewedPage = 0.obs;
+
   @override
   void onInit() {
     tabController = TabController(length: 2, vsync: this);
-    
-    // LISTENER CORREGIDO: Forzar actualización cuando cambia el tab
     tabController.addListener(_handleTabChange);
 
     fetchDiscoverEvents();
@@ -30,68 +34,73 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
     super.onInit();
   }
 
-  // NUEVO: Manejar cambio de tabs
   void _handleTabChange() {
     if (tabController.indexIsChanging) {
-      update(['tab_selection', 'discover_feed', 'friends_feed']); // Actualizar múltiples IDs
+      update(['tab_selection', 'discover_feed', 'friends_feed']);
     }
   }
 
   // Obtener eventos para el feed Discover (Para Ti)
   void fetchDiscoverEvents() async {
+    final userId = _apiService.getUserId();
+    if (userId == null) {
+      log('⚠️ No token, no se cargan eventos');
+      isLoadingDiscover.value = false;
+      return;
+    }
     isLoadingDiscover.value = true;
     try {
-      print('🔄 Fetching events from /event endpoint...');
+      log('🔄 Fetching events from /event endpoint...');
       
-      // Usar el endpoint general de eventos que YA TIENES
       final response = await _apiService.get('/event?limit=20');
       
-      print('✅ Events response: ${response.data}');
-      
-      // Tu endpoint devuelve { events: [], pagination: {} }
       if (response.data is Map && response.data['events'] is List) {
-        discoverEvents.value = (response.data['events'] as List)
-            .map((i) => Event.fromJson(i))
-            .toList();
+        final eventsList = response.data['events'] as List;
+        log('📋 Found ${eventsList.length} events');
         
-        print('✅ Loaded ${discoverEvents.length} events from /event endpoint');
+        discoverEvents.value = eventsList.map((i) {
+          return Event.fromJson(i);
+        }).toList();
+        
+        // CARGAR ESTADOS DE LIKE DESPUÉS DE OBTENER LOS EVENTOS
+        await loadLikeStatusForEvents();
       } else {
-        print('❌ Unexpected response format: ${response.data}');
+        log('❌ Unexpected response format: ${response.data}');
         discoverEvents.value = [];
       }
       
     } catch (e) {
-      print('❌ Error loading events: $e');
-      Get.snackbar(
-        'Error', 
-        'No se pudo cargar los eventos: $e', 
-        snackPosition: SnackPosition.BOTTOM
-      );
+      log('❌ Error loading events: $e');
       discoverEvents.value = [];
     } finally {
       isLoadingDiscover.value = false;
-      update(['discover_feed']); // Asegurar actualización
+      update(['discover_feed']);
     }
   }
 
   // Obtener posts de amigos
   void fetchFriendsPosts() async {
+    final userId = _apiService.getUserId();
+    if (userId == null) {
+      log('⚠️ No token, no se cargan posts de amigos');
+      isLoadingFriends.value = false;
+      return;
+    }
     isLoadingFriends.value = true;
     try {
-      print('🔄 Fetching friends posts from backend...');
+      log('🔄 Fetching friends posts from backend...');
       
-      // Usar el endpoint real de tu backend para el feed de amigos
       final response = await _apiService.get('/post/feed/friends');
       
-      print('✅ Friends posts response: ${response.data}');
+      log('✅ Friends posts response: ${response.data}');
       
       friendsPosts.value = (response.data as List)
           .map((i) => Post.fromFriendPostJson(i))
           .toList();
 
-      print('✅ Loaded ${friendsPosts.length} posts from friends');
+      log('✅ Loaded ${friendsPosts.length} posts from friends');
     } catch (e) {
-      print('❌ Error loading friends posts: $e');
+      log('❌ Error loading friends posts: $e');
       Get.snackbar(
         'Error', 
         'No se pudo cargar el feed de Amigos: $e', 
@@ -99,7 +108,259 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
       );
     } finally {
       isLoadingFriends.value = false;
-      update(['friends_feed']); // Asegurar actualización
+      update(['friends_feed']);
+    }
+  }
+
+  // --- MÉTODOS DE INTERACCIÓN CON EVENTOS CORREGIDOS ---
+
+  Future<void> toggleLikeEvent(Event event) async {
+    try {
+      final apiService = Get.find<ApiService>();
+      final userId = apiService.getUserId();
+      
+      if (userId == null) {
+        Get.snackbar('Error', 'Usuario no identificado');
+        return;
+      }
+
+      log('🎯 Toggling like for event: ${event.id}');
+      log('📊 Current state - Liked: ${event.isLiked}, Likes: ${event.likes}');
+
+      // Actualizar UI inmediatamente para mejor experiencia de usuario
+      final index = discoverEvents.indexWhere((e) => e.id == event.id);
+      if (index != -1) {
+        if (event.isLiked) {
+          discoverEvents[index] = event.copyWith(
+            isLiked: false,
+            likes: event.likes - 1,
+          );
+        } else {
+          discoverEvents[index] = event.copyWith(
+            isLiked: true,
+            likes: event.likes + 1,
+          );
+        }
+        update(['discover_feed', 'current_page']);
+      }
+
+      // Hacer la llamada API - ENVIAR CUERPO VACÍO para evitar errores de validación
+      if (event.isLiked) {
+        await apiService.post('/event/${event.id}/unlike', data: {});
+        log('✅ Like removed from event: ${event.id}');
+      } else {
+        await apiService.post('/event/${event.id}/like', data: {});
+        log('✅ Like added to event: ${event.id}');
+      }
+      
+    } catch (e) {
+      log('❌ Error toggling like: $e');
+      // Revertir cambios en caso de error
+      final index = discoverEvents.indexWhere((e) => e.id == event.id);
+      if (index != -1) {
+        discoverEvents[index] = event; // Volver al estado original
+        update(['discover_feed', 'current_page']);
+      }
+      
+      Get.snackbar(
+        'Error',
+        'No se pudo actualizar el like: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> shareEvent(Event event) async {
+    try {
+      final shareText = '¡Mira este evento: ${event.title} en ${event.venue}! ${event.displayPrice} - ${event.formattedDate}';
+      final eventUrl = 'https://nightup.com/events/${event.id}';
+      
+      log('📤 Sharing event: ${event.id}');
+      
+      // Diálogo simple y funcional que SIEMPRE funciona
+      await Get.dialog(
+        Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.neonGradient,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.share, color: Colors.white, size: 24),
+                      SizedBox(width: 12),
+                      Text(
+                        'Compartir Evento',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Content
+                Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Copia el texto para compartir:',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.glassWhite,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.glassBorder),
+                        ),
+                        child: SelectableText(
+                          '$shareText\n$eventUrl',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Selecciona y copia el texto',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Actions - Botón simple que SIEMPRE funciona
+                Container(
+                  padding: EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () {
+                            Get.back(); // Cerrar el diálogo
+                          },
+                          style: TextButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Cerrar',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        barrierDismissible: true, // Permitir cerrar haciendo clic fuera
+      );
+      
+    } catch (e) {
+      log('❌ Error sharing event: $e');
+      // Fallback: mostrar snackbar simple
+      Get.snackbar(
+        'Compartir',
+        'Texto listo para compartir: ${event.title}',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: Duration(seconds: 3),
+      );
+    }
+  }
+
+  Future<void> loadLikeStatusForEvents() async {
+    try {
+      final apiService = Get.find<ApiService>();
+      final userId = apiService.getUserId();
+      
+      if (userId == null) {
+        log('⚠️ No user ID found for loading like status');
+        return;
+      }
+      
+      log('🔄 Loading like status for ${discoverEvents.length} events...');
+      
+      for (int i = 0; i < discoverEvents.length; i++) {
+        final event = discoverEvents[i];
+        try {
+          final response = await apiService.get('/event/${event.id}/like-status');
+          final isLiked = response.data['liked'] ?? false;
+          final likesCount = response.data['likesCount'] ?? event.likes;
+          
+          // Verificar si el usuario está unido al evento
+          final isJoined = await _checkUserParticipation(event.id, userId);
+          
+          discoverEvents[i] = event.copyWith(
+            isLiked: isLiked,
+            likes: likesCount,
+            isJoined: isJoined,
+          );
+          
+          log('   ✅ Event ${event.id}: Liked=$isLiked, Likes=$likesCount, Joined=$isJoined');
+        } catch (e) {
+          debugPrint('❌ Error loading like status for event ${event.id}: $e');
+        }
+      }
+      
+      update(['discover_feed']);
+      log('✅ Like status loaded for all events');
+    } catch (e) {
+      debugPrint('❌ Error loading like status: $e');
+    }
+  }
+
+  // Método para verificar participación del usuario
+  Future<bool> _checkUserParticipation(String eventId, String userId) async {
+    try {
+      final response = await _apiService.get('/event/$eventId');
+      if (response.data['participants'] is List) {
+        final participants = response.data['participants'] as List;
+        return participants.any((participant) => 
+          participant != null && participant.toString() == userId
+        );
+      }
+      return false;
+    } catch (e) {
+      debugPrint('❌ Error checking user participation: $e');
+      return false;
     }
   }
 
@@ -113,6 +374,33 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
   void changeTab(int index) {
     tabController.animateTo(index);
     update(['tab_selection', 'discover_feed', 'friends_feed']);
+  }
+
+  // Método para refrescar estados cuando se vuelve de EventDetail
+  void refreshEventStates() {
+    if (discoverEvents.isNotEmpty) {
+      loadLikeStatusForEvents();
+    }
+  }
+
+  // Guardar la página actual antes de ir a detalles
+  void saveCurrentPage() {
+    lastViewedPage.value = currentPage.value;
+    log('💾 Saved current page: ${lastViewedPage.value}');
+  }
+
+  // Restaurar la página guardada
+  void restoreLastPage() {
+    if (discoverEvents.isNotEmpty && lastViewedPage.value < discoverEvents.length) {
+      currentPage.value = lastViewedPage.value;
+      if (pageController.hasClients) {
+        pageController.jumpToPage(lastViewedPage.value);
+      }
+      log('📖 Restored to page: ${lastViewedPage.value}');
+      update(['current_page']);
+    } else {
+      log('⚠️ Cannot restore page - events: ${discoverEvents.length}, last page: ${lastViewedPage.value}');
+    }
   }
 
   @override

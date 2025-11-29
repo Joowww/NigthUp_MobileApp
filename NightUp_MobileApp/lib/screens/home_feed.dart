@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../widgets/glass_card.dart';
@@ -6,8 +7,10 @@ import '../controllers/home_feed_controller.dart';
 import '../models/event.dart';
 import '../models/post.dart';
 import '../widgets/image_with_fallback.dart'; 
+import '../widgets/menu_modal.dart';
+import '../controllers/auth_controller.dart';
 
-class HomeFeed extends GetView<HomeFeedController> {
+class HomeFeed extends StatefulWidget {
   final void Function(String eventId)? onEventClick;
 
   const HomeFeed({
@@ -16,19 +19,85 @@ class HomeFeed extends GetView<HomeFeedController> {
   });
 
   @override
+  State<HomeFeed> createState() => _HomeFeedState();
+}
+
+class _HomeFeedState extends State<HomeFeed> {
+  final HomeFeedController controller = Get.find<HomeFeedController>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Restaurar la página cuando volvemos a esta pantalla
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (controller.lastViewedPage.value > 0) {
+        controller.restoreLastPage();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final AuthController authController = Get.find<AuthController>();
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Contenido principal
           _buildContent(),
-          
-          // Navegación superior - COMPLETAMENTE PEGADO AL BORDE
           _buildTopNavigation(),
-
-          // Acciones inferiores
           _buildBottomActions(),
+          // Sugerencia de intereses tras renovar token y si onboarding está incompleto
+          Obx(() {
+            final bool onboardingDone = authController.hasCompletedOnboarding() == true;
+            if (authController.isLoggedIn &&
+              !authController.isLoading &&
+              !onboardingDone &&
+              authController.showOnboardingSuggestion.value) {
+              return Positioned(
+                top: 80,
+                left: 20,
+                right: 20,
+                child: Material(
+                  color: Colors.transparent,
+                  child: GlassCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.star, color: AppColors.neonPink),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              '¡Completa tus intereses para mejorar tus recomendaciones!',
+                              style: TextStyle(color: Colors.white, fontSize: 15),
+                            ),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.neonPink,
+                            ),
+                            onPressed: () {
+                              Get.toNamed('/interestSelection');
+                            },
+                            child: const Text('Completar', style: TextStyle(color: Colors.white)),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () {
+                              authController.showOnboardingSuggestion.value = false;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            } else {
+              return const SizedBox.shrink();
+            }
+          }),
         ],
       ),
     );
@@ -132,7 +201,7 @@ class HomeFeed extends GetView<HomeFeedController> {
         ),
         
         _buildEventContent(event),
-        _buildDetailsButton(event), // Botón separado
+        _buildDetailsButton(event),
       ],
     );
   }
@@ -141,20 +210,19 @@ class HomeFeed extends GetView<HomeFeedController> {
     return Positioned(
       left: 20,
       right: 20,
-      bottom: 70, // Espacio para el botón + margen del nav bar
+      bottom: 70,
       child: Container(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(Get.context!).size.height * 0.6, // Límite máximo de altura
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
         ),
-        child: SingleChildScrollView( // Permite scroll si el contenido es muy largo
+        child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Título - con margen superior para evitar solapamiento con botones de like
               Container(
                 margin: const EdgeInsets.only(
-                  top: 50, // Espacio para los botones de like
-                  right: 80, // LÍMITE: margen derecho para que no se solape con botones
+                  top: 50,
+                  right: 80,
                 ),
                 child: Text(
                   event.title,
@@ -170,13 +238,13 @@ class HomeFeed extends GetView<HomeFeedController> {
                       ),
                     ],
                   ),
-                  maxLines: 3, // Máximo 3 líneas
-                  overflow: TextOverflow.ellipsis, // Puntos suspensivos si es muy largo
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(height: 8),
               Container(
-                margin: const EdgeInsets.only(right: 80), // Mismo margen para la ubicación
+                margin: const EdgeInsets.only(right: 80),
                 child: Text(
                   event.venue,
                   style: const TextStyle(
@@ -260,16 +328,21 @@ class HomeFeed extends GetView<HomeFeedController> {
     );
   }
 
-  // Botón de detalles posicionado justo encima del nav bar
   Widget _buildDetailsButton(Event event) {
     return Positioned(
       left: 20,
       right: 20,
-      bottom: 10, // Justo encima del nav bar
+      bottom: 10,
       child: GestureDetector(
         onTap: () {
-          if (onEventClick != null) {
-            onEventClick!(event.id);
+          final eventId = event.id;
+          log('🖱️ Details Button clicked - Event ID: $eventId');
+          
+          // Guardar la página actual antes de navegar
+          controller.saveCurrentPage();
+          
+          if (widget.onEventClick != null) {
+            widget.onEventClick!(eventId);
           }
         },
         child: Container(
@@ -308,7 +381,7 @@ class HomeFeed extends GetView<HomeFeedController> {
         if (controller.isLoadingFriends.value) {
           return Container(
             color: Colors.black,
-            padding: const EdgeInsets.only(top: 80), // Ajustado por la navegación superior
+            padding: const EdgeInsets.only(top: 80),
             child: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
           );
         }
@@ -316,7 +389,7 @@ class HomeFeed extends GetView<HomeFeedController> {
         if (controller.friendsPosts.isEmpty) {
           return Container(
             color: Colors.black,
-            padding: const EdgeInsets.only(top: 80), // Ajustado por la navegación superior
+            padding: const EdgeInsets.only(top: 80),
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -342,7 +415,7 @@ class HomeFeed extends GetView<HomeFeedController> {
         return Container(
           color: Colors.black,
           child: ListView.builder(
-            padding: const EdgeInsets.only(top: 80, bottom: 80), // Ajustado por la navegación superior
+            padding: const EdgeInsets.only(top: 80, bottom: 80),
             itemCount: controller.friendsPosts.length,
             itemBuilder: (context, index) {
               final post = controller.friendsPosts[index];
@@ -451,12 +524,11 @@ class HomeFeed extends GetView<HomeFeedController> {
       id: 'tab_selection',
       builder: (controller) {
         return Positioned(
-          top: 0, // COMPLETAMENTE PEGADO AL BORDE SUPERIOR
+          top: 0,
           left: 0,
           right: 0,
           child: Container(
-            // SIN MARGEN - COMPLETAMENTE PEGADO
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Padding interno
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
@@ -501,7 +573,7 @@ class HomeFeed extends GetView<HomeFeedController> {
                   child: IconButton(
                     icon: const Icon(Icons.menu, color: Colors.white, size: 20),
                     onPressed: () {
-                      // Menú de opciones
+                       Get.to(() => const MenuModal());
                     },
                   ),
                 ),
@@ -517,7 +589,6 @@ class HomeFeed extends GetView<HomeFeedController> {
     return GetBuilder<HomeFeedController>(
       id: 'current_page',
       builder: (controller) {
-        // Solo mostrar en el tab Discover (Para Ti)
         if (controller.tabController.index != 0 || controller.discoverEvents.isEmpty) {
           return const SizedBox.shrink();
         }
@@ -525,13 +596,28 @@ class HomeFeed extends GetView<HomeFeedController> {
         final event = controller.discoverEvents[controller.currentPage.value.clamp(0, controller.discoverEvents.length - 1)];
         
         return Positioned(
-          bottom: 70, // Justo encima del botón "Ver Detalles"
+          bottom: 70,
           right: 24,
           child: Column(
             children: [
-              _buildActionButton(Icons.favorite, '${event.likes}'),
+              _buildActionButton(
+                event.isLiked ? Icons.favorite : Icons.favorite_border,
+                '${event.likes}',
+                () {
+                  log('🖱️ LIKE BUTTON PRESSED - Event: ${event.id}');
+                  controller.toggleLikeEvent(event);
+                },
+                isLiked: event.isLiked,
+              ),
               const SizedBox(height: 16),
-              _buildActionButton(Icons.share, 'Compartir'),
+              _buildActionButton(
+                Icons.share,
+                'Compartir',
+                () {
+                  log('🖱️ SHARE BUTTON PRESSED - Event: ${event.id}');
+                  controller.shareEvent(event);
+                },
+              ),
             ],
           ),
         );
@@ -539,16 +625,18 @@ class HomeFeed extends GetView<HomeFeedController> {
     );
   }
 
-  Widget _buildActionButton(IconData icon, String text) {
+  Widget _buildActionButton(IconData icon, String text, VoidCallback onTap, {bool isLiked = false}) {
     return Column(
       children: [
         GestureDetector(
-          onTap: () {
-            // Aquí puedes agregar la lógica para like/share
-          },
+          onTap: onTap,
           child: GlassCard(
             padding: const EdgeInsets.all(12),
-            child: Icon(icon, color: Colors.white, size: 24),
+            child: Icon(
+              icon, 
+              color: isLiked ? Colors.red : Colors.white, 
+              size: 24
+            ),
           ),
         ),
         const SizedBox(height: 4),

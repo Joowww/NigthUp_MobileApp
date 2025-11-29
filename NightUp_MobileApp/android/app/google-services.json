@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "274987323558",
+    "project_id": "nightup-firebase",
+    "storage_bucket": "nightup-firebase.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:274987323558:android:b7dfd9f222bfc9ba3de467",
+        "android_client_info": {
+          "package_name": "com.example.ea_seminari_9"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAx70xcYzqKWM4qPfgfC2xQCocw5Nv669I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

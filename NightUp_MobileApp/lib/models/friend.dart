@@ -19,8 +19,8 @@ class Friend {
 
   factory Friend.fromJson(Map<String, dynamic> json) {
     return Friend(
-      id: json['_id'] ?? json['id'],
-      username: json['username'],
+      id: (json['_id']?.toString() ?? json['id']?.toString() ?? ''),
+      username: json['username']?.toString() ?? 'Desconocido',
       profilePictureUrl: json['profilePictureUrl'],
       isOnline: json['isOnline'] ?? false,
       lat: json['location']?['coordinates']?[1],

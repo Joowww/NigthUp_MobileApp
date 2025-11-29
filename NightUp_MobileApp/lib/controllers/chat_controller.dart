@@ -1,8 +1,10 @@
+import 'dart:developer';
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
 
 class ChatController extends GetxController {
+    RxList<dynamic> get polls => _socketService.polls;
   final ApiService _apiService = Get.find<ApiService>();
   final SocketService _socketService = Get.find<SocketService>();
   final RxList<Map<String, dynamic>> conversations = <Map<String, dynamic>>[].obs;
@@ -11,6 +13,8 @@ class ChatController extends GetxController {
   final RxBool isLoading = true.obs;
   final RxBool isTyping = false.obs;
   final RxList<String> typingUsers = <String>[].obs;
+  final RxInt unreadBadge = 0.obs;
+  final RxMap<String, dynamic> friendStatus = <String, dynamic>{}.obs;
 
   @override
   void onInit() {
@@ -20,22 +24,44 @@ class ChatController extends GetxController {
   }
 
   void _setupSocketListeners() {
-    ever<List<Map<String, dynamic>>>(_socketService.messages as RxList<Map<String, dynamic>>, (newMessages) {
-      // Actualizar mensajes cuando lleguen nuevos via socket
-      messages.assignAll(newMessages);
+    // Escuchar mensajes nuevos del socket y asegurarse de que sean Map<String, dynamic>
+    ever<List<dynamic>>(_socketService.messages, (newMessages) {
+      // Filtrar y convertir solo los mensajes que sean Map<String, dynamic>
+      final safeMessages = newMessages
+          .whereType<Map<String, dynamic>>()
+          .toList();
+      messages.assignAll(safeMessages);
+    });
+
+    ever<int>(_socketService.unreadNotifications, (count) {
+      unreadBadge.value = count;
+    });
+
+    ever<Map<String, dynamic>>(_socketService.friendStatus, (status) {
+      friendStatus.assignAll(status);
     });
   }
 
   void fetchConversations() async {
+    final userId = _apiService.getUserId();
+    if (userId == null) {
+      log('⚠️ No token, no se cargan conversaciones');
+      isLoading.value = false;
+      return;
+    }
     isLoading.value = true;
     try {
       final response = await _apiService.get('/chat');
       if (response.data is List) {
-        conversations.assignAll(List<Map<String, dynamic>>.from(response.data));
+        // Asegurarse de que cada item sea Map<String, dynamic>
+        final safeList = response.data
+            .whereType<Map<String, dynamic>>()
+            .toList();
+        conversations.assignAll(safeList);
       } else {
         conversations.clear();
       }
-      print('✅ Loaded ${conversations.length} conversations');
+      log('✅ Loaded ${conversations.length} conversations');
     } catch (e) {
       Get.snackbar('Error', 'No se pudieron cargar las conversaciones: $e');
     } finally {
@@ -45,14 +71,17 @@ class ChatController extends GetxController {
 
   void fetchMessages(String conversationId) async {
     try {
-      final response = await _apiService.get('/chat/$conversationId/messages');
+      final response = await _apiService.get('/chat/messages/$conversationId');
       if (response.data is List) {
-        messages.assignAll(List<Map<String, dynamic>>.from(response.data));
+        final safeList = response.data
+            .whereType<Map<String, dynamic>>()
+            .toList();
+        messages.assignAll(safeList);
       } else {
         messages.clear();
       }
       _socketService.joinConversation(conversationId);
-      print('✅ Loaded ${messages.length} messages for conversation $conversationId');
+      log('✅ Loaded ${messages.length} messages for conversation $conversationId');
     } catch (e) {
       Get.snackbar('Error', 'No se pudieron cargar los mensajes: $e');
     }
@@ -85,6 +114,10 @@ class ChatController extends GetxController {
   void setCurrentConversation(Map<String, dynamic> conversation) {
     currentConversation.value = conversation;
     fetchMessages(conversation['_id']);
+    // Marcar mensajes como leídos y resetear badge
+    unreadBadge.value = 0;
+    _socketService.resetUnreadNotifications();
+    // Aquí podrías llamar a la API para marcar como leídos en backend si es necesario
   }
 
   void createGroupChat(String name, List<String> participantIds) async {

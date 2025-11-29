@@ -13,7 +13,13 @@ import 'screens/event_detail_screen.dart';
 import 'screens/panic_screen.dart';
 import 'screens/event_calendar_screen.dart';
 import 'screens/full_map_screen.dart';
+import 'widgets/menu_modal.dart';
 import 'widgets/bottom_navigation.dart';
+import 'controllers/auth_controller.dart';
+import 'package:get/get.dart';
+import 'dart:developer';
+import 'services/socket_service.dart';
+import 'services/fcm_service.dart';
 
 class App extends StatefulWidget {
   const App({super.key});
@@ -25,14 +31,53 @@ class App extends StatefulWidget {
 class _AppState extends State<App> {
   AppScreen _currentScreen = AppScreen.splash;
   int _currentTab = 0;
+  String? _selectedEventId;
 
-  // Estados para navegación entre pantallas
-  int _selectedEventId = 1;
+  @override
+  void initState() {
+    super.initState();
+    _initApp();
+  }
+
+  void _initApp() async {
+    // Inicializar FCM solo una vez al arranque
+    await FcmService.initializeFCM();
+    _checkAuthStatus();
+  }
+
+  void _checkAuthStatus() async {
+    final AuthController authController = Get.find<AuthController>();
+    final status = await authController.checkAuthStatus();
+    
+    print('🔐 Auth status: $status');
+    
+    if (status['isLoggedIn'] == true) {
+      if (status['onboardingComplete'] == true) {
+        _changeScreen(AppScreen.main);
+      } else {
+        _changeScreen(AppScreen.interestSelection);
+      }
+    } else {
+      _changeScreen(AppScreen.login);
+    }
+  }
 
   void _changeScreen(AppScreen screen) {
+    // Inicializa controladores privados solo al entrar a la app principal
+    if (screen == AppScreen.main) {
+      _initPrivateControllers();
+    }
     setState(() {
       _currentScreen = screen;
     });
+  }
+
+  void _initPrivateControllers() {
+    // Los controladores y servicios se inicializan ahora solo vía Bindings
+    if (!Get.isRegistered<SocketService>()) {
+      Get.put(SocketService());
+    }
+    // Otros controladores se gestionan por Bindings
   }
 
   void _changeTab(int index) {
@@ -45,7 +90,7 @@ class _AppState extends State<App> {
   Widget _buildCurrentScreen() {
     switch (_currentScreen) {
       case AppScreen.splash:
-        return SplashScreen(onComplete: () => _changeScreen(AppScreen.login));
+        return SplashScreen(onComplete: () => _checkAuthStatus());
       case AppScreen.login:
         return LoginScreen(
           onLogin: () => _changeScreen(AppScreen.main),
@@ -70,7 +115,7 @@ class _AppState extends State<App> {
       case AppScreen.eventDetail:
         return EventDetailScreen(
           onBack: () => _changeScreen(AppScreen.main),
-          eventId: _selectedEventId.toString(),
+          eventId: _selectedEventId ?? '',
         );
       case AppScreen.panic:
         return PanicScreen(onBack: () => _changeScreen(AppScreen.main));
@@ -78,6 +123,8 @@ class _AppState extends State<App> {
         return EventCalendarScreen(onBack: () => _changeScreen(AppScreen.main));
       case AppScreen.fullMap:
         return FullMapScreen(onBack: () => _changeScreen(AppScreen.main));
+      case AppScreen.menuModal:
+        return const MenuModal();
     }
   }
 
@@ -89,14 +136,19 @@ class _AppState extends State<App> {
         children: [
           HomeFeed(
             onEventClick: (eventId) {
+              log('🚀 NAVIGATING TO EVENT DETAIL:');
+              log('   Original eventId: $eventId');
+              log('   Type: [33m[1m[4m${eventId.runtimeType}[0m');
+              log('   Length: ${eventId.length}');
+              // Forzar nueva instancia con UniqueKey y navegación directa
               setState(() {
-                _selectedEventId = int.tryParse(eventId) ?? 0;
+                _selectedEventId = eventId;
                 _currentScreen = AppScreen.eventDetail;
               });
             },
           ),
           SearchScreen(),
-          Container(color: Colors.black), // Camera placeholder
+          Container(color: Colors.black, child: Center(child: Text('Camera', style: TextStyle(color: Colors.white)))), // Camera placeholder
           ChatScreen(),
           UserProfile(
             onSettingsOpen: () => _changeScreen(AppScreen.settings),
@@ -131,4 +183,5 @@ enum AppScreen {
   panic,
   calendar,
   fullMap,
+  menuModal,
 }

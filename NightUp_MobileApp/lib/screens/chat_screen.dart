@@ -1,3 +1,5 @@
+import 'dart:developer';
+import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/chat_controller.dart';
@@ -433,10 +435,9 @@ class _ChatScreenState extends State<ChatScreen> {
           bottom: BorderSide(color: AppColors.glassBorder),
         ),
       ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
+          const Text(
             'Messages',
             style: TextStyle(
               fontSize: 28,
@@ -444,7 +445,28 @@ class _ChatScreenState extends State<ChatScreen> {
               color: Colors.white,
             ),
           ),
-          SizedBox(height: 16),
+          const SizedBox(width: 12),
+          Obx(() {
+            final badge = _chatController.unreadBadge.value;
+            if (badge > 0) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  badge > 99 ? '99+' : '$badge',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/interestSelection_controller.dart';
+import '../controllers/auth_controller.dart'; // Importar AuthController
 import '../theme/colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/gradient_button.dart';
@@ -47,6 +48,19 @@ class _InterestSelectionScreenState extends State<InterestSelectionScreen> {
                   _buildHeader(),
                   const SizedBox(height: 30),
                   _buildContent(),
+                  const SizedBox(height: 30),
+                  // Botón temporal para limpiar sesión y volver a login
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
+                    onPressed: () async {
+                      await Get.find<AuthController>().logout();
+                      // Opcional: recargar la app o navegar a login
+                      Get.offAllNamed('/');
+                    },
+                    child: const Text('Resetear sesión (dev)', style: TextStyle(color: Colors.white)),
+                  ),
                 ],
               ),
             ),

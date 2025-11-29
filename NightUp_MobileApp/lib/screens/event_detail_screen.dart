@@ -1,11 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:developer';
+import 'dart:convert';
+import 'package:dio/dio.dart' as dio;
 import '../theme/colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/image_with_fallback.dart';
 import '../widgets/gradient_button.dart';
 import '../services/api_service.dart';
 import '../models/event.dart';
+import 'friend_profile_screen.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -30,49 +35,124 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   int _likeCount = 0;
   Event? _event;
   bool _isLoading = true;
+  bool _isJoined = false;
+  List<Map<String, dynamic>> _participants = [];
+  bool _loadingParticipants = false;
+  Map<String, dynamic>? _ratingStats;
+  List<Map<String, dynamic>> _eventRatings = [];
+  Map<String, dynamic>? _myRating;
+  bool _loadingRatings = false;
 
   @override
   void initState() {
     super.initState();
     _loadEventData();
+    _fetchRatings();
   }
 
   Future<void> _loadEventData() async {
     try {
-      print('🔄 Loading event details for ID: ${widget.eventId}');
-      
-      // Cargar datos del evento
       final response = await _apiService.get('/event/${widget.eventId}');
-      print('✅ Event data loaded: ${response.data}');
-      
       _event = Event.fromJson(response.data);
-      
-      // Cargar estado de like
+      final userId = _apiService.getUserId();
       try {
         final likeResponse = await _apiService.get('/event/${widget.eventId}/like-status');
+        final isLiked = likeResponse.data['liked'] ?? false;
+        final likesCount = likeResponse.data['likesCount'] ?? _event?.likes ?? 0;
+        bool isJoined = false;
+        if (userId != null && _event != null) {
+          // NUEVO: Usar endpoint rápido para saber si participa
+          final joinResp = await _apiService.get('/event/is-participant/${widget.eventId}/$userId');
+          isJoined = joinResp.data['isParticipant'] == true;
+        }
         setState(() {
-          _isLiked = likeResponse.data['liked'] ?? false;
-          _likeCount = likeResponse.data['likesCount'] ?? _event?.likes ?? 0;
+          _isLiked = isLiked;
+          _likeCount = likesCount;
+          _isJoined = isJoined;
           _isLoading = false;
         });
       } catch (likeError) {
-        print('⚠️ Could not load like status, using default: $likeError');
+        debugPrint('⚠️ Could not load like status: $likeError');
         setState(() {
           _isLiked = false;
           _likeCount = _event?.likes ?? 0;
+          _isJoined = false;
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('❌ Error loading event details: $e');
-      Get.snackbar(
-        'Error',
-        'No se pudo cargar los detalles del evento',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      if (e is dio.DioError && e.response != null) {
+        if (e.response?.statusCode == 401) {
+          log('🔐 Sesión expirada. Por favor inicia sesión de nuevo.');
+          Get.snackbar('Sesión expirada', 'Por favor inicia sesión de nuevo', snackPosition: SnackPosition.BOTTOM);
+        } else if (e.response?.statusCode == 404) {
+          log('❌ Recurso no encontrado (404)');
+          Get.snackbar('No encontrado', 'El evento no existe o fue eliminado', snackPosition: SnackPosition.BOTTOM);
+        } else {
+          log('❌ Error loading event details: $e');
+          Get.snackbar('Error', 'No se pudo cargar los detalles del evento', snackPosition: SnackPosition.BOTTOM);
+        }
+      } else {
+        log('❌ Error loading event details: $e');
+        Get.snackbar('Error', 'No se pudo cargar los detalles del evento', snackPosition: SnackPosition.BOTTOM);
+      }
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _fetchRatings() async {
+    setState(() { _loadingRatings = true; });
+    try {
+      // Stats
+      final statsResp = await _apiService.get('/rating/event/${widget.eventId}/stats');
+      if (statsResp.data is Map) _ratingStats = statsResp.data;
+      // Lista de valoraciones
+      final ratingsResp = await _apiService.get('/rating/event/${widget.eventId}');
+      if (ratingsResp.data is List) {
+        _eventRatings = List<Map<String, dynamic>>.from(ratingsResp.data);
+      } else if (ratingsResp.data is Map && ratingsResp.data['ratings'] is List) {
+        _eventRatings = List<Map<String, dynamic>>.from(ratingsResp.data['ratings']);
+      } else {
+        _eventRatings = [];
+      }
+      // Valoración del usuario actual
+      final storageService = Get.find<dynamic>(); // Use GetStorage or your storage service directly
+      Map<String, dynamic>? userMap;
+      // Try to read as JSON first
+      userMap = storageService.readJson != null ? storageService.readJson('user') : null;
+      if (userMap == null) {
+        // fallback: try to read as Map or decode String
+        final userRaw = storageService.read('user');
+        if (userRaw is Map<String, dynamic>) {
+          userMap = userRaw;
+        } else if (userRaw is String) {
+          try {
+            userMap = json.decode(userRaw);
+          } catch (_) {
+            userMap = null;
+          }
+        }
+      }
+      String? username;
+      if (userMap != null) {
+        username = userMap['username']?.toString() ?? userMap['name']?.toString();
+      }
+      if (username != null) {
+        final myRatingResp = await _apiService.get('/rating/user/$username/event/${widget.eventId}');
+        if (myRatingResp.data is Map && myRatingResp.data['score'] != null) {
+          _myRating = myRatingResp.data;
+        } else {
+          _myRating = null;
+        }
+      }
+    } catch (e) {
+      _ratingStats = null;
+      _eventRatings = [];
+      _myRating = null;
+    } finally {
+      setState(() { _loadingRatings = false; });
     }
   }
 
@@ -81,23 +161,19 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
     try {
       setState(() {
-        // Actualización optimista
         _isLiked = !_isLiked;
         _likeCount = _isLiked ? _likeCount + 1 : _likeCount - 1;
       });
 
       if (_isLiked) {
-        // Like
-        await _apiService.post('/event/${widget.eventId}/like');
-        print('✅ Event liked successfully');
+        await _apiService.post('/event/${widget.eventId}/like', data: {});
+        log('✅ Event liked successfully');
       } else {
-        // Unlike
-        await _apiService.post('/event/${widget.eventId}/unlike');
-        print('✅ Event unliked successfully');
+        await _apiService.post('/event/${widget.eventId}/unlike', data: {});
+        log('✅ Event unliked successfully');
       }
     } catch (e) {
-      print('❌ Error toggling like: $e');
-      // Revertir actualización optimista
+      log('❌ Error toggling like: $e');
       setState(() {
         _isLiked = !_isLiked;
         _likeCount = _isLiked ? _likeCount - 1 : _likeCount + 1;
@@ -105,7 +181,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       
       Get.snackbar(
         'Error',
-        'No se pudo actualizar el like',
+        'No se pudo actualizar el like: $e',
         snackPosition: SnackPosition.BOTTOM,
       );
     }
@@ -115,14 +191,349 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     if (_event == null) return;
 
     final shareText = '¡Mira este evento: ${_event!.title} en ${_event!.venue}! ${_event!.displayPrice} - ${_event!.formattedDate}';
+    final eventUrl = 'https://nightup.com/events/${_event!.id}';
     
-    // Aquí integrarías con el paquete de sharing
-    // Por ejemplo: await Share.share(shareText);
+    log('📤 Sharing event: ${_event!.id}');
     
-    Get.snackbar(
-      'Compartir',
-      'Funcionalidad de compartir pronto disponible',
-      snackPosition: SnackPosition.BOTTOM,
+    try {
+      // Diálogo simple y funcional que SIEMPRE funciona
+      await Get.dialog(
+        Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.neonGradient,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.share, color: Colors.white, size: 24),
+                      SizedBox(width: 12),
+                      Text(
+                        'Compartir Evento',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Content
+                Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Copia el texto para compartir:',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.glassWhite,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.glassBorder),
+                        ),
+                        child: SelectableText(
+                          '$shareText\n$eventUrl',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Selecciona y copia el texto',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Actions - Botón simple que SIEMPRE funciona
+                Container(
+                  padding: EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () {
+                            Get.back(); // Cerrar el diálogo
+                          },
+                          style: TextButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Cerrar',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        barrierDismissible: true, // Permitir cerrar haciendo clic fuera
+      );
+      
+    } catch (e) {
+      log('❌ Error sharing event: $e');
+      // Fallback: mostrar snackbar simple
+      Get.snackbar(
+        'Compartir',
+        'Texto listo para compartir: ${_event!.title}',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: Duration(seconds: 3),
+      );
+    }
+  }
+
+  Future<void> _joinEvent() async {
+    if (_event == null) return;
+    try {
+      final userId = _apiService.getUserId();
+      if (userId == null) {
+        Get.snackbar(
+          'Error',
+          'No se pudo identificar al usuario',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+      if (!_isJoined) {
+        await _apiService.post('/event/${widget.eventId}/join', data: {});
+        setState(() {
+          _isJoined = true;
+        });
+        // NUEVO: Verificar estado real tras unirse
+        final joinResp = await _apiService.get('/event/is-participant/${widget.eventId}/$userId');
+        setState(() {
+          _isJoined = joinResp.data['isParticipant'] == true;
+        });
+        Get.snackbar(
+          '¡Unido!',
+          'Te has unido al evento [1m${_event!.title}[0m',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      } else {
+        await _apiService.post('/event/${widget.eventId}/leave', data: {});
+        setState(() {
+          _isJoined = false;
+        });
+        // NUEVO: Verificar estado real tras salir
+        final joinResp = await _apiService.get('/event/is-participant/${widget.eventId}/$userId');
+        setState(() {
+          _isJoined = joinResp.data['isParticipant'] == true;
+        });
+        Get.snackbar(
+          '¡Saliste!',
+          'Has salido del evento [1m${_event!.title}[0m',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error in join/leave: $e');
+      Get.snackbar(
+        'Error',
+        'No se pudo actualizar la participación: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  Future<void> _showParticipantsDialog() async {
+    setState(() {
+      _loadingParticipants = true;
+    });
+    try {
+      final response = await _apiService.get('/event/${widget.eventId}/participants');
+      List<dynamic> data = [];
+      if (response.data is Map && response.data['participants'] is List) {
+        data = response.data['participants'];
+      } else if (response.data is List) {
+        data = response.data;
+      }
+      _participants = data.cast<Map<String, dynamic>>();
+    } catch (e) {
+      _participants = [];
+    } finally {
+      setState(() {
+        _loadingParticipants = false;
+      });
+    }
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        if (_loadingParticipants) {
+          return const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+          );
+        }
+        if (_participants.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(child: Text('No hay participantes', style: TextStyle(color: Colors.white70))),
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.all(24),
+          itemCount: _participants.length,
+          separatorBuilder: (_, __) => const Divider(color: Colors.white12),
+          itemBuilder: (context, index) {
+            final user = _participants[index];
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundImage: user['avatar'] != null && user['avatar'].toString().isNotEmpty
+                  ? NetworkImage(user['avatar'])
+                  : const AssetImage('assets/images/default-avatar.jpg') as ImageProvider,
+                backgroundColor: Colors.grey[900],
+              ),
+              title: Text(user['username'] ?? 'Usuario', style: const TextStyle(color: Colors.white)),
+              subtitle: Text(user['_id'] ?? '', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              onTap: () {
+                Navigator.of(context).pop();
+                Get.to(() => FriendProfileScreen(friendId: user['_id']));
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showRatingDialog({bool edit = false}) async {
+    final TextEditingController commentCtrl = TextEditingController(text: (edit && _myRating != null) ? (_myRating!['comment'] ?? '') : '');
+    int score = edit ? (_myRating?['score'] ?? 5) : 5;
+    final storageService = Get.find<dynamic>(); // Use GetStorage or your storage service directly
+    final user = storageService.read('user');
+    String? username;
+    if (user is String) {
+      try {
+        dynamic decoded;
+        try {
+          decoded = json.decode(user);
+        } catch (_) {
+          decoded = null;
+        }
+        username = (decoded != null ? (decoded['username'] ?? decoded['name']) : null)?.toString();
+      } catch (_) {}
+    } else if (user is Map && user['username'] != null) {
+      username = user['username'].toString();
+    }
+    if (username == null) return;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.black,
+          title: Text(edit ? 'Editar valoración' : 'Valorar evento', style: const TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) => IconButton(
+                  icon: Icon(i < score ? Icons.star : Icons.star_border, color: Colors.amber),
+                  onPressed: () { score = i + 1; setState(() {}); },
+                )),
+              ),
+              TextField(
+                controller: commentCtrl,
+                maxLines: 3,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'Comentario (opcional)',
+                  hintStyle: TextStyle(color: Colors.white54),
+                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white10,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  if (edit && _myRating != null) {
+                    await _apiService.patch('/rating/${_myRating!['_id']}', data: {
+                      'score': score,
+                      'comment': commentCtrl.text,
+                    });
+                  } else {
+                    await _apiService.post('/rating', data: {
+                      'eventId': widget.eventId,
+                      'username': username,
+                      'score': score,
+                      'comment': commentCtrl.text,
+                    });
+                  }
+                  Navigator.of(context).pop();
+                  await _fetchRatings();
+                  Get.snackbar('¡Gracias!', 'Tu valoración ha sido guardada', snackPosition: SnackPosition.BOTTOM);
+                } catch (e) {
+                  Get.snackbar('Error', 'No se pudo guardar la valoración', snackPosition: SnackPosition.BOTTOM);
+                }
+              },
+              child: Text(edit ? 'Actualizar' : 'Enviar'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -198,6 +609,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 children: [
                   ImageWithFallback(
                     imageUrl: event.safeImageUrl,
+                    fallbackAsset: 'assets/images/default-event.jpg',
                     width: double.infinity,
                     height: double.infinity,
                     fit: BoxFit.cover,
@@ -244,7 +656,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     _isLiked ? Icons.favorite : Icons.favorite_border,
                     color: _isLiked ? Colors.red : Colors.white,
                   ),
-                  onPressed: _toggleLike, // BOTÓN FUNCIONAL
+                  onPressed: _toggleLike,
                 ),
               ),
               Container(
@@ -255,7 +667,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 ),
                 child: IconButton(
                   icon: const Icon(Icons.share, color: Colors.white),
-                  onPressed: _shareEvent, // BOTÓN FUNCIONAL
+                  onPressed: _shareEvent,
                 ),
               ),
             ],
@@ -266,7 +678,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title and venue
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -316,7 +727,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   
                   const SizedBox(height: 16),
                   
-                  // Tags
                   if (event.tags.isNotEmpty)
                     Wrap(
                       spacing: 8,
@@ -342,7 +752,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   
                   const SizedBox(height: 24),
                   
-                  // Quick info cards
                   GridView.count(
                     crossAxisCount: 2,
                     shrinkWrap: true,
@@ -380,7 +789,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   
                   const SizedBox(height: 24),
                   
-                  // Description
                   if (event.description.isNotEmpty)
                     GlassCard(
                       child: Padding(
@@ -412,10 +820,203 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   
                   const SizedBox(height: 24),
                   
-                  // Join button
-                  GradientButton(
-                    onPressed: _joinEvent, // BOTÓN FUNCIONAL
-                    text: 'Join Event',
+                  // BOTÓN JOIN/LEAVE MEJORADO - Ahora funciona correctamente
+                  _isJoined 
+                    ? Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Colors.red, Colors.orange],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _joinEvent,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              height: 48,
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Leave Event',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    : GradientButton(
+                        onPressed: _joinEvent,
+                        text: 'Join Event',
+                      ),
+                  
+                  if (_isJoined || (!_isJoined && _event != null && _event!.participantsCount > 0))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16.0),
+                      child: OutlinedButton.icon(
+                        onPressed: _showParticipantsDialog,
+                        icon: const Icon(Icons.people, color: Colors.white),
+                        label: const Text('Ver participantes', style: TextStyle(color: Colors.white)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.primary),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  
+                  const SizedBox(height: 24),
+                  // VALORACIONES
+                  GlassCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.star, color: Colors.amber, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                _ratingStats != null && _ratingStats!['average'] != null
+                                  ? (_ratingStats!['average'] as num).toStringAsFixed(1)
+                                  : '--',
+                                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '(${_ratingStats != null && _ratingStats!['count'] != null ? _ratingStats!['count'] : 0} valoraciones)',
+                                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                              ),
+                              const Spacer(),
+                              if (!_loadingRatings && _myRating == null)
+                                OutlinedButton(
+                                  onPressed: () => _showRatingDialog(),
+                                  child: const Text('Valorar', style: TextStyle(color: Colors.amber)),
+                                  style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.amber)),
+                                ),
+                              if (!_loadingRatings && _myRating != null)
+                                OutlinedButton(
+                                  onPressed: () => _showRatingDialog(edit: true),
+                                  child: const Text('Editar', style: TextStyle(color: Colors.amber)),
+                                  style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.amber)),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if (_loadingRatings)
+                            const Center(child: CircularProgressIndicator(color: Colors.amber)),
+                          if (!_loadingRatings && _eventRatings.isEmpty)
+                            const Text('Sé el primero en valorar este evento', style: TextStyle(color: Colors.white54)),
+                          if (!_loadingRatings && _eventRatings.isNotEmpty)
+                            ..._eventRatings.take(5).map((r) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 16,
+                                    backgroundImage: r['avatar'] != null && r['avatar'].toString().isNotEmpty
+                                      ? NetworkImage(r['avatar'])
+                                      : const AssetImage('assets/images/default-avatar.jpg') as ImageProvider,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(r['username'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                            const SizedBox(width: 8),
+                                            ...List.generate(5, (i) => Icon(i < (r['score'] ?? 0) ? Icons.star : Icons.star_border, color: Colors.amber, size: 16)),
+                                          ],
+                                        ),
+                                        if ((r['comment'] ?? '').toString().isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 2.0),
+                                            child: Text(r['comment'], style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )),
+                          if (!_loadingRatings && _eventRatings.length > 5)
+                            TextButton(
+                              onPressed: () async {
+                                await showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return AlertDialog(
+                                      backgroundColor: Colors.black,
+                                      title: const Text('Todas las valoraciones', style: TextStyle(color: Colors.white)),
+                                      content: SizedBox(
+                                        width: double.maxFinite,
+                                        child: ListView(
+                                          shrinkWrap: true,
+                                          children: _eventRatings.map((r) => Padding(
+                                            padding: const EdgeInsets.symmetric(vertical: 6),
+                                            child: Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                CircleAvatar(
+                                                  radius: 16,
+                                                  backgroundImage: r['avatar'] != null && r['avatar'].toString().isNotEmpty
+                                                    ? NetworkImage(r['avatar'])
+                                                    : const AssetImage('assets/images/default-avatar.jpg') as ImageProvider,
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Row(
+                                                        children: [
+                                                          Text(r['username'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                                          const SizedBox(width: 8),
+                                                          ...List.generate(5, (i) => Icon(i < (r['score'] ?? 0) ? Icons.star : Icons.star_border, color: Colors.amber, size: 16)),
+                                                        ],
+                                                      ),
+                                                      if ((r['comment'] ?? '').toString().isNotEmpty)
+                                                        Padding(
+                                                          padding: const EdgeInsets.only(top: 2.0),
+                                                          child: Text(r['comment'], style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )).toList(),
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(),
+                                          child: const Text('Cerrar', style: TextStyle(color: Colors.white70)),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                              child: const Text('Ver todas las valoraciones', style: TextStyle(color: Colors.amber)),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                   
                   const SizedBox(height: 32),
@@ -457,28 +1058,5 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _joinEvent() async {
-    if (_event == null) return;
-
-    try {
-      await _apiService.post('/event/${widget.eventId}/join');
-      Get.snackbar(
-        '¡Unido!',
-        'Te has unido al evento ${_event!.title}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'No se pudo unir al evento: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    }
   }
 }

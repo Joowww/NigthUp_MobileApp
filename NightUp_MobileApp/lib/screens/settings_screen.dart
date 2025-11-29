@@ -6,6 +6,7 @@ import '../theme/colors.dart';
 import '../models/user.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/gradient_button.dart';
+import 'login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -309,8 +310,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       
                       const SizedBox(height: 32),
                       GradientButton(
-                        onPressed: () {
-                          Get.find<AuthController>().logout();
+                        onPressed: () async {
+                          await Get.find<AuthController>().logout();
+                          // Navega a login eliminando el historial
+                          Get.offAll(() => LoginScreen(
+                            onLogin: () {
+                              // Puedes personalizar esto si tu app usa otro flujo
+                              // Por ejemplo, Get.offAllNamed('/main') después de login
+                            },
+                            onRegister: () {},
+                            onForgotPassword: () {},
+                          ));
                         },
                         text: 'Log Out',
                       ),

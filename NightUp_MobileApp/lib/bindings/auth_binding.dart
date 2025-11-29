@@ -1,13 +1,13 @@
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
-import '../services/socket_service.dart';
 import '../controllers/auth_controller.dart';
-import '../controllers/chat_controller.dart';
 import '../controllers/map_controller.dart';
 import '../controllers/settings_controller.dart';
 import '../controllers/home_feed_controller.dart';
+import '../controllers/chat_controller.dart';
 import '../controllers/interestSelection_controller.dart';
+import '../controllers/menu_modal_controller.dart'; 
 import 'package:http/http.dart' as http;
 
 class AuthBinding implements Bindings {
@@ -24,8 +24,7 @@ class AuthBinding implements Bindings {
     // Servicio de API
     Get.lazyPut(() => ApiService());
 
-    // Servicio de WebSockets - CORREGIDO: usar put en lugar de lazyPut
-    Get.put(SocketService());
+    // SocketService se registra solo después del login
 
     // ================== CONTROLADORES ==================
 
@@ -38,13 +37,16 @@ class AuthBinding implements Bindings {
     // Controlador de feed principal
     Get.lazyPut(() => HomeFeedController());
 
-    // Controlador de chat - CORREGIDO: Usar put en lugar de lazyPut para asegurar inicialización
-    Get.put(ChatController());
+    // ChatController disponible siempre
+    Get.lazyPut(() => ChatController());
 
     // Controlador de mapa
     Get.lazyPut(() => MapController());
 
     // Controlador de settings
     Get.lazyPut(() => SettingsController());
+
+    // Controlador del menú modal - AÑADIR
+    Get.lazyPut(() => MenuModalController());
   }
 }

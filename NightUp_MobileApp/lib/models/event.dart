@@ -1,4 +1,6 @@
 import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:developer';
 
 class Event {
   final String id;
@@ -11,6 +13,9 @@ class Event {
   final List<String> tags;
   final int likes;
   final int participantsCount;
+  final bool isLiked;
+  final List<String> participantsIds;
+  final bool isJoined;
 
   Event({
     required this.id,
@@ -23,11 +28,48 @@ class Event {
     required this.tags,
     required this.likes,
     required this.participantsCount,
+    this.isLiked = false,
+    this.participantsIds = const [],
+    this.isJoined = false,
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
+    // DEBUG del ID
+    final rawId = json['_id'];
+    log('🔍 Mapping event ID:');
+    log('   Raw _id: $rawId (type: ${rawId.runtimeType})');
+    
+    String eventId;
+    if (rawId is String) {
+      eventId = rawId;
+    } else if (rawId != null) {
+      eventId = rawId.toString();
+    } else {
+      eventId = 'NO_ID';
+      log('⚠️ WARNING: Event has no ID!');
+    }
+    log('   Final ID: $eventId');
+
+    // Obtener lista de IDs de participantes
+    List<String> participantsIds = [];
+    if (json['participants'] is List) {
+      participantsIds = (json['participants'] as List)
+          .where((e) => e != null)
+          .map((e) => e is String ? e : e.toString())
+          .toList();
+    }
+
+    // Obtener lista de IDs de likedBy
+    List<String> likedByIds = [];
+    if (json['likedBy'] is List) {
+      likedByIds = (json['likedBy'] as List)
+          .where((e) => e != null)
+          .map((e) => e is String ? e : e.toString())
+          .toList();
+    }
+
     return Event(
-      id: json['_id'] ?? '',
+      id: eventId,
       title: json['name'] ?? 'Evento sin título',
       venue: _parseVenue(json['location']),
       description: json['description'] ?? '',
@@ -37,6 +79,9 @@ class Event {
       tags: _parseTags(json),
       likes: (json['likes'] as num?)?.toInt() ?? 0,
       participantsCount: _getParticipantsCount(json),
+      participantsIds: participantsIds,
+      isLiked: false, // Se actualizará después
+      isJoined: false, // Se actualizará después
     );
   }
 
@@ -54,7 +99,7 @@ class Event {
       try {
         return DateTime.parse(schedule).toLocal();
       } catch (e) {
-        print('Error parsing date: $e');
+        log('Error parsing date: $e');
         return DateTime.now().add(const Duration(days: 1));
       }
     }
@@ -115,8 +160,41 @@ class Event {
     return image;
   }
 
+  // Método para crear copia con nuevos valores
+  Event copyWith({
+    String? id,
+    String? title,
+    String? venue,
+    String? description,
+    String? image,
+    double? price,
+    DateTime? date,
+    List<String>? tags,
+    int? likes,
+    int? participantsCount,
+    bool? isLiked,
+    List<String>? participantsIds,
+    bool? isJoined,
+  }) {
+    return Event(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      venue: venue ?? this.venue,
+      description: description ?? this.description,
+      image: image ?? this.image,
+      price: price ?? this.price,
+      date: date ?? this.date,
+      tags: tags ?? this.tags,
+      likes: likes ?? this.likes,
+      participantsCount: participantsCount ?? this.participantsCount,
+      isLiked: isLiked ?? this.isLiked,
+      participantsIds: participantsIds ?? this.participantsIds,
+      isJoined: isJoined ?? this.isJoined,
+    );
+  }
+
   @override
   String toString() {
-    return 'Event{id: $id, title: $title, venue: $venue, date: $date}';
+    return 'Event{id: $id, title: $title, venue: $venue, date: $date, isLiked: $isLiked, isJoined: $isJoined}';
   }
 }

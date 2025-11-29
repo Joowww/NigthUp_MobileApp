@@ -23,26 +23,32 @@ dependencies:
   animations: ^2.0.11
   
   # MAPAS
-  flutter_map: ^6.1.0
+  flutter_map: ^7.0.0
   latlong2: ^0.9.1
   table_calendar: ^3.0.9
 
   # AUTH & NETWORK
-  firebase_auth: ^5.3.1
   google_sign_in: ^6.2.1
-  firebase_core: ^3.7.0
+  firebase_auth: ^6.1.2
+  firebase_auth_web: ^6.1.0
+  firebase_core: ^4.2.1
+  firebase_core_web: ^3.3.0
+  firebase_messaging: ^16.0.4
+  firebase_messaging_web: ^4.1.0
+  js: ^0.6.3
   http: ^1.1.0
   dio: ^5.4.0
-  socket_io_client: ^2.0.0
+  socket_io_client: ^3.1.3
   pretty_dio_logger: ^1.3.1
+
   # UTILS
   geolocator: ^10.1.0
   
   # Storage
   shared_preferences: ^2.2.2
-  flutter_secure_storage: ^9.0.0
+  flutter_secure_storage: ^9.2.4
   
-  # Localization
+  # Localizations
   flutter_translate: ^3.1.0
   flutter_localizations:
     sdk: flutter
@@ -51,7 +57,7 @@ dependencies:
   # UI Utilities
   pull_to_refresh: ^2.0.0
   flutter_rating_bar: ^4.0.1
-  image_picker: ^1.0.7
+  image_picker: ^1.1.2
   
   # Validation
   password_strength_checker: ^1.3.2
@@ -63,11 +69,12 @@ dependencies:
 
   # NUEVAS PARA POSTS Y FEEDS
   video_player: ^2.8.2
-  chewie: ^1.5.0
+  chewie: ^1.7.0
   visibility_detector: ^0.4.0+2
   photo_view: ^0.14.0
   extended_image: ^7.0.1
   like_button: ^2.0.7
+  flutter_local_notifications: ^17.0.0
 
 dev_dependencies:
   flutter_test:
@@ -83,7 +90,9 @@ flutter:
     - assets/images/default-avatar.png
     - assets/images/default-cover.jpg
     - assets/images/default-event.jpg
+    - assets/images/default-business.jpg
     - assets/images/google.png
+    - assets/images/default-mapa.jpg
   
   fonts:
     - family: Poppins
@@ -95,3 +104,4 @@ flutter:
           weight: 600
         - asset: assets/fonts/Poppins-Bold.ttf
           weight: 700
+

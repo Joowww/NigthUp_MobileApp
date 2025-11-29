@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class User {
   final String id;
   final String username;
@@ -72,6 +74,37 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    // Manejar intereses como lista de strings o lista de mapas serializados como string
+    List<String>? parsedInterests;
+    if (json['interests'] != null) {
+      try {
+        parsedInterests = List<String>.from(json['interests'].map((i) {
+          if (i is String) {
+            // Si parece un mapa serializado, intenta parsear a Map y luego a string normalizado
+            if (i.trim().startsWith('{') && i.trim().endsWith('}')) {
+              try {
+                // Reemplazar las claves sin comillas por claves con comillas dobles
+                final normalized = i.replaceAllMapped(
+                  RegExp(r'(\w+):'),
+                  (match) => '"${match[1]}":',
+                ).replaceAll("'", '"');
+                final map = Map<String, dynamic>.from(jsonDecode(normalized));
+                return jsonEncode(map); // Guardar como JSON serializado
+              } catch (_) {
+                return i;
+              }
+            }
+            return i;
+          } else if (i is Map) {
+            return jsonEncode(i);
+          } else {
+            return i.toString();
+          }
+        }));
+      } catch (_) {
+        parsedInterests = null;
+      }
+    }
     return User(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       username: json['username'] ?? '',
@@ -95,7 +128,7 @@ class User {
       website: json['website'],
       socialMedia: json['socialMedia'] != null ? Map<String, dynamic>.from(json['socialMedia']) : null,
       friends: json['friends'] != null ? List<String>.from(json['friends'].map((f) => f.toString())) : null,
-      interests: json['interests'] != null ? List<String>.from(json['interests'].map((i) => i.toString())) : null,
+      interests: parsedInterests,
       gender: json['gender'],
       firstName: json['firstName'],
       lastName: json['lastName'],
@@ -162,6 +195,13 @@ class User {
       }
       return coverPhoto!;
     }
+
+    Object? get safeLocationString {
+    if (location == null) return '';
+    if (location is String) return location;
+    if (location is Map && location?['name'] != null) return location?['name'].toString();
+    return location.toString();
+  }
 }
 
 class LoginRequest {
