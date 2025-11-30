@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../screens/home_feed.dart'; // Asegúrate de que la ruta sea correcta
+import 'auth_controller.dart';
 
 class InterestSelectionController extends GetxController {
   final ApiService _apiService = Get.find<ApiService>();
@@ -41,6 +42,19 @@ class InterestSelectionController extends GetxController {
   void onInit() {
     super.onInit();
     print('🟢 [InterestController] onInit called');
+    // Si el usuario es JoelMoreno, saltar onboarding automáticamente
+    try {
+      final authController = Get.find<AuthController>();
+      final user = authController.currentUser;
+      if (user != null && user.username == 'JoelMoreno') {
+        print('🟢 [InterestController] Usuario JoelMoreno detectado, saltando onboarding');
+        _storageService.write('onboarding_complete', true);
+        Future.delayed(Duration.zero, () => Get.offAll(() => HomeFeed()));
+        return;
+      }
+    } catch (e) {
+      print('Error comprobando usuario para skip onboarding: $e');
+    }
     _loadTags();
   }
 
@@ -81,11 +95,11 @@ class InterestSelectionController extends GetxController {
     } catch (e) {
       print('🔴 [InterestController] Error loading tags: $e');
       _loadFallbackTags();
-    } finally {
-      print('🟢 [InterestController] _loadTags finally. Setting isLoading to false');
-      isLoading.value = false;
-      update();
     }
+    // Asegura que isLoading siempre se pone a false aunque haya error
+    print('🟢 [InterestController] _loadTags finally. Setting isLoading to false');
+    isLoading.value = false;
+    update();
   }
 
   // Datos de fallback - CORREGIDO

@@ -1,8 +1,32 @@
 import 'package:intl/intl.dart';
+import '../utils/constants.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:developer';
 
 class Event {
+  final double? lat;
+  final double? lng;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'venue': venue,
+      'description': description,
+      'image': image,
+      'price': price,
+      'date': date.toIso8601String(),
+      'tags': tags,
+      'likes': likes,
+      'participantsCount': participantsCount,
+      'isLiked': isLiked,
+      'participantsIds': participantsIds,
+      'isJoined': isJoined,
+      'location': {
+        'coordinates': (lng != null && lat != null) ? [lng, lat] : [],
+      },
+    };
+  }
   final String id;
   final String title;
   final String venue;
@@ -31,9 +55,19 @@ class Event {
     this.isLiked = false,
     this.participantsIds = const [],
     this.isJoined = false,
+    this.lat,
+    this.lng,
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
+    double? lat, lng;
+    if (json['location'] != null && json['location']['coordinates'] is List) {
+      final coords = json['location']['coordinates'] as List;
+      if (coords.length >= 2) {
+        lng = (coords[0] as num?)?.toDouble();
+        lat = (coords[1] as num?)?.toDouble();
+      }
+    }
     // DEBUG del ID
     final rawId = json['_id'];
     log('🔍 Mapping event ID:');
@@ -82,6 +116,8 @@ class Event {
       participantsIds: participantsIds,
       isLiked: false, // Se actualizará después
       isJoined: false, // Se actualizará después
+      lat: lat,
+      lng: lng,
     );
   }
 
@@ -151,9 +187,7 @@ class Event {
     // Si la imagen es una ruta relativa (como '/default-images/default-event.jpg')
     // construir URL completa con tu base URL
     if (image.startsWith('/')) {
-      // CONFIGURA AQUÍ TU DOMINIO REAL DEL BACKEND
-      const baseUrl = 'http://localhost:3000'; // ⚠️ CAMBIA ESTO POR TU DOMINIO REAL
-      return '$baseUrl$image';
+      return ApiConstants.baseUrl.replaceFirst('/api', '') + image;
     }
     
     // Si ya es una URL completa, usarla directamente
@@ -175,6 +209,8 @@ class Event {
     bool? isLiked,
     List<String>? participantsIds,
     bool? isJoined,
+    double? lat,
+    double? lng,
   }) {
     return Event(
       id: id ?? this.id,
@@ -190,6 +226,8 @@ class Event {
       isLiked: isLiked ?? this.isLiked,
       participantsIds: participantsIds ?? this.participantsIds,
       isJoined: isJoined ?? this.isJoined,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
     );
   }
 

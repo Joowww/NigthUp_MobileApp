@@ -254,17 +254,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
             ],
           ),
         ),
-        Positioned(
-          top: 60,
-          left: 20,
-          child: GlassCard(
-            padding: EdgeInsets.zero,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Get.back(),
-            ),
-          ),
-        ),
+        // ... Botón de volver eliminado para dejar solo el del AppBar ...
       ],
     );
   }

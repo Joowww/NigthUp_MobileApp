@@ -1,3 +1,4 @@
+import '../screens/friend_profile_screen.dart';
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -8,7 +9,6 @@ import '../widgets/image_with_fallback.dart';
 import '../models/business.dart';
 import '../models/event.dart';
 import '../models/friend.dart';
-import '../screens/friend_profile_screen.dart';
 import '../screens/full_map_screen.dart';
 
 class MenuModal extends StatelessWidget {
@@ -151,7 +151,168 @@ class MenuModal extends StatelessWidget {
           itemCount: businesses.length,
           itemBuilder: (context, index) {
             final business = businesses[index];
-            return _buildBusinessCard(business);
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: GlassCard(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: ImageWithFallback(
+                                imageUrl: business.safeImageUrl,
+                                fallbackAsset: 'assets/images/default-business.jpg',
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  business.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  business.displayAddress,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.phone, color: Colors.white70, size: 14),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        business.displayContact,
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 12,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.access_time, color: Colors.white70, size: 14),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      business.displayHours,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      height: 120,
+                      margin: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.glassBorder),
+                      ),
+                      child: Stack(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: AppColors.glassWhite,
+                            ),
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  GestureDetector(
+                                    onTap: () {
+                                      final controller = Get.find<MenuModalController>();
+                                      Get.to(() => FullMapScreen(
+                                        businesses: controller.businesses,
+                                        events: controller.events,
+                                        // initialTab: 'business', // Removed because it's not defined in FullMapScreen
+                                        selectedBusiness: business,
+                                      ));
+                                    },
+                                    child: Column(
+                                      children: [
+                                        SizedBox(
+                                          width: double.infinity,
+                                          height: 80,
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: Image.asset(
+                                              'assets/images/default-mapa.jpg',
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          business.lat != null && business.lng != null 
+                                              ? 'Location Available' 
+                                              : 'No Location',
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: GlassCard(
+                              padding: EdgeInsets.zero,
+                              child: IconButton(
+                                icon: const Icon(Icons.share, color: Colors.white, size: 20),
+                                onPressed: () {
+                                  _shareLocation(business);
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
           },
         ),
       );
@@ -266,7 +427,6 @@ class MenuModal extends StatelessWidget {
                               // Abrir el mapa con todos los negocios y resaltar el seleccionado
                               final controller = Get.find<MenuModalController>();
                               Get.to(() => FullMapScreen(
-                                onBack: () => Get.back(),
                                 businesses: controller.businesses,
                                 selectedBusiness: business,
                               ));
@@ -347,7 +507,176 @@ class MenuModal extends StatelessWidget {
           itemCount: events.length,
           itemBuilder: (context, index) {
             final event = events[index];
-            return _buildEventCard(event);
+            // LOG DETALLADO DE EVENTO (para todas las plataformas)
+            final eventLog = '🟢 EVENTO[$index]: id: \\${event.id}, title: \\${event.title}, venue: \\${event.venue}, image: \\${event.safeImageUrl}, price: \\${event.price}, date: \\${event.date}, tags: \\${event.tags}, likes: \\${event.likes}, participants: \\${event.participantsCount}';
+            log(eventLog);
+            print(eventLog);
+            if (index == 0) {
+              final total = events.length;
+              log('🟡 TOTAL EVENTOS: $total');
+              print('🟡 TOTAL EVENTOS: $total');
+            }
+            if (index == events.length - 1) {
+              log('🔴 FIN DE EVENTOS (${events.length})');
+              print('🔴 FIN DE EVENTOS (${events.length})');
+            }
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: GlassCard(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: ImageWithFallback(
+                                imageUrl: event.safeImageUrl,
+                                fallbackAsset: 'assets/images/default-event.jpg',
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  event.title,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  event.venue,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(
+                                      event.displayPrice,
+                                      style: const TextStyle(
+                                        color: AppColors.primary,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      event.formattedDate,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${event.participantsCount} attending',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      height: 120,
+                      margin: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.glassBorder),
+                      ),
+                      child: Stack(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: AppColors.glassWhite,
+                            ),
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  GestureDetector(
+                                      onTap: () {
+                                        final controller = Get.find<MenuModalController>();
+                                        Get.to(() => FullMapScreen(
+                                          businesses: controller.businesses,
+                                          events: controller.events,
+                                          selectedEvent: event,
+                                        ));
+                                      },
+                                      child: Column(
+                                      children: [
+                                        SizedBox(
+                                          width: double.infinity,
+                                          height: 80,
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: Image.asset(
+                                              'assets/images/default-mapa.jpg',
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          'Event Location',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: GlassCard(
+                              padding: EdgeInsets.zero,
+                              child: IconButton(
+                                icon: const Icon(Icons.share, color: Colors.white, size: 20),
+                                onPressed: () {
+                                  _shareLocationFromEvent(event);
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
           },
         ),
       );
@@ -460,7 +789,6 @@ class MenuModal extends StatelessWidget {
                               // Abrir el mapa con todos los eventos y resaltar el seleccionado
                               final controller = Get.find<MenuModalController>();
                               Get.to(() => FullMapScreen(
-                                onBack: () => Get.back(),
                                 events: controller.events,
                                 selectedEvent: event,
                               ));
@@ -520,7 +848,6 @@ class MenuModal extends StatelessWidget {
       if (controller.isLoadingFriends.value) {
         return const Center(child: CircularProgressIndicator(color: AppColors.primary));
       }
-      
       if (controller.friends.isEmpty) {
         return _buildEmptyState(
           Icons.people,
@@ -528,7 +855,6 @@ class MenuModal extends StatelessWidget {
           'Add friends to see them here and connect on NightUp.',
         );
       }
-      
       return RefreshIndicator(
         onRefresh: () => controller.fetchFriends(),
         child: ListView.builder(
@@ -536,108 +862,105 @@ class MenuModal extends StatelessWidget {
           itemCount: controller.friends.length,
           itemBuilder: (context, index) {
             final friend = controller.friends[index];
-            return _buildFriendCard(friend);
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Stack(
+                        children: [
+                          SizedBox(
+                            width: 50,
+                            height: 50,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(25),
+                              child: ImageWithFallback(
+                                imageUrl: friend.profilePictureUrl ?? '',
+                                fallbackAsset: 'assets/images/default-avatar.png',
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: friend.isOnline ? Colors.green : Colors.grey,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.surface,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              friend.username,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              friend.isOnline ? 'Online' : 'Offline',
+                              style: TextStyle(
+                                color: friend.isOnline ? Colors.green : Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                            if (friend.distance != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                '${friend.distance!.toStringAsFixed(1)} km away',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              Get.to(() => FriendProfileScreen(friendId: friend.id));
+                            },
+                            icon: const Icon(Icons.person, color: Colors.white70, size: 20),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              _openChatWithFriend(friend);
+                            },
+                            icon: const Icon(Icons.chat, color: Colors.white70, size: 20),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
           },
         ),
       );
     });
   }
 
-  Widget _buildFriendCard(Friend friend) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: GlassCard(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Stack(
-                children: [
-                  SizedBox(
-                    width: 50,
-                    height: 50,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(25),
-                      child: ImageWithFallback(
-                        imageUrl: friend.profilePictureUrl ?? '',
-                        fallbackAsset: 'assets/images/default-avatar.png',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: friend.isOnline ? Colors.green : Colors.grey,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.surface,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      friend.username,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Text(
-                      friend.isOnline ? 'Online' : 'Offline',
-                      style: TextStyle(
-                        color: friend.isOnline ? Colors.green : Colors.grey,
-                        fontSize: 12,
-                      ),
-                    ),
-                    if (friend.distance != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        '${friend.distance!.toStringAsFixed(1)} km away',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      Get.to(() => FriendProfileScreen(friendId: friend.id));
-                    },
-                    icon: const Icon(Icons.person, color: Colors.white70, size: 20),
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      _openChatWithFriend(friend);
-                    },
-                    icon: const Icon(Icons.chat, color: Colors.white70, size: 20),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildEmptyState(IconData icon, String title, String message) {
     return Center(

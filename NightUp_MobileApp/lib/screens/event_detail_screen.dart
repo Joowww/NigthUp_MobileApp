@@ -1,3 +1,4 @@
+// lib/screens/event_detail_screen.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -11,6 +12,7 @@ import '../widgets/gradient_button.dart';
 import '../services/api_service.dart';
 import '../models/event.dart';
 import 'friend_profile_screen.dart';
+import '../controllers/auth_controller.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -61,7 +63,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         final likesCount = likeResponse.data['likesCount'] ?? _event?.likes ?? 0;
         bool isJoined = false;
         if (userId != null && _event != null) {
-          // NUEVO: Usar endpoint rápido para saber si participa
           final joinResp = await _apiService.get('/event/is-participant/${widget.eventId}/$userId');
           isJoined = joinResp.data['isParticipant'] == true;
         }
@@ -108,6 +109,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       // Stats
       final statsResp = await _apiService.get('/rating/event/${widget.eventId}/stats');
       if (statsResp.data is Map) _ratingStats = statsResp.data;
+      
       // Lista de valoraciones
       final ratingsResp = await _apiService.get('/rating/event/${widget.eventId}');
       if (ratingsResp.data is List) {
@@ -117,37 +119,37 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       } else {
         _eventRatings = [];
       }
-      // Valoración del usuario actual
-      final storageService = Get.find<dynamic>(); // Use GetStorage or your storage service directly
-      Map<String, dynamic>? userMap;
-      // Try to read as JSON first
-      userMap = storageService.readJson != null ? storageService.readJson('user') : null;
-      if (userMap == null) {
-        // fallback: try to read as Map or decode String
-        final userRaw = storageService.read('user');
-        if (userRaw is Map<String, dynamic>) {
-          userMap = userRaw;
-        } else if (userRaw is String) {
+      
+      // ✅ CORREGIDO: Usar username del usuario actual para buscar su rating
+      final userId = _apiService.getUserId();
+      if (userId != null && _event != null) {
+        try {
+          // Primero intenta obtener el rating por user ID si existe ese endpoint
+          final myRatingResp = await _apiService.get('/rating/user/$userId/event/${widget.eventId}');
+          if (myRatingResp.data is Map && myRatingResp.data.isNotEmpty) {
+            _myRating = Map<String, dynamic>.from(myRatingResp.data);
+          } else {
+            _myRating = null;
+          }
+        } catch (e) {
+          // Fallback: intentar por username
           try {
-            userMap = json.decode(userRaw);
-          } catch (_) {
-            userMap = null;
+            final currentUser = Get.find<AuthController>().currentUser;
+            if (currentUser != null && currentUser.username != null) {
+              final myRatingResp = await _apiService.get('/rating/user/${currentUser.username}/event/${widget.eventId}');
+              if (myRatingResp.data is Map && myRatingResp.data.isNotEmpty) {
+                _myRating = Map<String, dynamic>.from(myRatingResp.data);
+              } else {
+                _myRating = null;
+              }
+            }
+          } catch (e2) {
+            _myRating = null;
           }
         }
       }
-      String? username;
-      if (userMap != null) {
-        username = userMap['username']?.toString() ?? userMap['name']?.toString();
-      }
-      if (username != null) {
-        final myRatingResp = await _apiService.get('/rating/user/$username/event/${widget.eventId}');
-        if (myRatingResp.data is Map && myRatingResp.data['score'] != null) {
-          _myRating = myRatingResp.data;
-        } else {
-          _myRating = null;
-        }
-      }
     } catch (e) {
+      print('❌ Error fetching ratings: $e');
       _ratingStats = null;
       _eventRatings = [];
       _myRating = null;
@@ -196,7 +198,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     log('📤 Sharing event: ${_event!.id}');
     
     try {
-      // Diálogo simple y funcional que SIEMPRE funciona
       await Get.dialog(
         Dialog(
           backgroundColor: Colors.transparent,
@@ -209,18 +210,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
                 Container(
                   width: double.infinity,
-                  padding: EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: AppColors.neonGradient,
-                    borderRadius: BorderRadius.only(
+                    borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
                     ),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
                       Icon(Icons.share, color: Colors.white, size: 24),
                       SizedBox(width: 12),
@@ -236,22 +236,21 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   ),
                 ),
                 
-                // Content
                 Padding(
-                  padding: EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      Text(
+                      const Text(
                         'Copia el texto para compartir:',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                         ),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       Container(
                         width: double.infinity,
-                        padding: EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: AppColors.glassWhite,
                           borderRadius: BorderRadius.circular(12),
@@ -259,14 +258,14 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                         ),
                         child: SelectableText(
                           '$shareText\n$eventUrl',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
                           ),
                         ),
                       ),
-                      SizedBox(height: 16),
-                      Text(
+                      const SizedBox(height: 16),
+                      const Text(
                         'Selecciona y copia el texto',
                         style: TextStyle(
                           color: AppColors.primary,
@@ -277,24 +276,23 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   ),
                 ),
                 
-                // Actions - Botón simple que SIEMPRE funciona
                 Container(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
                       Expanded(
                         child: TextButton(
                           onPressed: () {
-                            Get.back(); // Cerrar el diálogo
+                            Get.back();
                           },
                           style: TextButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            padding: EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Text(
+                          child: const Text(
                             'Cerrar',
                             style: TextStyle(
                               color: Colors.white,
@@ -310,17 +308,16 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             ),
           ),
         ),
-        barrierDismissible: true, // Permitir cerrar haciendo clic fuera
+        barrierDismissible: true,
       );
       
     } catch (e) {
       log('❌ Error sharing event: $e');
-      // Fallback: mostrar snackbar simple
       Get.snackbar(
         'Compartir',
         'Texto listo para compartir: ${_event!.title}',
         snackPosition: SnackPosition.BOTTOM,
-        duration: Duration(seconds: 3),
+        duration: const Duration(seconds: 3),
       );
     }
   }
@@ -344,14 +341,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         setState(() {
           _isJoined = true;
         });
-        // NUEVO: Verificar estado real tras unirse
         final joinResp = await _apiService.get('/event/is-participant/${widget.eventId}/$userId');
         setState(() {
           _isJoined = joinResp.data['isParticipant'] == true;
         });
         Get.snackbar(
           '¡Unido!',
-          'Te has unido al evento [1m${_event!.title}[0m',
+          'Te has unido al evento ${_event!.title}',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green,
           colorText: Colors.white,
@@ -361,14 +357,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         setState(() {
           _isJoined = false;
         });
-        // NUEVO: Verificar estado real tras salir
         final joinResp = await _apiService.get('/event/is-participant/${widget.eventId}/$userId');
         setState(() {
           _isJoined = joinResp.data['isParticipant'] == true;
         });
         Get.snackbar(
           '¡Saliste!',
-          'Has salido del evento [1m${_event!.title}[0m',
+          'Has salido del evento ${_event!.title}',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.orange,
           colorText: Colors.white,
@@ -431,15 +426,26 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           separatorBuilder: (_, __) => const Divider(color: Colors.white12),
           itemBuilder: (context, index) {
             final user = _participants[index];
+            
             return ListTile(
-              leading: CircleAvatar(
-                backgroundImage: user['avatar'] != null && user['avatar'].toString().isNotEmpty
-                  ? NetworkImage(user['avatar'])
-                  : const AssetImage('assets/images/default-avatar.jpg') as ImageProvider,
-                backgroundColor: Colors.grey[900],
+              // ✅ CAMBIO: Usar ImageWithFallback en lugar de CircleAvatar
+              leading: ClipOval(
+                child: SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: ImageWithFallback(
+                    imageUrl: user['avatar']?.toString(),
+                    fallbackAsset: 'assets/images/default-avatar.png',
+                    fit: BoxFit.cover,
+                    width: 40,
+                    height: 40,
+                  ),
+                ),
               ),
-              title: Text(user['username'] ?? 'Usuario', style: const TextStyle(color: Colors.white)),
-              subtitle: Text(user['_id'] ?? '', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              title: Text(
+                user['username'] ?? 'Usuario', 
+                style: const TextStyle(color: Colors.white)
+              ),
               onTap: () {
                 Navigator.of(context).pop();
                 Get.to(() => FriendProfileScreen(friendId: user['_id']));
@@ -454,84 +460,97 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   Future<void> _showRatingDialog({bool edit = false}) async {
     final TextEditingController commentCtrl = TextEditingController(text: (edit && _myRating != null) ? (_myRating!['comment'] ?? '') : '');
     int score = edit ? (_myRating?['score'] ?? 5) : 5;
-    final storageService = Get.find<dynamic>(); // Use GetStorage or your storage service directly
-    final user = storageService.read('user');
-    String? username;
-    if (user is String) {
-      try {
-        dynamic decoded;
-        try {
-          decoded = json.decode(user);
-        } catch (_) {
-          decoded = null;
-        }
-        username = (decoded != null ? (decoded['username'] ?? decoded['name']) : null)?.toString();
-      } catch (_) {}
-    } else if (user is Map && user['username'] != null) {
-      username = user['username'].toString();
-    }
-    if (username == null) return;
+    final currentUser = Get.find<AuthController>().currentUser;
+    final username = currentUser?.username;
     await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.black,
-          title: Text(edit ? 'Editar valoración' : 'Valorar evento', style: const TextStyle(color: Colors.white)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (i) => IconButton(
-                  icon: Icon(i < score ? Icons.star : Icons.star_border, color: Colors.amber),
-                  onPressed: () { score = i + 1; setState(() {}); },
-                )),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Colors.black,
+              title: Text(edit ? 'Editar valoración' : 'Valorar evento', style: const TextStyle(color: Colors.white)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (i) => IconButton(
+                      icon: Icon(i < score ? Icons.star : Icons.star_border, color: Colors.amber),
+                      onPressed: () {
+                        setState(() {
+                          score = i + 1;
+                        });
+                      },
+                    )),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: commentCtrl,
+                    maxLines: 3,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      hintText: 'Comentario (opcional)',
+                      hintStyle: TextStyle(color: Colors.white54),
+                      border: OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.white10,
+                    ),
+                  ),
+                ],
               ),
-              TextField(
-                controller: commentCtrl,
-                maxLines: 3,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: 'Comentario (opcional)',
-                  hintStyle: TextStyle(color: Colors.white54),
-                  border: OutlineInputBorder(),
-                  filled: true,
-                  fillColor: Colors.white10,
+              actions: [
+                if (edit && _myRating != null)
+                  TextButton(
+                    onPressed: () async {
+                      try {
+                        await _apiService.delete('/rating/${_myRating!['_id']}');
+                        Navigator.of(context).pop();
+                        await _fetchRatings();
+                        Get.snackbar('Valoración eliminada', 'Tu valoración ha sido eliminada', snackPosition: SnackPosition.BOTTOM);
+                      } catch (e) {
+                        Get.snackbar('Error', 'No se pudo eliminar la valoración: $e', snackPosition: SnackPosition.BOTTOM);
+                      }
+                    },
+                    child: const Text('Eliminar valoración', style: TextStyle(color: Colors.red)),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
                 ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                try {
-                  if (edit && _myRating != null) {
-                    await _apiService.patch('/rating/${_myRating!['_id']}', data: {
-                      'score': score,
-                      'comment': commentCtrl.text,
-                    });
-                  } else {
-                    await _apiService.post('/rating', data: {
-                      'eventId': widget.eventId,
-                      'username': username,
-                      'score': score,
-                      'comment': commentCtrl.text,
-                    });
-                  }
-                  Navigator.of(context).pop();
-                  await _fetchRatings();
-                  Get.snackbar('¡Gracias!', 'Tu valoración ha sido guardada', snackPosition: SnackPosition.BOTTOM);
-                } catch (e) {
-                  Get.snackbar('Error', 'No se pudo guardar la valoración', snackPosition: SnackPosition.BOTTOM);
-                }
-              },
-              child: Text(edit ? 'Actualizar' : 'Enviar'),
-            ),
-          ],
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      if (username == null || username.isEmpty) {
+                        Get.snackbar('Error', 'Usuario no identificado', snackPosition: SnackPosition.BOTTOM);
+                        return;
+                      }
+
+                      if (edit && _myRating != null) {
+                        await _apiService.patch('/rating/${_myRating!['_id']}', data: {
+                          'score': score,
+                          'comment': commentCtrl.text,
+                        });
+                      } else {
+                        await _apiService.post('/rating', data: {
+                          'event': widget.eventId,
+                          'username': username,
+                          'score': score,
+                          'comment': commentCtrl.text,
+                        });
+                      }
+                      Navigator.of(context).pop();
+                      await _fetchRatings();
+                      Get.snackbar('¡Gracias!', 'Tu valoración ha sido guardada', snackPosition: SnackPosition.BOTTOM);
+                    } catch (e) {
+                      Get.snackbar('Error', 'No se pudo guardar la valoración: $e', snackPosition: SnackPosition.BOTTOM);
+                    }
+                  },
+                  child: Text(edit ? 'Actualizar' : 'Enviar'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -547,8 +566,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CircularProgressIndicator(color: AppColors.primary),
-              SizedBox(height: 16),
-              Text(
+              const SizedBox(height: 16),
+              const Text(
                 'Cargando evento...',
                 style: TextStyle(color: Colors.white70),
               ),
@@ -565,16 +584,16 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.white70),
-              SizedBox(height: 16),
-              Text(
+              const Icon(Icons.error_outline, size: 64, color: Colors.white70),
+              const SizedBox(height: 16),
+              const Text(
                 'Evento no encontrado',
                 style: TextStyle(color: Colors.white70, fontSize: 16),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: widget.onBack,
-                child: Text('Volver'),
+                child: const Text('Volver'),
               ),
             ],
           ),
@@ -820,7 +839,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   
                   const SizedBox(height: 24),
                   
-                  // BOTÓN JOIN/LEAVE MEJORADO - Ahora funciona correctamente
                   _isJoined 
                     ? Container(
                         decoration: BoxDecoration(
@@ -844,9 +862,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                             child: Container(
                               height: 48,
                               alignment: Alignment.center,
-                              child: Text(
+                              child: const Text(
                                 'Leave Event',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -876,7 +894,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     ),
                   
                   const SizedBox(height: 24),
-                  // VALORACIONES
+                  
                   GlassCard(
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -924,11 +942,19 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  CircleAvatar(
-                                    radius: 16,
-                                    backgroundImage: r['avatar'] != null && r['avatar'].toString().isNotEmpty
-                                      ? NetworkImage(r['avatar'])
-                                      : const AssetImage('assets/images/default-avatar.jpg') as ImageProvider,
+                                  // ✅ CAMBIO: Usar ImageWithFallback en lugar de CircleAvatar
+                                  ClipOval(
+                                    child: SizedBox(
+                                      width: 32,
+                                      height: 32,
+                                      child: ImageWithFallback(
+                                        imageUrl: r['avatar']?.toString(),
+                                        fallbackAsset: 'assets/images/default-avatar.png',
+                                        fit: BoxFit.cover,
+                                        width: 32,
+                                        height: 32,
+                                      ),
+                                    ),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
@@ -971,11 +997,19 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                             child: Row(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                CircleAvatar(
-                                                  radius: 16,
-                                                  backgroundImage: r['avatar'] != null && r['avatar'].toString().isNotEmpty
-                                                    ? NetworkImage(r['avatar'])
-                                                    : const AssetImage('assets/images/default-avatar.jpg') as ImageProvider,
+                                                // ✅ CAMBIO: Usar ImageWithFallback en lugar de CircleAvatar
+                                                ClipOval(
+                                                  child: SizedBox(
+                                                    width: 32,
+                                                    height: 32,
+                                                    child: ImageWithFallback(
+                                                      imageUrl: r['avatar']?.toString(),
+                                                      fallbackAsset: 'assets/images/default-avatar.png',
+                                                      fit: BoxFit.cover,
+                                                      width: 32,
+                                                      height: 32,
+                                                    ),
+                                                  ),
                                                 ),
                                                 const SizedBox(width: 10),
                                                 Expanded(

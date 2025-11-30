@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'package:get/get.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../services/storage_service.dart';
+import '../utils/constants.dart';
 
 class SocketService extends GetxService {
     void resetUnreadNotifications() {
@@ -36,7 +37,7 @@ class SocketService extends GetxService {
 
     // Conectar al servidor Socket.io de tu backend
     _socket = IO.io(
-      'http://localhost:3000', // Ajusta según tu backend
+      ApiConstants.baseUrl.replaceFirst('/api', ''), 
       IO.OptionBuilder()
         .setTransports(['websocket'])
         .enableAutoConnect()

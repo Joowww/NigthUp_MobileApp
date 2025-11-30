@@ -8,6 +8,7 @@ import '../controllers/home_feed_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/interestSelection_controller.dart';
 import '../controllers/menu_modal_controller.dart'; 
+import '../controllers/rating_controller.dart';
 import 'package:http/http.dart' as http;
 
 class AuthBinding implements Bindings {
@@ -48,5 +49,8 @@ class AuthBinding implements Bindings {
 
     // Controlador del menú modal - AÑADIR
     Get.lazyPut(() => MenuModalController());
+
+    // Controlador de valoraciones
+    Get.lazyPut(() => RatingController());
   }
 }

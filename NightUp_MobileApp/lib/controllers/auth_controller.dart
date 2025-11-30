@@ -49,7 +49,22 @@ class AuthController extends GetxController {
       _refreshToken.value = response.refreshToken;
       _currentUser.value = response.user;
 
+
       await _saveAuthData();
+
+      // Si el usuario es 'JoelMoreno', marca el onboarding como completo automáticamente
+      final storage = Get.find<StorageService>();
+      if (response.user.username == 'JoelMoreno') {
+        await storage.write('onboarding_complete', true);
+        print('✅ Onboarding saltado para usuario JoelMoreno');
+      } else {
+        // Si el usuario ya completó el onboarding antes, márcalo en el storage local
+        final onboardingComplete = storage.read('onboarding_complete');
+        if (onboardingComplete == true) {
+          await storage.write('onboarding_complete', true);
+          print('✅ Onboarding marcado como completo tras login');
+        }
+      }
 
       print('✅ Login successful for user: ${response.user.username}');
       return true;

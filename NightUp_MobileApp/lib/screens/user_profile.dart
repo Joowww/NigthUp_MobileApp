@@ -278,12 +278,14 @@ class _UserProfileState extends State<UserProfile>
 
               const SizedBox(height: 16),
 
-              Row(
+              // ✅ CORREGIDO: Wrap en vez de Row con Expanded
+              Wrap(
+                spacing: 16,
+                runSpacing: 8,
                 children: [
                   _buildInfoItem(
                       Icons.location_on,
                       safeString(user.safeLocationString)),
-                  const SizedBox(width: 16),
                   if (user.birthday != null)
                     _buildInfoItem(
                         Icons.cake,
@@ -322,15 +324,14 @@ class _UserProfileState extends State<UserProfile>
 
   Widget _buildInfoItem(IconData icon, String text) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, color: AppColors.primary, size: 16),
         const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-                color: Colors.white70, fontSize: 14),
-          ),
+        Text(
+          text,
+          style: const TextStyle(
+              color: Colors.white70, fontSize: 14),
         ),
       ],
     );

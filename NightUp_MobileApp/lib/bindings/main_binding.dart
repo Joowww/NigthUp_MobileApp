@@ -5,6 +5,7 @@ import '../controllers/chat_controller.dart';
 import '../controllers/map_controller.dart';
 import '../controllers/settings_controller.dart';
 import '../controllers/menu_modal_controller.dart';
+import '../controllers/rating_controller.dart';
 
 class MainBinding implements Bindings {
   @override
@@ -14,5 +15,6 @@ class MainBinding implements Bindings {
     Get.lazyPut(() => MapController());
     Get.lazyPut(() => SettingsController());
     Get.lazyPut(() => MenuModalController());
+    Get.lazyPut(() => RatingController());
   }
 }

@@ -10,116 +10,173 @@ import '../models/business.dart';
 import '../models/event.dart';
 import '../models/friend.dart';
 
-class FullMapScreen extends StatelessWidget {
-  final VoidCallback? onBack;
-  final List<Business>? businesses;
-  final List<Event>? events;
-  final List<Friend>? friends;
+class FullMapScreen extends StatefulWidget {
   final Business? selectedBusiness;
   final Event? selectedEvent;
-  final Friend? selectedFriend;
-  const FullMapScreen({Key? key, this.onBack, this.businesses, this.events, this.friends, this.selectedBusiness, this.selectedEvent, this.selectedFriend}) : super(key: key);
+  final List<Business>? businesses;
+  final List<Event>? events;
+
+  const FullMapScreen({
+    Key? key,
+    this.selectedBusiness,
+    this.selectedEvent,
+    this.businesses,
+    this.events,
+  }) : super(key: key);
+
+  @override
+  _FullMapScreenState createState() => _FullMapScreenState();
+}
+
+class _FullMapScreenState extends State<FullMapScreen> {
+  Business? _selectedBusiness;
+  Event? _selectedEvent;
+  final MapController _flutterMapController = MapController();
+  bool _isMinimap = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedBusiness = widget.selectedBusiness;
+    _selectedEvent = widget.selectedEvent;
+  }
+
+void _showBusinessInfo(Business business) {
+  setState(() {
+    _selectedBusiness = business;
+    _selectedEvent = null;
+  });
+}
+
+  void _showEventInfo(Event event) {
+    setState(() {
+      _selectedEvent = event;
+      _selectedBusiness = null;
+    });
+  }
+
+  void _zoomIn() {
+    final currentZoom = _flutterMapController.camera.zoom;
+    final newZoom = (currentZoom + 1).clamp(1.0, 18.0);
+    _flutterMapController.move(_flutterMapController.camera.center, newZoom);
+  }
+
+  void _zoomOut() {
+    final currentZoom = _flutterMapController.camera.zoom;
+    final newZoom = (currentZoom - 1).clamp(1.0, 18.0);
+    _flutterMapController.move(_flutterMapController.camera.center, newZoom);
+  }
+
+  void _toggleMinimap() {
+    setState(() {
+      _isMinimap = !_isMinimap;
+      if (_isMinimap) {
+        _flutterMapController.move(LatLng(40.4637, -3.7492), 5.5);
+      } else {
+        // Centrar en el marcador seleccionado
+        if (_selectedBusiness != null && _selectedBusiness!.lat != null && _selectedBusiness!.lng != null) {
+          _flutterMapController.move(LatLng(_selectedBusiness!.lat!, _selectedBusiness!.lng!), 15.0);
+        } else if (_selectedEvent != null && _selectedEvent!.toJson()['location']?['coordinates'] != null) {
+          final coords = _selectedEvent!.toJson()['location']['coordinates'];
+          _flutterMapController.move(LatLng(coords[1], coords[0]), 15.0);
+        }
+      }
+    });
+  }
+
+  Widget _greyGlassButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    double size = 24,
+    String? tooltip,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(1.0),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.5)),
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: Colors.white, size: size),
+        onPressed: onPressed,
+        tooltip: tooltip,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final myapp.MapController _mapController = Get.find<myapp.MapController>();
-    final List<Business> allBusinesses = businesses ?? _mapController.nearbyBusinesses.map((e) => Business.fromJson(e)).toList();
-    final List<Event> allEvents = events ?? _mapController.nearbyEvents.map((e) => Event.fromJson(e)).toList();
-    final List<Friend> allFriends = friends ?? _mapController.nearbyFriends.map((e) => Friend.fromJson(e)).toList();
-    final Business? highlightedBusiness = selectedBusiness;
-    final Event? highlightedEvent = selectedEvent;
-    final Friend? highlightedFriend = selectedFriend;
+    final List<Business> allBusinesses = widget.businesses ?? _mapController.nearbyBusinesses.map((e) => Business.fromJson(e)).toList();
+    final List<Event> allEvents = widget.events ?? _mapController.nearbyEvents.map((e) => Event.fromJson(e)).toList();
+    final LatLng initialCenter = _selectedBusiness != null && _selectedBusiness!.lat != null && _selectedBusiness!.lng != null
+        ? LatLng(_selectedBusiness!.lat!, _selectedBusiness!.lng!)
+        : _selectedEvent != null && _selectedEvent!.toJson()['location']?['coordinates'] != null
+            ? LatLng(_selectedEvent!.toJson()['location']['coordinates'][1], _selectedEvent!.toJson()['location']['coordinates'][0])
+            : LatLng(_mapController.currentPosition.value.latitude, _mapController.currentPosition.value.longitude);
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
           FlutterMap(
+            mapController: _flutterMapController,
             options: MapOptions(
-              initialCenter: LatLng(
-                _mapController.currentPosition.value.latitude,
-                _mapController.currentPosition.value.longitude,
-              ),
-              initialZoom: 13.0,
+              initialCenter: _isMinimap ? LatLng(40.4637, -3.7492) : initialCenter,
+              initialZoom: _isMinimap ? 5.5 : 15.0,
             ),
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.nightup.app',
               ),
-              // Marcadores de negocios
-              MarkerLayer(
-                markers: allBusinesses.where((b) => b.lat != null && b.lng != null).map((business) {
-                  final isSelected = highlightedBusiness != null && business.id == highlightedBusiness.id;
-                  return Marker(
-                    width: isSelected ? 60.0 : 40.0,
-                    height: isSelected ? 60.0 : 40.0,
-                    point: LatLng(business.lat!, business.lng!),
-                    child: GestureDetector(
-                      onTap: () {
-                        // Mostrar info negocio
-                      },
-                      child: Icon(
-                        Icons.store,
-                        color: isSelected ? Colors.red : Colors.blue,
-                        size: isSelected ? 40 : 30,
+              if (_selectedBusiness != null)
+                MarkerLayer(
+                  markers: allBusinesses.where((b) => b.lat != null && b.lng != null).map((business) {
+                    final isSelected = _selectedBusiness != null && business.id == _selectedBusiness!.id;
+                    return Marker(
+                      width: isSelected ? 70.0 : 40.0,
+                      height: isSelected ? 70.0 : 40.0,
+                      point: LatLng(business.lat!, business.lng!),
+                      child: GestureDetector(
+                        onTap: () => _showBusinessInfo(business),
+                        child: Icon(
+                          Icons.store,
+                          color: isSelected ? Colors.redAccent : Colors.blue,
+                          size: isSelected ? 50 : 30,
+                        ),
                       ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              // Marcadores de eventos
-              MarkerLayer(
-                markers: allEvents.where((e) {
-                  // Extraer lat/lng de GeoJSON
-                  final loc = (e as dynamic).toJson()['location'];
-                  if (loc is Map && loc['coordinates'] is List && loc['coordinates'].length >= 2) {
-                    return loc['coordinates'][1] != null && loc['coordinates'][0] != null;
-                  }
-                  return false;
-                }).map((event) {
-                  final isSelected = highlightedEvent != null && event.id == highlightedEvent.id;
-                  final loc = (event as dynamic).toJson()['location'];
-                  final lat = loc['coordinates'][1];
-                  final lng = loc['coordinates'][0];
-                  return Marker(
-                    width: isSelected ? 60.0 : 40.0,
-                    height: isSelected ? 60.0 : 40.0,
-                    point: LatLng(lat, lng),
-                    child: GestureDetector(
-                      onTap: () {
-                        // Mostrar info evento
-                      },
-                      child: Icon(
-                        Icons.event,
-                        color: isSelected ? Colors.red : Colors.orange,
-                        size: isSelected ? 40 : 30,
+                    );
+                  }).toList(),
+                ),
+              if (_selectedEvent != null)
+                MarkerLayer(
+                  markers: allEvents.where((e) {
+                    final loc = (e as dynamic).toJson()['location'];
+                    if (loc is Map && loc['coordinates'] is List && loc['coordinates'].length >= 2) {
+                      return loc['coordinates'][1] != null && loc['coordinates'][0] != null;
+                    }
+                    return false;
+                  }).map((event) {
+                    final isSelected = _selectedEvent != null && event.id == _selectedEvent!.id;
+                    final loc = (event as dynamic).toJson()['location'];
+                    final lat = loc['coordinates'][1];
+                    final lng = loc['coordinates'][0];
+                    return Marker(
+                      width: isSelected ? 70.0 : 40.0,
+                      height: isSelected ? 70.0 : 40.0,
+                      point: LatLng(lat, lng),
+                      child: GestureDetector(
+                        onTap: () => _showEventInfo(event),
+                        child: Icon(
+                          Icons.event,
+                          color: isSelected ? Colors.redAccent : Colors.orange,
+                          size: isSelected ? 50 : 30,
+                        ),
                       ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              // Marcadores de amigos
-              MarkerLayer(
-                markers: allFriends.where((f) => f.lat != null && f.lng != null).map((friend) {
-                  final isSelected = highlightedFriend != null && friend.id == highlightedFriend.id;
-                  return Marker(
-                    width: isSelected ? 60.0 : 40.0,
-                    height: isSelected ? 60.0 : 40.0,
-                    point: LatLng(friend.lat!, friend.lng!),
-                    child: GestureDetector(
-                      onTap: () {
-                        // Mostrar info amigo
-                      },
-                      child: Icon(
-                        Icons.person_pin_circle,
-                        color: isSelected ? Colors.red : Colors.green,
-                        size: isSelected ? 40 : 30,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
+                    );
+                  }).toList(),
+                ),
               // Marcador de posición actual
               MarkerLayer(
                 markers: [
@@ -152,92 +209,126 @@ class FullMapScreen extends StatelessWidget {
               ),
             ],
           ),
-          
-          // Botón de regreso
+
+          // Botón de minimapa
           Positioned(
-            top: 60,
-            left: 16,
-            child: GlassCard(
-              padding: EdgeInsets.zero,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: onBack,
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton(
+              heroTag: 'minimap',
+              onPressed: _toggleMinimap,
+              backgroundColor: Colors.white,
+              child: Icon(
+                _isMinimap ? Icons.zoom_in_map : Icons.zoom_out_map,
+                color: AppColors.primary,
+                size: 24,
               ),
+              tooltip: _isMinimap ? 'Expandir mapa' : 'Vista península',
             ),
           ),
-          
-          // Botón de actualizar
+          // Controles de zoom
           Positioned(
-            top: 60,
+            bottom: 86,
             right: 16,
-            child: GlassCard(
-              padding: EdgeInsets.zero,
-              child: IconButton(
-                icon: const Icon(Icons.refresh, color: Colors.white),
-                onPressed: _mapController.refreshData,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _greyGlassButton(
+                  icon: Icons.add,
+                  onPressed: _zoomIn,
+                  size: 24,
+                  tooltip: 'Zoom In',
+                ),
+                const SizedBox(height: 8),
+                _greyGlassButton(
+                  icon: Icons.remove,
+                  onPressed: _zoomOut,
+                  size: 24,
+                  tooltip: 'Zoom Out',
+                ),
+              ],
             ),
           ),
-          
-          // Panel inferior con información
-          Positioned(
-            bottom: 120,
-            left: 16,
-            right: 16,
-            child: Obx(() => GlassCard(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Around You',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${_mapController.nearbyFriends.length} friends • ${_mapController.nearbyEvents.length} events',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
+
+          // Panel superior con info del negocio/evento seleccionado
+          if (_selectedBusiness != null)
+            Positioned(
+              top: 60,
+              left: 16,
+              right: 16,
+              child: GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_selectedBusiness!.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      if (_selectedBusiness!.address != null)
+                        Text(_selectedBusiness!.address!, style: const TextStyle(color: Colors.grey)),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(_selectedBusiness!.displayContact, style: const TextStyle(color: Colors.grey)),
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: _mapController.refreshData,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          'Refresh',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            )),
+            ),
+          if (_selectedEvent != null)
+            Positioned(
+              top: 64,
+              left: 16,
+              right: 16,
+              child: GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_selectedEvent!.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text(_selectedEvent!.venue, style: const TextStyle(color: Colors.white70)),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(_selectedEvent!.description, style: const TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          // ...botón de regreso, refresh, panel inferior...
+
+          // Botón de retroceso cuadrado, gris, estilo igual a + y -
+          Positioned(
+            top: 12,
+            left: 12,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(1.0),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.5)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                onPressed: () {
+                  Get.back();
+                },
+                tooltip: 'Volver',
+                splashRadius: 28,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
-
-
 }

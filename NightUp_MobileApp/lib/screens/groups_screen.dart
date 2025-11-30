@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/chat_controller.dart';
+import 'create_group_screen.dart';
+import '../theme/colors.dart';
 
 class GroupsScreen extends StatelessWidget {
   final ChatController _chatController = Get.find<ChatController>();
@@ -14,6 +16,13 @@ class GroupsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Group Polls'),
         backgroundColor: Colors.black,
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Get.to(() => CreateGroupScreen()); // ✅ CORREGIDO: Navega a pantalla con Material
+        },
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.group_add, color: Colors.white),
       ),
       body: Obx(() {
         final polls = _chatController.polls;

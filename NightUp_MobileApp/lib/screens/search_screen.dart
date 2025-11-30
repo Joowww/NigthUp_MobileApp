@@ -1,4 +1,3 @@
-// screens/search_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/map_controller.dart' as my_map;
@@ -19,6 +18,9 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
 
+  // ✅ CAMBIO 3: Iniciar en modo minimap (vista península)
+  final RxBool _isMinimap = true.obs; // ← Cambiado de false a true
+
   final my_map.MapController _mapController = Get.find<my_map.MapController>();
   final ApiService _apiService = Get.find<ApiService>();
   final TextEditingController _searchController = TextEditingController();
@@ -26,465 +28,694 @@ class _SearchScreenState extends State<SearchScreen> {
   final _searchResults = [].obs;
   final _isSearching = false.obs;
 
-  // Filtros visuales
-  final RxBool _showFriends = true.obs;
-  final RxBool _showUsers = false.obs;
-  final RxBool _showEvents = false.obs;
-  final RxBool _showBusinesses = false.obs;
+  final RxString _activeFilter = 'friends'.obs;
+  final MapController _flutterMapController = MapController();
 
-  RxBool get _isVisibleOnMap => _mapController.isVisibleOnMap;
+  @override
+  void initState() {
+    super.initState();
+    _mapController.refreshData();
+    
+    Future.delayed(Duration(seconds: 2), () {
+      _centerMapOnMarkers();
+    });
+
+    ever(_activeFilter, (_) {
+      Future.delayed(Duration(milliseconds: 300), _centerMapOnMarkers);
+    });
+  }
+
+  void _centerMapOnMarkers() {
+    final markers = _getAllValidMarkers();
+    
+    if (markers.isEmpty) {
+      print('⚠️ No markers to center on');
+      return;
+    }
+
+    if (_isMinimap.value) {
+      _flutterMapController.move(LatLng(40.4637, -3.7492), 5.5);
+      print('🗺️ MINIMAP MODE: Showing full peninsula view');
+      return;
+    }
+
+    double minLat = 90.0, maxLat = -90.0, minLng = 180.0, maxLng = -180.0;
+
+    for (var marker in markers) {
+      final point = marker.point;
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    final centerLat = (minLat + maxLat) / 2;
+    final centerLng = (minLng + maxLng) / 2;
+    
+    final latDiff = maxLat - minLat;
+    final lngDiff = maxLng - minLng;
+    final maxDiff = latDiff > lngDiff ? latDiff : lngDiff;
+    double zoom = 13.0;
+    
+    if (maxDiff > 0.1) zoom = 11.0;
+    if (maxDiff > 0.2) zoom = 10.0;
+    if (maxDiff > 0.5) zoom = 9.0;
+
+    _flutterMapController.move(LatLng(centerLat, centerLng), zoom);
+    
+    print('🎯 MAP CENTERED on ${_activeFilter.value}: $centerLat, $centerLng zoom: $zoom');
+  }
+
+  List<Marker> _getAllValidMarkers() {
+    final List<Marker> markers = [];
+    
+    switch (_activeFilter.value) {
+      case 'friends':
+        for (var friend in _mapController.nearbyFriends) {
+          final marker = _createFriendMarker(friend);
+          if (marker != null) markers.add(marker);
+        }
+        break;
+        
+      case 'events':
+        for (var event in _mapController.nearbyEvents) {
+          if (event is Map<String, dynamic>) {
+            final marker = _createEventMarker(event);
+            if (marker != null) markers.add(marker);
+          }
+        }
+        break;
+        
+      case 'businesses':
+        for (var biz in _mapController.nearbyBusinesses) {
+          if (biz is Map<String, dynamic>) {
+            final marker = _createBusinessMarker(biz);
+            if (marker != null) markers.add(marker);
+          }
+        }
+        break;
+    }
+
+    return markers;
+  }
+
+  void _zoomIn() {
+    final currentZoom = _flutterMapController.camera.zoom;
+    final newZoom = (currentZoom + 1).clamp(1.0, 18.0);
+    _flutterMapController.move(_flutterMapController.camera.center, newZoom);
+    print('🔍 Zoom In: $currentZoom → $newZoom');
+  }
+
+  void _zoomOut() {
+    final currentZoom = _flutterMapController.camera.zoom;
+    final newZoom = (currentZoom - 1).clamp(1.0, 18.0);
+    _flutterMapController.move(_flutterMapController.camera.center, newZoom);
+    print('🔍 Zoom Out: $currentZoom → $newZoom');
+  }
+
+  // ✅ CAMBIO 2: Widget para botones con fondo gris transparente
+  Widget _greyGlassButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    double size = 24,
+    String? tooltip,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(1.0), // ← Gris transparente
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.5)),
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: Colors.white, size: size),
+        onPressed: onPressed,
+        tooltip: tooltip,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // ------------------- MAPA -------------------
-          Obx(() {
-            final List<Marker> markers = [];
-            // Amigos
-            if (_showFriends.value) {
-              for (var friend in _mapController.getFriendsAsMap()) {
-                final marker = _createMarker(friend, type: 'friend');
-                if (marker != null) markers.add(marker);
-              }
-            }
-            // Usuarios
-            if (_showUsers.value) {
-              for (var user in _mapController.getUsersAsMap()) {
-                final marker = _createMarker(user, type: 'user');
-                if (marker != null) markers.add(marker);
-              }
-            }
-            // Eventos
-            if (_showEvents.value) {
-              for (var event in _mapController.nearbyEvents.whereType<Map<String, dynamic>>()) {
-                final marker = _createMarker(event, type: 'event');
-                if (marker != null) markers.add(marker);
-              }
-            }
-            // Negocios
-            if (_showBusinesses.value) {
-              for (var biz in _mapController.nearbyBusinesses.whereType<Map<String, dynamic>>()) {
-                final marker = _createMarker(biz, type: 'business');
-                if (marker != null) markers.add(marker);
-              }
-            }
-            // Mi posición
-            markers.add(
-              Marker(
-                point: LatLng(
-                  _mapController.currentPosition.value.latitude,
-                  _mapController.currentPosition.value.longitude,
-                ),
-                width: 40,
-                height: 40,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.3),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primary, width: 2),
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 15,
-                      height: 15,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-            return FlutterMap(
-              options: MapOptions(
-                initialCenter: LatLng(
-                  _mapController.currentPosition.value.latitude,
-                  _mapController.currentPosition.value.longitude,
-                ),
-                initialZoom: 13.0,
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.nightup.app',
-                ),
-                MarkerLayer(markers: markers),
-              ],
-            );
-          }),
-          // ------------------- BARRA DE BÚSQUEDA Y FILTROS -------------------
-          Positioned(
-            top: 16,
-            left: 16,
-            right: 16,
-            child: Column(
-              children: [
-                GlassCard(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search users, events...',
-                      hintStyle: const TextStyle(color: Colors.white70),
-                      prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                      border: InputBorder.none,
-                      suffixIcon: Obx(
-                        () => _isSearching.value
-                            ? const Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : IconButton(
-                                icon: const Icon(Icons.clear, color: Colors.white70),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  _searchResults.clear();
-                                },
-                              ),
-                      ),
-                    ),
-                    style: const TextStyle(color: Colors.white),
-                    onChanged: _performSearch,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _filterChip('Amigos', _showFriends, AppColors.primary),
-                      const SizedBox(width: 8),
-                      _filterChip('Usuarios', _showUsers, Colors.blue),
-                      const SizedBox(width: 8),
-                      _filterChip('Eventos', _showEvents, Colors.pink),
-                      const SizedBox(width: 8),
-                      _filterChip('Negocios', _showBusinesses, Colors.orange),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper para construir los marcadores de forma segura
-  Marker? _createMarker(dynamic data, {required String type}) {
-    if (data['location'] == null || data['location']['coordinates'] == null) return null;
-    final coords = data['location']['coordinates'];
-    if (coords is! List || coords.length < 2) return null;
-    final lat = (coords[1] as num).toDouble();
-    final lng = (coords[0] as num).toDouble();
-    String imageUrl = '';
-    String title = '';
-    Color borderColor = Colors.white;
-    IconData? icon;
-    switch (type) {
-      case 'friend':
-      case 'user':
-        imageUrl = data['profilePicture'] ?? data['profilePictureUrl'] ?? '';
-        title = data['username'] ?? 'User';
-        borderColor = type == 'friend' ? AppColors.primary : Colors.blue;
-        break;
-      case 'event':
-        imageUrl = data['image'] ?? '';
-        title = data['title'] ?? data['name'] ?? 'Event';
-        borderColor = Colors.pink;
-        icon = Icons.event;
-        break;
-      case 'business':
-        imageUrl = data['logo'] ?? '';
-        title = data['name'] ?? 'Business';
-        borderColor = Colors.orange;
-        icon = Icons.store;
-        break;
-    }
-    return Marker(
-      point: LatLng(lat, lng),
-      width: 80,
-      height: 90,
-      child: GestureDetector(
-        onTap: () {
-          Get.snackbar("Info", "Tocaste a $title");
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: borderColor, width: 2),
-                color: Colors.black,
-                boxShadow: [BoxShadow(color: borderColor.withOpacity(0.5), blurRadius: 8)],
-              ),
-              child: ClipOval(
-                child: imageUrl.isNotEmpty
-                    ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_,__,___) => const Icon(Icons.person, color: Colors.white))
-                    : (icon != null 
-                        ? Icon(icon, color: borderColor, size: 30) 
-                        : const Icon(Icons.person, color: Colors.white)),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                title,
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _filterChip(String label, RxBool value, Color activeColor) {
-    return Obx(() => FilterChip(
-      label: Text(label),
-      selected: value.value,
-      onSelected: (v) => value.value = v,
-      backgroundColor: Colors.black.withOpacity(0.6),
-      selectedColor: activeColor.withOpacity(0.3),
-      labelStyle: TextStyle(
-        color: value.value ? activeColor : Colors.white70,
-        fontWeight: value.value ? FontWeight.bold : FontWeight.normal,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: value.value ? activeColor : Colors.white24),
-      ),
-      showCheckmark: false,
-    ));
-  }
-
-  // ============================================================
-  //                 FRIEND MAP MODAL
-  // ============================================================
-  void _showFriendMapModal(BuildContext context, Map friend) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) {
-        return Container(
-          margin: const EdgeInsets.all(24),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.black87,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      body: Obx(() {
+        if (_isMinimap.value) {
+          return Stack(
             children: [
-              CircleAvatar(
-                radius: 40,
-                backgroundImage: NetworkImage(friend['profilePictureUrl'] ?? ''),
-                backgroundColor: Colors.grey[800],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                friend['username'] ?? 'Unknown',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              FlutterMap(
+                mapController: _flutterMapController,
+                options: MapOptions(
+                  initialCenter: LatLng(40.4637, -3.7492),
+                  initialZoom: 5.5,
+                  interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.all,
                   ),
                 ),
-                icon: const Icon(Icons.person, color: Colors.white),
-                label: const Text(
-                  'Ver perfil',
-                  style: TextStyle(color: Colors.white),
-                ),
-                onPressed: () {
-                  final friendId = friend['_id'] ?? friend['id'];
-                  if (friendId != null) {
-                    Navigator.of(context).pop();
-                    Get.to(() =>
-                        FriendProfileScreen(friendId: friendId.toString()));
-                  }
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // ============================================================
-  //                 USER CARD
-  // ============================================================
-  Widget _buildUserCard(dynamic user) {
-    final userMap =
-        user is Map<String, dynamic> ? user : <String, dynamic>{};
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: GlassCard(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Stack(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(25),
-                      child: ImageWithFallback(
-                        imageUrl:
-                            userMap['avatar'] ?? userMap['profilePictureUrl'] ?? '',
-                        fallbackAsset: 'assets/images/default-avatar.png',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.nightup.app',
                   ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: (userMap['isOnline'] ?? false)
-                            ? Colors.green
-                            : Colors.grey,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.surface,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
+                  MarkerLayer(markers: _getAllValidMarkers()),
                 ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
+              
+              Positioned(
+                top: 16,
+                left: 16,
+                right: 16,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      userMap['username'] ?? 'Unknown User',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                    // ✅ CAMBIO 2: Buscador con fondo gris
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(1.0), // ← Gris transparente
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withOpacity(0.5)),
                       ),
-                    ),
-                    Text(
-                      (userMap['isOnline'] ?? false) ? 'Online' : 'Offline',
-                      style: TextStyle(
-                        color: (userMap['isOnline'] ?? false)
-                            ? Colors.green
-                            : Colors.grey,
-                        fontSize: 12,
-                      ),
-                    ),
-                    if (userMap['city'] != null || userMap['country'] != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        '${userMap['city'] ?? ''}'
-                        '${userMap['city'] != null && userMap['country'] != null ? ', ' : ''}'
-                        '${userMap['country'] ?? ''}',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search users, events...',
+                          hintStyle: const TextStyle(color: Colors.white70),
+                          prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          suffixIcon: Obx(
+                            () => _isSearching.value
+                                ? const Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : IconButton(
+                                    icon: const Icon(Icons.clear, color: Colors.white70),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _searchResults.clear();
+                                    },
+                                  ),
+                          ),
                         ),
+                        style: const TextStyle(color: Colors.white),
+                        onChanged: _performSearch,
                       ),
-                    ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        // ✅ CAMBIO 2: Botón centrar con fondo gris
+                        _greyGlassButton(
+                          icon: Icons.my_location,
+                          onPressed: _centerMapOnMarkers,
+                          tooltip: 'Center map',
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _filterChip('Friends', 'friends', AppColors.primary),
+                                const SizedBox(width: 8),
+                                _filterChip('Events', 'events', Colors.pink),
+                                const SizedBox(width: 8),
+                                _filterChip('Businesses', 'businesses', Colors.orange),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              Row(
+              
+              // ✅ CAMBIO 1: Botón minimap pegado al fondo derecho
+              Positioned(
+                bottom: 16, // ← Pegado al fondo
+                right: 16,  // ← Pegado a la derecha
+                child: FloatingActionButton(
+                  heroTag: 'minimap',
+                  onPressed: () {
+                    _isMinimap.value = !_isMinimap.value;
+                    Future.delayed(Duration(milliseconds: 300), _centerMapOnMarkers);
+                  },
+                  backgroundColor: Colors.white,
+                  child: Icon(
+                    _isMinimap.value ? Icons.zoom_in_map : Icons.zoom_out_map, 
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
+                  tooltip: _isMinimap.value ? 'Expandir mapa' : 'Vista península',
+                ),
+              ),
+              
+              // ✅ CAMBIO 1 y 2: Controles zoom pegados al fondo con fondo gris
+              Positioned(
+                bottom: 86, // ← Encima del botón minimap
+                right: 16,  // ← Pegado a la derecha
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _greyGlassButton(
+                      icon: Icons.add,
+                      onPressed: _zoomIn,
+                      size: 24,
+                      tooltip: 'Zoom In',
+                    ),
+                    const SizedBox(height: 8),
+                    _greyGlassButton(
+                      icon: Icons.remove,
+                      onPressed: _zoomOut,
+                      size: 24,
+                      tooltip: 'Zoom Out',
+                    ),
+                  ],
+                ),
+              ),
+              
+              if (_mapController.isLoading.value)
+                Positioned(
+                  top: 100,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: GlassCard(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator(color: AppColors.primary),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Loading map data...',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        } else {
+          // Modo mapa completo
+          return Stack(
+            children: [
+              FlutterMap(
+                mapController: _flutterMapController,
+                options: MapOptions(
+                  initialCenter: LatLng(
+                    _mapController.currentPosition.value.latitude,
+                    _mapController.currentPosition.value.longitude,
+                  ),
+                  initialZoom: 12.0,
+                  interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.all,
+                  ),
+                ),
                 children: [
-                  IconButton(
-                    onPressed: () {
-                      final friendId = userMap['_id'] ?? userMap['id'];
-                      if (friendId != null) {
-                        Get.to(() =>
-                            FriendProfileScreen(friendId: friendId.toString()));
-                      }
-                    },
-                    icon: const Icon(Icons.person,
-                        color: Colors.white70, size: 20),
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.nightup.app',
                   ),
-                  IconButton(
-                    onPressed: () => _openChatWithUser(userMap),
-                    icon: const Icon(Icons.chat,
-                        color: Colors.white70, size: 20),
-                  ),
+                  MarkerLayer(markers: _getAllValidMarkers()),
                 ],
               ),
+              
+              Positioned(
+                top: 16,
+                left: 16,
+                right: 16,
+                child: Column(
+                  children: [
+                    // ✅ CAMBIO 2: Buscador con fondo gris
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withOpacity(0.2)),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search users, events...',
+                          hintStyle: const TextStyle(color: Colors.white70),
+                          prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          suffixIcon: Obx(
+                            () => _isSearching.value
+                                ? const Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : IconButton(
+                                    icon: const Icon(Icons.clear, color: Colors.white70),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _searchResults.clear();
+                                    },
+                                  ),
+                          ),
+                        ),
+                        style: const TextStyle(color: Colors.white),
+                        onChanged: _performSearch,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        _greyGlassButton(
+                          icon: Icons.my_location,
+                          onPressed: _centerMapOnMarkers,
+                          tooltip: 'Center map',
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _filterChip('Friends', 'friends', AppColors.primary),
+                                const SizedBox(width: 8),
+                                _filterChip('Events', 'events', Colors.pink),
+                                const SizedBox(width: 8),
+                                _filterChip('Businesses', 'businesses', Colors.orange),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              
+              // ✅ CAMBIO 1: Botón minimap pegado al fondo derecho
+              Positioned(
+                bottom: 16,
+                right: 16,
+                child: FloatingActionButton(
+                  heroTag: 'minimap',
+                  onPressed: () {
+                    _isMinimap.value = !_isMinimap.value;
+                    Future.delayed(Duration(milliseconds: 300), _centerMapOnMarkers);
+                  },
+                  backgroundColor: Colors.white,
+                  child: Icon(
+                    _isMinimap.value ? Icons.zoom_in_map : Icons.zoom_out_map, 
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
+                  tooltip: _isMinimap.value ? 'Expandir mapa' : 'Vista península',
+                ),
+              ),
+              
+              // ✅ CAMBIO 1 y 2: Controles zoom pegados al fondo con fondo gris
+              Positioned(
+                bottom: 86,
+                right: 16,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _greyGlassButton(
+                      icon: Icons.add,
+                      onPressed: _zoomIn,
+                      size: 28,
+                      tooltip: 'Zoom In',
+                    ),
+                    const SizedBox(height: 8),
+                    _greyGlassButton(
+                      icon: Icons.remove,
+                      onPressed: _zoomOut,
+                      size: 28,
+                      tooltip: 'Zoom Out',
+                    ),
+                  ],
+                ),
+              ),
+              
+              if (_mapController.isLoading.value)
+                Positioned(
+                  top: 100,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: GlassCard(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator(color: AppColors.primary),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Loading map data...',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
-          ),
-        ),
-      ),
+          );
+        }
+      }),
     );
   }
 
-  // ============================================================
-  //                 EMPTY SEARCH
-  // ============================================================
-  Widget _buildEmptySearch() {
-    return Center(
-      child: GlassCard(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
+  Marker? _createFriendMarker(dynamic friend) {
+    try {
+      if (friend.lat == null || friend.lng == null) {
+        print('❌ Friend ${friend.username} has invalid coordinates: [${friend.lng}, ${friend.lat}]');
+        return null;
+      }
+      final lat = friend.lat as double;
+      final lng = friend.lng as double;
+      final username = friend.username ?? 'Friend';
+      final avatar = friend.profilePictureUrl ?? '';
+      print('📍 Friend Marker: $username at $lat, $lng');
+      return Marker(
+        point: LatLng(lat, lng),
+        width: 70,
+        height: 85,
+        child: GestureDetector(
+          onTap: () {
+            Get.snackbar("Friend", "Tapped on $username");
+          },
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.search_off, size: 64, color: Colors.white70),
-              const SizedBox(height: 16),
-              const Text(
-                'No Users Found',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.primary, width: 3),
+                  color: Colors.black,
+                  boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.5), blurRadius: 10)],
+                ),
+                child: ClipOval(
+                  child: ImageWithFallback(
+                    imageUrl: avatar,
+                    fallbackAsset: 'assets/images/default-avatar.png',
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'No users found for "${_searchController.text}"',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.primary),
+                ),
+                child: Text(
+                  username,
+                  style: const TextStyle(
+                    color: Colors.white, 
+                    fontSize: 11, 
+                    fontWeight: FontWeight.bold
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      print('❌ Error creating friend marker: $e');
+      return null;
+    }
   }
 
-  // ============================================================
-  //                 SEARCH FUNCTION
-  // ============================================================
+  Marker? _createEventMarker(Map<String, dynamic> event) {
+    try {
+      final coords = event['location']?['coordinates'];
+      if (coords is! List || coords.length < 2) {
+        final name = event['name'] ?? event['title'] ?? 'Unknown';
+        print('❌ Event $name has invalid coordinates: $coords');
+        return null;
+      }
+      
+      final lng = (coords[0] as num).toDouble();
+      final lat = (coords[1] as num).toDouble();
+      
+      final name = event['name'] ?? event['title'] ?? 'Event';
+      
+      print('📍 Event Marker: $name at $lat, $lng');
+      
+      return Marker(
+        point: LatLng(lat, lng),
+        width: 60,
+        height: 75,
+        child: GestureDetector(
+          onTap: () {
+            Get.snackbar("Event", "Tapped on $name");
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 45,
+                height: 45,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.pink, width: 3),
+                  color: Colors.black,
+                  boxShadow: [BoxShadow(color: Colors.pink.withOpacity(0.5), blurRadius: 10)],
+                ),
+                child: const Icon(Icons.event, color: Colors.pink, size: 25),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.pink),
+                ),
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white, 
+                    fontSize: 10, 
+                    fontWeight: FontWeight.bold
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      print('❌ Error creating event marker: $e');
+      return null;
+    }
+  }
+
+  Marker? _createBusinessMarker(Map<String, dynamic> business) {
+    try {
+      final coords = business['location']?['coordinates'];
+      if (coords is! List || coords.length < 2) {
+        final name = business['name'] ?? 'Unknown';
+        print('❌ Business $name has invalid coordinates: $coords');
+        return null;
+      }
+      
+      final lng = (coords[0] as num).toDouble();
+      final lat = (coords[1] as num).toDouble();
+      
+      final name = business['name'] ?? 'Business';
+      
+      print('📍 Business Marker: $name at $lat, $lng');
+      
+      return Marker(
+        point: LatLng(lat, lng),
+        width: 60,
+        height: 75,
+        child: GestureDetector(
+          onTap: () {
+            Get.snackbar("Business", "Tapped on $name");
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 45,
+                height: 45,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.orange, width: 3),
+                  color: Colors.black,
+                  boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.5), blurRadius: 10)],
+                ),
+                child: const Icon(Icons.store, color: Colors.orange, size: 25),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange),
+                ),
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white, 
+                    fontSize: 10, 
+                    fontWeight: FontWeight.bold
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      print('❌ Error creating business marker: $e');
+      return null;
+    }
+  }
+
+  Widget _filterChip(String label, String filterValue, Color activeColor) {
+    return Obx(() {
+      final isActive = _activeFilter.value == filterValue;
+      
+      return FilterChip(
+        label: Text(label),
+        selected: isActive,
+        onSelected: (v) {
+          _activeFilter.value = filterValue;
+        },
+        backgroundColor: Colors.black.withOpacity(0.6),
+        selectedColor: activeColor.withOpacity(0.3),
+        labelStyle: TextStyle(
+          color: isActive ? activeColor : Colors.white70,
+          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: isActive ? activeColor : Colors.white24),
+        ),
+        showCheckmark: false,
+      );
+    });
+  }
+
   void _performSearch(String query) async {
     if (query.isEmpty) {
       _searchResults.clear();
@@ -509,17 +740,5 @@ class _SearchScreenState extends State<SearchScreen> {
     } finally {
       _isSearching.value = false;
     }
-  }
-
-  // ============================================================
-  //                 OPEN CHAT
-  // ============================================================
-  void _openChatWithUser(Map<String, dynamic> user) {
-    final username = user['username'] ?? 'User';
-    Get.snackbar(
-      'Chat',
-      'Opening chat with $username',
-      snackPosition: SnackPosition.BOTTOM,
-    );
   }
 }

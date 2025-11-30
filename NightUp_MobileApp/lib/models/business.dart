@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import '../utils/constants.dart';
 
 class Business {
   final String id;
@@ -58,8 +59,7 @@ class Business {
     }
     
     if (avatar.startsWith('/')) {
-      const baseUrl = 'http://localhost:3000';
-      return '$baseUrl$avatar';
+      return ApiConstants.baseUrl.replaceFirst('/api', '') + avatar;
     }
     
     return avatar;
