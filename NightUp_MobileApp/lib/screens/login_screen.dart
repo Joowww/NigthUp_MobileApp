@@ -3,9 +3,8 @@ import 'package:get/get.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:js' as js;
-import '../screens/interestSelection_screen.dart';
+import '../screens/home_feed.dart';
 import '../controllers/auth_controller.dart';
-import '../controllers/interestSelection_controller.dart';
 import '../theme/colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/gradient_button.dart';
@@ -52,7 +51,9 @@ class _LoginScreenState extends State<LoginScreen> {
   void _registerGlobalHandler() {
     try {
       js.context['handleFlutterGoogleSignIn'] = js.allowInterop((credential) {
-        print('🎯 Global handler received credential: [36m${credential.length} chars[0m');
+        print(
+          '🎯 Global handler received credential: [36m${credential.length} chars[0m',
+        );
         _handleGISCredential(credential);
       });
       print('✅ Global handler registered successfully');
@@ -76,44 +77,26 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (success) {
-      widget.onLogin();
+      // Siempre ir al home, intereses deshabilitados
+      Get.offAll(() => const HomeFeed());
     } else {
       _showErrorDialog(_authController.error);
     }
   }
 
   // ================== GOOGLE LOGIN WEB ==================
-  // ================== GOOGLE LOGIN WEB ==================
-void _handleGISCredential(String credential) async {
-  print('✅ Received Google credential: ${credential.length} characters');
-  
-  final result = await _authController.googleLoginWeb(credential);
-  
-  if (result['success'] == true) {
-    final isNewUser = result['isNewUser'] ?? false;
-    
-    if (isNewUser) {
-      print('🎯 New user detected, navigating to interests screen');
-      
-      // AÑADE ESTE DELAY PARA EVITAR CONFLICTOS
-      await Future.delayed(Duration(milliseconds: 50));
-      
-      // NAVEGA USANDO TU SISTEMA DE APP.DART
-      Get.offAll(
-        GetBuilder<InterestSelectionController>(
-          init: InterestSelectionController(),
-          builder: (controller) => InterestSelectionScreen(),
-        )
-      );
-      
+  void _handleGISCredential(String credential) async {
+    print('✅ Received Google credential: ${credential.length} characters');
+
+    final result = await _authController.googleLoginWeb(credential);
+
+    if (result['success'] == true) {
+      // Siempre ir al home, intereses deshabilitados
+      Get.offAll(() => HomeFeed());
     } else {
-      print('🎯 Existing user, navigating to home');
-      widget.onLogin();
+      _showErrorDialog(_authController.error);
     }
-  } else {
-    _showErrorDialog(_authController.error);
   }
-}
 
   void _initializeGoogleGIS() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -126,11 +109,13 @@ void _handleGISCredential(String credential) async {
 
   void _loadAndInitializeGIS() {
     try {
-      const clientId = '750097459792-9cbl6emgs6j9vbpip10q8ddo1ru3i2s3.apps.googleusercontent.com';
+      const clientId =
+          '750097459792-9cbl6emgs6j9vbpip10q8ddo1ru3i2s3.apps.googleusercontent.com';
 
       if (js.context['google'] == null) {
         final script = js.JsObject.fromBrowserObject(
-            js.context['document'].callMethod('createElement', ['script']));
+          js.context['document'].callMethod('createElement', ['script']),
+        );
         script['src'] = 'https://accounts.google.com/gsi/client';
         script['async'] = true;
         script['defer'] = true;
@@ -201,7 +186,7 @@ void _handleGISCredential(String credential) async {
         };
         document.head.appendChild(script);
       }
-      '''
+      ''',
       ]);
     } catch (e) {
       print('❌ Error initializing GIS: $e');
@@ -222,10 +207,7 @@ void _handleGISCredential(String credential) async {
           translate('error.title'),
           style: const TextStyle(color: Colors.white),
         ),
-        content: Text(
-          error,
-          style: const TextStyle(color: Colors.white70),
-        ),
+        content: Text(error, style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -249,7 +231,10 @@ void _handleGISCredential(String credential) async {
           _buildBackgroundGradients(),
           SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 60),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 60,
+              ),
               child: Column(
                 children: [
                   _buildLogo(),
@@ -330,7 +315,13 @@ void _handleGISCredential(String credential) async {
 
     return Stack(
       children: particles
-          .map((p) => _buildNeonParticle(p[0] as Color, p[1] as double, p[2] as double))
+          .map(
+            (p) => _buildNeonParticle(
+              p[0] as Color,
+              p[1] as double,
+              p[2] as double,
+            ),
+          )
           .toList(),
     );
   }
@@ -345,9 +336,7 @@ void _handleGISCredential(String credential) async {
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(color: color, blurRadius: 8, spreadRadius: 2),
-          ],
+          boxShadow: [BoxShadow(color: color, blurRadius: 8, spreadRadius: 2)],
         ),
       ),
     );
@@ -359,7 +348,11 @@ void _handleGISCredential(String credential) async {
       children: [
         ShaderMask(
           shaderCallback: (bounds) => const LinearGradient(
-            colors: [AppColors.neonPink, AppColors.neonMagenta, AppColors.primary],
+            colors: [
+              AppColors.neonPink,
+              AppColors.neonMagenta,
+              AppColors.primary,
+            ],
             stops: [0.0, 0.5, 1.0],
           ).createShader(bounds),
           child: Text(
@@ -401,7 +394,10 @@ void _handleGISCredential(String credential) async {
             const SizedBox(height: 16),
             _buildRememberForgot(),
             const SizedBox(height: 16),
-            GradientButton(onPressed: _login, text: translate('login.login_button')),
+            GradientButton(
+              onPressed: _login,
+              text: translate('login.login_button'),
+            ),
             const SizedBox(height: 16),
             kIsWeb ? _buildGoogleWebButton() : _buildGoogleMobileButton(),
           ],
@@ -417,10 +413,14 @@ void _handleGISCredential(String credential) async {
         labelText: translate('login.email_label'),
         labelStyle: const TextStyle(color: Color(0xB3FFFFFF)),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.glassBorder)),
-        focusedBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.neonPink)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.glassBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.neonPink),
+        ),
         prefixIcon: const Icon(Icons.person, color: Color(0xB3FFFFFF)),
       ),
       style: const TextStyle(color: Colors.white),
@@ -435,10 +435,14 @@ void _handleGISCredential(String credential) async {
         labelText: translate('login.password_label'),
         labelStyle: const TextStyle(color: Color(0xB3FFFFFF)),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.glassBorder)),
-        focusedBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.neonPink)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.glassBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.neonPink),
+        ),
         prefixIcon: const Icon(Icons.lock, color: Color(0xB3FFFFFF)),
       ),
       style: const TextStyle(color: Colors.white),
@@ -463,7 +467,10 @@ void _handleGISCredential(String credential) async {
             ),
             Text(
               translate('login.remember_me'),
-              style: const TextStyle(color: Color(0xCCFFFFFF), shadows: [Shadow(blurRadius: 5, color: Color(0x4DFF00FF))]),
+              style: const TextStyle(
+                color: Color(0xCCFFFFFF),
+                shadows: [Shadow(blurRadius: 5, color: Color(0x4DFF00FF))],
+              ),
             ),
           ],
         ),
@@ -510,7 +517,9 @@ void _handleGISCredential(String credential) async {
           const SizedBox(width: 8),
           Text(
             translate('login.google_login'),
-            style: const TextStyle(shadows: [Shadow(blurRadius: 5, color: Color(0x4DFF00FF))]),
+            style: const TextStyle(
+              shadows: [Shadow(blurRadius: 5, color: Color(0x4DFF00FF))],
+            ),
           ),
         ],
       ),
@@ -594,8 +603,8 @@ void _handleGISCredential(String credential) async {
       } else {
         console.error('❌ GIS not available');
       }
-      '''
-    ]);
+      ''',
+      ]);
     } catch (e) {
       print('❌ Error showing Google modal: $e');
     }
@@ -608,7 +617,10 @@ void _handleGISCredential(String credential) async {
       children: [
         Text(
           translate('login.no_account'),
-          style: const TextStyle(color: Color(0xCCFFFFFF), shadows: [Shadow(blurRadius: 5, color: Color(0x4DFF00FF))]),
+          style: const TextStyle(
+            color: Color(0xCCFFFFFF),
+            shadows: [Shadow(blurRadius: 5, color: Color(0x4DFF00FF))],
+          ),
         ),
         GestureDetector(
           onTap: widget.onRegister,
@@ -659,7 +671,7 @@ void _handleGISCredential(String credential) async {
       window.handleFlutterOAuthError = function(error) {
         console.error('❌ OAuth error handler called:', error);
       };
-      '''
+      ''',
       ]);
     } catch (e) {
       print('❌ Error handling OAuth response: $e');

@@ -1,4 +1,4 @@
-// screens/friend_profile_screen.dart
+// friend_profile_screen.dart
 import 'dart:developer';
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
@@ -7,6 +7,8 @@ import '../services/api_service.dart';
 import '../theme/colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/image_with_fallback.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class FriendProfileScreen extends StatefulWidget {
   final String friendId;
@@ -22,9 +24,19 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
   var _isLoading = true.obs;
   var _friendData = <String, dynamic>{}.obs;
   var _friendEvents = [].obs;
-  var _friendshipStatus = ''.obs; // 'none', 'pending', 'accepted', 'blocked'
+  var _friendshipStatus = ''.obs;
   var _friendshipId = ''.obs;
   var _statusLoading = false.obs;
+  
+  // Trust score
+  var _trustScore = 0.0.obs;
+  var _totalRatings = 0.obs;
+  var _trustLevel = ''.obs;
+  var _trustRatings = [].obs;
+  
+  // Para ubicación
+  double? _friendLat;
+  double? _friendLng;
 
   @override
   void initState() {
@@ -32,20 +44,54 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
     _fetchFriendProfile();
     _fetchFriendEvents();
     _fetchFriendshipStatus();
+    _fetchTrustScore();
+  }
+
+  Future<void> _fetchTrustScore() async {
+    try {
+      final response = await _apiService.get('/user-trust/user/summary/${widget.friendId}');
+      if (response.data is Map) {
+        _trustScore.value = (response.data['averageTrust'] ?? 0.0).toDouble();
+        _totalRatings.value = response.data['totalRatings'] ?? 0;
+        _trustLevel.value = response.data['trustLevel'] ?? '';
+        
+        final ratingsResponse = await _apiService.get('/user-trust/user/ratings/${widget.friendId}');
+        if (ratingsResponse.data is List) {
+          _trustRatings.value = ratingsResponse.data;
+        }
+        
+        log('✅ Trust score loaded: ${_trustScore.value} (${_totalRatings.value} ratings)');
+      }
+    } catch (e) {
+      log('❌ Error loading trust score: $e');
+      _trustScore.value = 0.0;
+      _totalRatings.value = 0;
+    }
   }
 
   Future<void> _fetchFriendshipStatus() async {
     _statusLoading.value = true;
     try {
       final response = await _apiService.get('/friendship/status/${widget.friendId}');
-      if (response.data is Map && response.data['status'] != null) {
-        _friendshipStatus.value = response.data['status'];
-        _friendshipId.value = response.data['friendshipId']?.toString() ?? '';
+      
+      log('🔍 FRIENDSHIP STATUS RESPONSE: ${response.data}');
+      
+      if (response.data is Map && response.data['status'] is Map) {
+        final statusData = response.data['status'];
+        _friendshipStatus.value = statusData['friendshipStatus'] ?? 'none';
+        
+        // Si son amigos, obtener friendshipId Y ubicación
+        if (_friendshipStatus.value == 'accepted') {
+          await _getFriendshipDataAndLocation();
+        }
+        
+        log('✅ Friendship status: ${_friendshipStatus.value}');
       } else {
         _friendshipStatus.value = 'none';
         _friendshipId.value = '';
       }
     } catch (e) {
+      log('❌ Error loading friendship status: $e');
       _friendshipStatus.value = 'none';
       _friendshipId.value = '';
     } finally {
@@ -53,9 +99,89 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
     }
   }
 
+  // Obtener friendshipId Y ubicación desde /friendship/friends
+  Future<void> _getFriendshipDataAndLocation() async {
+    try {
+      print('🔍 Getting friendship data and location...');
+      final response = await _apiService.get('/friendship/friends');
+      
+      print('🔍 FRIENDSHIP/FRIENDS RESPONSE:');
+      print('   Type: ${response.data.runtimeType}');
+      print('   Is List: ${response.data is List}');
+      
+      if (response.data is List) {
+        print('   List length: ${response.data.length}');
+        
+        for (var friendship in response.data) {
+          final recipient = friendship['recipient'];
+          final requester = friendship['requester'];
+          
+          print('   Checking friendship:');
+          print('      recipient._id: ${recipient?['_id']}');
+          print('      requester._id: ${requester?['_id']}');
+          print('      Looking for: ${widget.friendId}');
+          
+          // Buscar el amigo en recipient o requester
+          Map<String, dynamic>? friendData;
+          
+          if (recipient != null && recipient['_id'] == widget.friendId) {
+            print('   ✅ FOUND in recipient!');
+            _friendshipId.value = friendship['_id'];
+            friendData = recipient;
+          } else if (requester != null && requester['_id'] == widget.friendId) {
+            print('   ✅ FOUND in requester!');
+            _friendshipId.value = friendship['_id'];
+            friendData = requester;
+          }
+          
+          // Si encontramos al amigo, extraer su ubicación
+          if (friendData != null) {
+            log('✅ Friendship ID found: ${_friendshipId.value}');
+            
+            print('   🔍 Friend data:');
+            print('      location: ${friendData['location']}');
+            print('      location type: ${friendData['location']?.runtimeType}');
+            
+            // Extraer ubicación
+            if (friendData['location'] is Map) {
+              final location = friendData['location'] as Map;
+              print('      coordinates: ${location['coordinates']}');
+              print('      coordinates type: ${location['coordinates']?.runtimeType}');
+              
+              if (location['coordinates'] is List) {
+                final coords = location['coordinates'] as List;
+                print('      ✅ coordinates is List with ${coords.length} elements');
+                
+                if (coords.length >= 2) {
+                  _friendLng = (coords[0] as num).toDouble();
+                  _friendLat = (coords[1] as num).toDouble();
+                  print('      ✅ EXTRACTED: lat=$_friendLat, lng=$_friendLng');
+                  log('✅ Friend location extracted: lat=$_friendLat, lng=$_friendLng');
+                } else {
+                  print('      ❌ coords.length < 2');
+                }
+              } else {
+                print('      ❌ coordinates is NOT a List');
+              }
+            } else {
+              print('      ❌ location is NOT a Map');
+            }
+            return;
+          }
+        }
+        print('   ❌ Friend not found in list');
+      } else {
+        print('   ❌ Response is NOT a List');
+      }
+    } catch (e) {
+      log('❌ Error getting friendship data and location: $e');
+      print('❌ Exception: $e');
+    }
+  }
+
   Future<void> _sendFriendRequest() async {
     try {
-      final response = await _apiService.post('/friendship/request', data: {"recipientId": widget.friendId});
+      await _apiService.post('/friendship/request', data: {"recipientId": widget.friendId});
       Get.snackbar('Solicitud enviada', 'Tu solicitud de amistad ha sido enviada.');
       await _fetchFriendshipStatus();
     } catch (e) {
@@ -65,9 +191,17 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
 
   Future<void> _deleteFriend() async {
     try {
-      if (_friendshipId.value.isEmpty) return;
+      if (_friendshipId.value.isEmpty) {
+        Get.snackbar('Error', 'No se pudo encontrar la amistad');
+        return;
+      }
       await _apiService.delete('/friendship/friend/${_friendshipId.value}');
       Get.snackbar('Amistad eliminada', 'Has eliminado a este amigo.');
+      
+      // Limpiar ubicación al eliminar amigo
+      _friendLat = null;
+      _friendLng = null;
+      
       await _fetchFriendshipStatus();
     } catch (e) {
       Get.snackbar('Error', 'No se pudo eliminar la amistad.');
@@ -78,17 +212,15 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
     _isLoading.value = true;
     try {
       final response = await _apiService.get('/user/profile/${widget.friendId}');
-      
-      // Manejar diferentes formatos de respuesta
       if (response.data is Map<String, dynamic>) {
         _friendData.value = response.data;
       } else {
         _friendData.value = {};
       }
-      
-      print('✅ Loaded friend profile: ${_friendData['username']}');
+      log('✅ Loaded friend profile: ${_friendData['username']}');
     } catch (e) {
-      if (e is dio.DioError && e.response != null) {
+      _friendData.value = {};
+      if (e is dio.DioException && e.response != null) {
         if (e.response?.statusCode == 401) {
           log('🔐 Sesión expirada. Por favor inicia sesión de nuevo.');
           Get.snackbar('Sesión expirada', 'Por favor inicia sesión de nuevo');
@@ -113,6 +245,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
       final response = await _apiService.get('/event/by-participant/${widget.friendId}');
       if (response.data is Map && response.data['events'] is List) {
         _friendEvents.value = response.data['events'];
+        log('✅ Loaded ${_friendEvents.length} events for friend');
       } else if (response.data is List) {
         _friendEvents.value = response.data;
       } else {
@@ -144,7 +277,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
               onPressed: () => Get.back(),
             ),
           ),
-          body: Center(
+          body: const Center(
             child: Text(
               'Friend not found',
               style: TextStyle(color: Colors.white70),
@@ -177,7 +310,6 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
 
   Widget _buildProfileHeader() {
     final username = _friendData['username']?.toString() ?? 'Unknown User';
-    final avatar = _friendData['avatar']?.toString() ?? '';
     final coverPhoto = _friendData['coverPhoto']?.toString() ?? '';
     final isOnline = _friendData['isOnline'] == true;
 
@@ -241,20 +373,11 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Trust Score: 4.8⭐',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
                 ],
               ),
             ],
           ),
         ),
-        // ... Botón de volver eliminado para dejar solo el del AppBar ...
       ],
     );
   }
@@ -296,76 +419,150 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        GlassCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  'Current Location',
+        
+        // Trust Score
+        Obx(() => GlassCard(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Valoraciones de confianza',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-              Container(
-                height: 150,
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.glassBorder),
-                ),
-                child: Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: AppColors.glassWhite,
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.map, color: Colors.white70, size: 40),
-                            const SizedBox(height: 8),
-                            Text(
-                              _friendData['location'] != null ? 'Location Available' : 'No Location',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+                const SizedBox(height: 16),
+                if (_totalRatings.value > 0) ...[
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 28),
+                      const SizedBox(width: 8),
+                      Text(
+                        _trustScore.value.toStringAsFixed(1),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
                         ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '(${_totalRatings.value} ${_totalRatings.value == 1 ? "valoración" : "valoraciones"})',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...(_trustRatings.take(3).map((rating) {
+                    final raterUsername = rating['rater']?['username'] ?? 'Usuario';
+                    final score = rating['score'] ?? 0;
+                    final comment = rating['comment'] ?? '';
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: List.generate(5, (index) => 
+                              Icon(
+                                index < score ? Icons.star : Icons.star_border,
+                                color: Colors.amber,
+                                size: 16,
+                              )
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  raterUsername,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (comment.isNotEmpty)
+                                  Text(
+                                    comment,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList()),
+                ] else ...[
+                  Row(
+                    children: [
+                      const Icon(Icons.star_border, color: Colors.grey, size: 28),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Sin valoraciones',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        )),
+        
+        const SizedBox(height: 16),
+        
+        // Eventos
+        Obx(() {
+          if (_friendEvents.isEmpty) {
+            return const GlassCard(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Eventos en los que participa',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: GlassCard(
-                        padding: EdgeInsets.zero,
-                        child: IconButton(
-                          icon: const Icon(Icons.share, color: Colors.white, size: 20),
-                          onPressed: () {
-                            _shareFriendLocation();
-                          },
+                    SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(Icons.event_busy, color: Colors.grey, size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Este usuario no participa en ningún evento todavía.',
+                            style: TextStyle(color: Colors.white54, fontSize: 16),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // NUEVO: Lista de eventos en los que participa el amigo
-        Obx(() {
-          if (_friendEvents.isEmpty) {
-            return const SizedBox();
+            );
           }
           return GlassCard(
             child: Padding(
@@ -373,18 +570,17 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Eventos en los que participa',
-                    style: TextStyle(
+                  Text(
+                    'Eventos en los que participa (${_friendEvents.length})',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ..._friendEvents.map((event) {
-                    final title = event['title'] ?? 'Evento';
-                    final date = event['formattedDate'] ?? '';
+                  ..._friendEvents.take(5).map((event) {
+                    final title = event['name'] ?? 'Evento';
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
@@ -393,7 +589,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              '$title - $date',
+                              title,
                               style: const TextStyle(color: Colors.white70),
                             ),
                           ),
@@ -401,6 +597,16 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
                       ),
                     );
                   }).toList(),
+                  if (_friendEvents.length > 5) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '+ ${_friendEvents.length - 5} eventos más',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -437,8 +643,9 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
           child: Center(child: CircularProgressIndicator()),
         );
       }
+      
       List<Widget> buttons = [];
-      // Botón de amistad
+      
       if (_friendshipStatus.value == 'accepted') {
         buttons.add(
           Expanded(
@@ -504,7 +711,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
           ),
         );
       }
-      // Botón de chat y mapa (si es amigo o no hay relación bloqueada)
+      
       if (_friendshipStatus.value != 'blocked') {
         buttons.add(const SizedBox(width: 12));
         buttons.add(
@@ -529,20 +736,77 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
           ),
         );
         buttons.add(const SizedBox(width: 12));
+        
         buttons.add(
           Expanded(
             child: OutlinedButton(
-              onPressed: () {
-                Get.snackbar(
-                  'Map',
-                  'Opening full map view',
-                  snackPosition: SnackPosition.BOTTOM,
-                );
-              },
+              onPressed: _friendLat != null && _friendLng != null
+                  ? () async {
+                      final userId = _apiService.getUserId();
+                      double? myLat;
+                      double? myLng;
+                      
+                      try {
+                        final resp = await _apiService.get('/friendship/friends');
+                        if (resp.data is List) {
+                          for (var friendship in resp.data) {
+                            final requester = friendship['requester'];
+                            if (requester != null && requester['_id'] == userId) {
+                              if (requester['location'] is Map && 
+                                  requester['location']['coordinates'] is List) {
+                                final coords = requester['location']['coordinates'] as List;
+                                if (coords.length >= 2) {
+                                  myLng = (coords[0] as num).toDouble();
+                                  myLat = (coords[1] as num).toDouble();
+                                  break;
+                                }
+                              }
+                            }
+                          }
+                        }
+                      } catch (e) {
+                        log('❌ Error getting my location: $e');
+                      }
+                      
+                      if (myLat != null && myLng != null) {
+                        Get.to(() => FriendMapScreen(
+                          friendUsername: _friendData['username']?.toString() ?? 'Friend',
+                          friendLat: _friendLat!,
+                          friendLng: _friendLng!,
+                          myLat: myLat!,
+                          myLng: myLng!,
+                        ));
+                      } else {
+                        Get.snackbar(
+                          'Error',
+                          'No se pudo obtener tu ubicación',
+                          backgroundColor: Colors.red.withOpacity(0.8),
+                          colorText: Colors.white,
+                        );
+                      }
+                    }
+                  : () {
+                      Get.snackbar(
+                        'Ubicación no disponible',
+                        _friendshipStatus.value == 'accepted' 
+                            ? 'Este amigo no tiene una ubicación registrada'
+                            : 'Solo puedes ver la ubicación de tus amigos',
+                        backgroundColor: Colors.orange.withOpacity(0.8),
+                        colorText: Colors.white,
+                      );
+                    },
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: AppColors.glassBorder),
-                backgroundColor: AppColors.glassWhite,
+                foregroundColor: _friendLat != null && _friendLng != null 
+                    ? Colors.white 
+                    : Colors.grey,
+                side: BorderSide(
+                  color: _friendLat != null && _friendLng != null 
+                      ? AppColors.glassBorder 
+                      : Colors.grey,
+                ),
+                backgroundColor: _friendLat != null && _friendLng != null 
+                    ? AppColors.glassWhite 
+                    : Colors.grey.withOpacity(0.2),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
               child: const Row(
@@ -557,6 +821,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
           ),
         );
       }
+      
       return Container(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -566,19 +831,6 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
     });
   }
 
-  void _shareFriendLocation() async {
-    final username = _friendData['username']?.toString() ?? 'Friend';
-    final city = _friendData['city']?.toString() ?? 'Unknown location';
-    final locationText = '$username - $city';
-    
-    print('📍 Sharing friend location: $locationText');
-    Get.snackbar(
-      'Location Shared',
-      'Friend location copied to clipboard',
-      snackPosition: SnackPosition.BOTTOM,
-    );
-  }
-
   void _openChat() {
     final username = _friendData['username']?.toString() ?? 'Friend';
     print('💬 Opening chat with $username');
@@ -586,6 +838,430 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
       'Chat',
       'Opening chat with $username',
       snackPosition: SnackPosition.BOTTOM,
+    );
+  }
+}
+
+// ============================================================================
+// FriendMapScreen - Pantalla de mapa con controles
+// ============================================================================
+
+class FriendMapScreen extends StatefulWidget {
+  final String friendUsername;
+  final double friendLat;
+  final double friendLng;
+  final double myLat;
+  final double myLng;
+
+  const FriendMapScreen({
+    super.key,
+    required this.friendUsername,
+    required this.friendLat,
+    required this.friendLng,
+    required this.myLat,
+    required this.myLng,
+  });
+
+  @override
+  State<FriendMapScreen> createState() => _FriendMapScreenState();
+}
+
+class _FriendMapScreenState extends State<FriendMapScreen> {
+  final MapController _mapController = MapController();
+  var _isExpanded = false.obs;
+  var _currentZoom = 13.0.obs;
+
+  void _zoomIn() {
+    _currentZoom.value = (_currentZoom.value + 1).clamp(1.0, 18.0);
+    _mapController.move(_mapController.camera.center, _currentZoom.value);
+  }
+
+  void _zoomOut() {
+    _currentZoom.value = (_currentZoom.value - 1).clamp(1.0, 18.0);
+    _mapController.move(_mapController.camera.center, _currentZoom.value);
+  }
+
+  void _toggleExpand() {
+    _isExpanded.value = !_isExpanded.value;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final markers = [
+      Marker(
+        point: LatLng(widget.friendLat, widget.friendLng),
+        width: 100,
+        height: 60,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.person_pin_circle, color: Colors.red, size: 40),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                widget.friendUsername,
+                style: const TextStyle(color: Colors.white, fontSize: 11),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+      Marker(
+        point: LatLng(widget.myLat, widget.myLng),
+        width: 60,
+        height: 60,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.person_pin, color: Colors.blue, size: 40),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Tú',
+                style: TextStyle(color: Colors.white, fontSize: 11),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
+
+    final centerLat = (widget.friendLat + widget.myLat) / 2;
+    final centerLng = (widget.friendLng + widget.myLng) / 2;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Obx(() => Stack(
+        children: [
+          // Mapa
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              height: _isExpanded.value 
+                  ? MediaQuery.of(context).size.height 
+                  : 300,
+              child: FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: LatLng(centerLat, centerLng),
+                  initialZoom: _currentZoom.value,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.nightup.app',
+                  ),
+                  MarkerLayer(markers: markers),
+                ],
+              ),
+            ),
+          ),
+
+          // Header con botón de cerrar
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 8,
+                left: 16,
+                right: 16,
+                bottom: 16,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.7),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Get.back(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Ubicación - ${widget.friendUsername}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Controles de zoom (dentro del área del mapa, abajo a la derecha)
+          Positioned(
+            top: _isExpanded.value ? null : 220,
+            bottom: _isExpanded.value ? 20 : null,
+            right: 16,
+            child: Column(
+              children: [
+                // Botón expandir/minimizar
+                Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[850]?.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.glassBorder,
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _toggleExpand,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        alignment: Alignment.center,
+                        child: Icon(
+                          _isExpanded.value 
+                              ? Icons.fullscreen_exit 
+                              : Icons.fullscreen,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // Botón zoom in
+                Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[850]?.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.glassBorder,
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _zoomIn,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.add,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // Botón zoom out
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[850]?.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.glassBorder,
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _zoomOut,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.remove,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Información adicional cuando está minimizado
+          if (!_isExpanded.value)
+            Positioned(
+              top: 300,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Detalles de ubicación',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    GlassCard(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.person_pin_circle,
+                                  color: Colors.red,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        widget.friendUsername,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Lat: ${widget.friendLat.toStringAsFixed(6)}, Lng: ${widget.friendLng.toStringAsFixed(6)}',
+                                        style: TextStyle(
+                                          color: Colors.grey[400],
+                                          fontSize: 12,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            const Divider(color: Colors.grey, height: 1),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.person_pin,
+                                  color: Colors.blue,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text(
+                                        'Tu ubicación',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Lat: ${widget.myLat.toStringAsFixed(6)}, Lng: ${widget.myLng.toStringAsFixed(6)}',
+                                        style: TextStyle(
+                                          color: Colors.grey[400],
+                                          fontSize: 12,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      )),
     );
   }
 }

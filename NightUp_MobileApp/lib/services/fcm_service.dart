@@ -1,4 +1,4 @@
-import 'local_notification_service.dart';
+import 'notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:developer';
@@ -15,7 +15,7 @@ class FcmService {
     if (_initialized) return;
     _initialized = true;
     // Inicializar notificaciones locales
-    await LocalNotificationService.initialize();
+    await NotificationService().init();
     // Inicializa Firebase solo si no está inicializado
     try {
       await Firebase.initializeApp();
@@ -29,7 +29,7 @@ class FcmService {
       log('Received FCM message: ${message.notification?.title}', name: 'FCM');
       final notification = message.notification;
       if (notification != null) {
-        LocalNotificationService.showNotification(
+        NotificationService().showMessageNotification(
           title: notification.title ?? 'Notificación',
           body: notification.body ?? '',
         );

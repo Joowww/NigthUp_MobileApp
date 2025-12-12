@@ -1,34 +1,60 @@
-import 'dart:developer';
+// lib/controllers/chat_controller.dart
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
+import '../services/notification_service.dart';
+import '../models/conversation.dart';
+import '../theme/colors.dart';
+import '../models/message.dart';
 
 class ChatController extends GetxController {
-    RxList<dynamic> get polls => _socketService.polls;
   final ApiService _apiService = Get.find<ApiService>();
   final SocketService _socketService = Get.find<SocketService>();
-  final RxList<Map<String, dynamic>> conversations = <Map<String, dynamic>>[].obs;
-  final RxMap<String, dynamic> currentConversation = <String, dynamic>{}.obs;
-  final RxList<Map<String, dynamic>> messages = <Map<String, dynamic>>[].obs;
+  final NotificationService _notificationService = NotificationService();
+
+  final RxList<Conversation> conversations = <Conversation>[].obs;
+  final Rx<Conversation?> currentConversation = Rx<Conversation?>(null);
+  final RxList<Message> messages = <Message>[].obs;
   final RxBool isLoading = true.obs;
   final RxBool isTyping = false.obs;
   final RxList<String> typingUsers = <String>[].obs;
   final RxInt unreadBadge = 0.obs;
   final RxMap<String, dynamic> friendStatus = <String, dynamic>{}.obs;
 
+  String? get currentUserId => _apiService.getUserId();
+
+  RxList<dynamic> get polls => _socketService.polls;
+
   @override
   void onInit() {
+    super.onInit();
     fetchConversations();
     _setupSocketListeners();
-    super.onInit();
   }
 
   void _setupSocketListeners() {
     ever<List<dynamic>>(_socketService.messages, (newMessages) {
-      final safeMessages = newMessages
-          .whereType<Map<String, dynamic>>()
-          .toList();
-      messages.assignAll(safeMessages);
+      if (newMessages.isNotEmpty) {
+        final lastMessage = newMessages.last;
+        final conversationId = lastMessage['conversation'];
+        final senderData = lastMessage['sender'];
+        final senderId = senderData is Map ? senderData['_id'] : senderData;
+
+        if (senderId != currentUserId) {
+          _updateConversationWithNewMessage(lastMessage);
+
+          if (currentConversation.value?.id != conversationId) {
+            _showNotificationForMessage(lastMessage);
+          }
+        }
+      }
+
+      if (currentConversation.value != null) {
+        messages.value = newMessages
+            .where((m) => m['conversation'] == currentConversation.value!.id)
+            .map((m) => Message.fromJson(m))
+            .toList();
+      }
     });
 
     ever<int>(_socketService.unreadNotifications, (count) {
@@ -40,207 +66,236 @@ class ChatController extends GetxController {
     });
   }
 
-  void fetchConversations() async {
+  void _updateConversationWithNewMessage(Map<String, dynamic> messageData) {
+    try {
+      final conversationId = messageData['conversation'];
+      final text = messageData['text'] ?? '';
+      final createdAt = messageData['createdAt'];
+
+      final index = conversations.indexWhere((c) => c.id == conversationId);
+
+      if (index != -1) {
+        final conv = conversations[index];
+        final updatedConv = Conversation(
+          id: conv.id,
+          isGroup: conv.isGroup,
+          name: conv.name,
+          avatar: conv.avatar,
+          lastMessage: text,
+          lastMessageTime: createdAt != null
+              ? DateTime.parse(createdAt)
+              : DateTime.now(),
+          participants: conv.participants,
+          unreadCount: conv.unreadCount + 1,
+        );
+
+        conversations.removeAt(index);
+
+        conversations.insert(0, updatedConv);
+      } else {
+        fetchConversations();
+      }
+    } catch (e) {
+      // Error handling logically kept silent or could be rethrown if critical, but keeping clean as requested.
+    }
+  }
+
+  void _showNotificationForMessage(Map<String, dynamic> messageData) {
+    try {
+      final conversationId = messageData['conversation'];
+      final senderData = messageData['sender'];
+      final senderName = senderData is Map
+          ? (senderData['username'] ?? 'Usuario')
+          : 'Usuario';
+      final text = messageData['text'] ?? '';
+
+      final conv = conversations.firstWhereOrNull(
+        (c) => c.id == conversationId,
+      );
+      final isGroup = conv?.isGroup ?? false;
+
+      _notificationService.showMessageNotification(
+        conversationId: conversationId,
+        senderName: senderName,
+        message: text,
+        isGroup: isGroup,
+      );
+    } catch (e) {
+      // Silent catch
+    }
+  }
+
+  Future<void> fetchConversations() async {
     final userId = _apiService.getUserId();
     if (userId == null) {
-      log('⚠️ No token, no se cargan conversaciones');
       isLoading.value = false;
       return;
     }
+
     isLoading.value = true;
     try {
-      // ✅ CORREGIDO: Usar endpoint de amigos que SÍ existe
-      final response = await _apiService.get('/friendship/friends');
-      
-      // ✅ Convertir amigos a formato de conversaciones
+      final response = await _apiService.get('/chat');
+
       if (response.data is List) {
-        final friends = response.data;
-        conversations.value = friends.map<Map<String, dynamic>>((friend) {
-          return {
-            '_id': 'conv_${friend['_id'] ?? friend['id']}',
-            'name': friend['username'] ?? 'Usuario',
-            'otherUser': friend is Map<String, dynamic> ? friend : {},
-            'isGroup': false,
-            'lastMessage': {
-              'content': 'Inicia una conversación...', 
-              'createdAt': DateTime.now().toIso8601String()
-            },
-            'unreadCount': 0
-          };
-        }).toList();
-        log('✅ Loaded ${conversations.length} conversations from friends');
-      } else if (response.data is Map && response.data['friends'] is List) {
-        final friends = response.data['friends'];
-        conversations.value = friends.map<Map<String, dynamic>>((friend) {
-          return {
-            '_id': 'conv_${friend['_id'] ?? friend['id']}',
-            'name': friend['username'] ?? 'Usuario',
-            'otherUser': friend is Map<String, dynamic> ? friend : {},
-            'isGroup': false,
-            'lastMessage': {
-              'content': 'Inicia una conversación...', 
-              'createdAt': DateTime.now().toIso8601String()
-            },
-            'unreadCount': 0
-          };
-        }).toList();
-        log('✅ Loaded ${conversations.length} conversations from friends');
+        conversations.value = (response.data as List)
+            .map((json) => Conversation.fromJson(json))
+            .toList();
       } else {
-        // ✅ FALLBACK: Conversaciones de ejemplo
-        conversations.value = [
-          {
-            '_id': 'conv_1',
-            'name': 'Usuario Ejemplo',
-            'isGroup': false,
-            'lastMessage': {
-              'content': 'Hola! 👋', 
-              'createdAt': DateTime.now().toIso8601String()
-            },
-            'unreadCount': 0
-          },
-          {
-            '_id': 'conv_2', 
-            'name': 'Grupo Fiesta',
-            'isGroup': true,
-            'lastMessage': {
-              'content': '¿A qué hora quedamos?',
-              'createdAt': DateTime.now().toIso8601String()
-            },
-            'unreadCount': 2
-          }
-        ];
-        log('⚠️ Using fallback conversations data');
+        conversations.value = [];
       }
     } catch (e) {
-      log('❌ Error loading conversations: $e');
-      // ✅ FALLBACK robusto
-      conversations.value = [
-        {
-          '_id': 'conv_fallback',
-          'name': 'Chat de Ejemplo',
-          'isGroup': false,
-          'lastMessage': {
-            'content': 'Bienvenido a NightUp!',
-            'createdAt': DateTime.now().toIso8601String()
-          },
-          'unreadCount': 0
-        }
-      ];
+      conversations.value = [];
     } finally {
       isLoading.value = false;
     }
   }
 
-  void fetchMessages(String conversationId) async {
+  Future<void> fetchMessages(String conversationId) async {
     try {
-      // ✅ CORREGIDO: Si el endpoint no existe, usar mensajes de ejemplo
-      try {
-        final response = await _apiService.get('/chat/messages/$conversationId');
-        if (response.data is List) {
-          final safeList = response.data
-              .whereType<Map<String, dynamic>>()
-              .toList();
-          messages.assignAll(safeList);
-        } else {
-          _setExampleMessages();
-        }
-      } catch (e) {
-        _setExampleMessages();
+      final response = await _apiService.get('/chat/$conversationId/messages');
+
+      if (response.data is List) {
+        messages.value = (response.data as List)
+            .map((json) => Message.fromJson(json))
+            .toList();
       }
-      
-      _socketService.joinConversation(conversationId);
-      log('✅ Loaded ${messages.length} messages for conversation $conversationId');
+
+      _socketService.joinRoom(conversationId);
     } catch (e) {
-      log('❌ Error loading messages: $e - using example messages');
-      _setExampleMessages();
+      messages.value = [];
     }
   }
 
-  void _setExampleMessages() {
-    messages.value = [
-      {
-        '_id': 'msg_1',
-        'content': '¡Hola! Bienvenido a NightUp 🎉',
-        'sender': {
-          '_id': 'system',
-          'username': 'NightUp',
-          'profilePictureUrl': null
+  Future<void> sendMessage(String text, {String? replyToId}) async {
+    if (text.trim().isEmpty) return;
+    if (currentConversation.value == null) {
+      return;
+    }
+
+    try {
+      await _apiService.post(
+        '/chat/message',
+        data: {
+          'conversationId': currentConversation.value!.id,
+          'text': text.trim(),
+          if (replyToId != null) 'replyTo': replyToId,
         },
-        'createdAt': DateTime.now().subtract(Duration(minutes: 5)).toIso8601String(),
-      },
-      {
-        '_id': 'msg_2', 
-        'content': 'Prueba el chat cuando tengas el backend configurado',
-        'sender': {
-          '_id': 'system', 
-          'username': 'NightUp',
-          'profilePictureUrl': null
-        },
-        'createdAt': DateTime.now().subtract(Duration(minutes: 3)).toIso8601String(),
-      }
-    ];
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo enviar el mensaje: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.error.withOpacity(0.8),
+        colorText: AppColors.white,
+      );
+    }
   }
 
-  void sendMessage(String content, {String type = 'text'}) {
-    if (content.trim().isEmpty) return;
-
-    final message = {
-      'conversationId': currentConversation['_id'],
-      'content': content.trim(),
-      'type': type
-    };
-
-    _socketService.sendMessage(message);
-    messages.add({
-      ...message,
-      '_id': 'temp-${DateTime.now().millisecondsSinceEpoch}',
-      'sender': {
-        '_id': 'current-user',
-        'username': 'You',
-        'profilePictureUrl': null
-      },
-      'createdAt': DateTime.now().toIso8601String(),
-      'isSent': false
-    });
-  }
-
-  void setCurrentConversation(Map<String, dynamic> conversation) {
+  void setCurrentConversation(Conversation conversation) {
     currentConversation.value = conversation;
-    fetchMessages(conversation['_id']);
+    fetchMessages(conversation.id);
     unreadBadge.value = 0;
     _socketService.resetUnreadNotifications();
   }
 
-  void createGroupChat(String name, List<String> participantIds) async {
+  Future<void> createPrivateChat(String recipientId) async {
     try {
-      final response = await _apiService.post('/group', data: {
-        'name': name,
-        'participants': participantIds
-      });
-      if (response.data is Map<String, dynamic>) {
-        conversations.add(response.data);
+      final response = await _apiService.post(
+        '/chat/conversation',
+        data: {'recipientId': recipientId},
+      );
+
+      if (response.data['conversationId'] != null) {
+        final conversationId = response.data['conversationId'].toString();
+
+        await fetchConversations();
+
+        final conv = conversations.firstWhereOrNull(
+          (c) => c.id == conversationId,
+        );
+
+        if (conv != null) {
+          setCurrentConversation(conv);
+        }
       }
+    } catch (e) {
+      throw Exception('No se pudo crear el chat: $e');
+    }
+  }
+
+  Future<void> createGroupChat(String name, List<String> participantIds) async {
+    try {
+      await _apiService.post(
+        '/chat/group',
+        data: {'name': name, 'participants': participantIds},
+      );
+
+      await fetchConversations();
       Get.back();
-      Get.snackbar('Éxito', 'Grupo creado correctamente');
+      Get.snackbar(
+        'Éxito',
+        'Grupo "$name" creado correctamente',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.success.withOpacity(0.8),
+        colorText: AppColors.white,
+      );
     } catch (e) {
       Get.snackbar('Error', 'No se pudo crear el grupo: $e');
     }
   }
 
-  void createPoll(String question, List<String> options) async {
+  Future<void> editMessage(String messageId, String newText) async {
     try {
-      await _apiService.post('/group/${currentConversation['_id']}/poll', data: {
-        'question': question,
-        'options': options
-      });
-      Get.back();
-      Get.snackbar('Éxito', 'Encuesta creada correctamente');
+      await _apiService.put(
+        '/chat/message/$messageId',
+        data: {'text': newText},
+      );
     } catch (e) {
-      Get.snackbar('Error', 'No se pudo crear la encuesta: $e');
+      Get.snackbar('Error', 'No se pudo editar el mensaje: $e');
+    }
+  }
+
+  Future<void> deleteMessage(String messageId) async {
+    try {
+      await _apiService.delete('/chat/message/$messageId');
+    } catch (e) {
+      Get.snackbar('Error', 'No se pudo eliminar el mensaje: $e');
+    }
+  }
+
+  Future<void> reactToMessage(String messageId, String emoji) async {
+    try {
+      await _apiService.post(
+        '/chat/message/$messageId/react',
+        data: {'emoji': emoji},
+      );
+    } catch (e) {
+      // Silent catch
+    }
+  }
+
+  void startTyping() {
+    if (currentConversation.value != null) {
+      _socketService.typing(currentConversation.value!.id);
+    }
+  }
+
+  void stopTyping() {
+    if (currentConversation.value != null) {
+      _socketService.stopTyping(currentConversation.value!.id);
     }
   }
 
   void resetUnreadNotifications() {
     _socketService.resetUnreadNotifications();
+  }
+
+  @override
+  void onClose() {
+    if (currentConversation.value != null) {
+      _socketService.leaveRoom(currentConversation.value!.id);
+    }
+    super.onClose();
   }
 }

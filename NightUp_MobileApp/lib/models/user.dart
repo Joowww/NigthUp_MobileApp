@@ -35,6 +35,7 @@ class User {
   final bool? isOnline;
   final DateTime? lastSeen;
   final DateTime? lastLocationUpdate;
+  final bool? onboardingCompleted;
 
   User({
     required this.id,
@@ -71,40 +72,46 @@ class User {
     this.isOnline,
     this.lastSeen,
     this.lastLocationUpdate,
+    this.onboardingCompleted,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
-    // Manejar intereses como lista de strings o lista de mapas serializados como string
+    // ✅ Manejar intereses extrayendo SOLO el campo 'name'
     List<String>? parsedInterests;
     if (json['interests'] != null) {
       try {
         parsedInterests = List<String>.from(json['interests'].map((i) {
+          if (i == null) return 'Unknown';
+          
           if (i is String) {
-            // Si parece un mapa serializado, intenta parsear a Map y luego a string normalizado
+            // Si es un string que parece un mapa JSON, parsearlo
             if (i.trim().startsWith('{') && i.trim().endsWith('}')) {
               try {
-                // Reemplazar las claves sin comillas por claves con comillas dobles
                 final normalized = i.replaceAllMapped(
                   RegExp(r'(\w+):'),
                   (match) => '"${match[1]}":',
                 ).replaceAll("'", '"');
                 final map = Map<String, dynamic>.from(jsonDecode(normalized));
-                return jsonEncode(map); // Guardar como JSON serializado
+                // ✅ Extraer SOLO el campo 'name'
+                return map['name']?.toString() ?? 'Unknown';
               } catch (_) {
                 return i;
               }
             }
             return i;
           } else if (i is Map) {
-            return jsonEncode(i);
+            // ✅ Si es un Map directo, extraer SOLO el campo 'name'
+            return i['name']?.toString() ?? 'Unknown';
           } else {
             return i.toString();
           }
         }));
-      } catch (_) {
+      } catch (e) {
+        print('Error parsing interests: $e');
         parsedInterests = null;
       }
     }
+
     return User(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       username: json['username'] ?? '',
@@ -140,6 +147,7 @@ class User {
       isOnline: json['isOnline'],
       lastSeen: json['lastSeen'] != null ? DateTime.tryParse(json['lastSeen'].toString()) : null,
       lastLocationUpdate: json['lastLocationUpdate'] != null ? DateTime.tryParse(json['lastLocationUpdate'].toString()) : null,
+      onboardingCompleted: json['onboardingCompleted'],
     );
   }
 
@@ -179,24 +187,25 @@ class User {
       'isOnline': isOnline,
       'lastSeen': lastSeen?.toIso8601String(),
       'lastLocationUpdate': lastLocationUpdate?.toIso8601String(),
+      'onboardingCompleted': onboardingCompleted,
     };
   }
 
-      String get safeProfilePictureUrl {
-      if (profilePictureUrl == null || profilePictureUrl!.isEmpty) {
-        return 'assets/images/default_avatar.png';
-      }
-      return profilePictureUrl!;
+  String get safeProfilePictureUrl {
+    if (profilePictureUrl == null || profilePictureUrl!.isEmpty) {
+      return 'assets/images/default_avatar.png';
     }
+    return profilePictureUrl!;
+  }
 
-    String get safeCoverPhoto {
-      if (coverPhoto == null || coverPhoto!.isEmpty) {
-        return 'assets/images/default_cover.jpg';
-      }
-      return coverPhoto!;
+  String get safeCoverPhoto {
+    if (coverPhoto == null || coverPhoto!.isEmpty) {
+      return 'assets/images/default_cover.jpg';
     }
+    return coverPhoto!;
+  }
 
-    Object? get safeLocationString {
+  Object? get safeLocationString {
     if (location == null) return '';
     if (location is String) return location;
     if (location is Map && location?['name'] != null) return location?['name'].toString();
@@ -301,7 +310,7 @@ class AuthResponse {
   final String token;
   final String refreshToken;
   final String message;
-   final bool isNewUser;
+  final bool isNewUser;
 
   AuthResponse({
     required this.user,
@@ -317,7 +326,7 @@ class AuthResponse {
       token: json['token'],
       refreshToken: json['refreshToken'],
       message: json['message'],
-       isNewUser: json['isNewUser'] ?? false,
+      isNewUser: json['isNewUser'] ?? false,
     );
   }
 }
@@ -377,4 +386,3 @@ class VerifySecurityAnswerResponse {
     );
   }
 }
-

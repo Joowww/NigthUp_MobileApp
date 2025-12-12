@@ -7,6 +7,7 @@ import '../screens/home_feed.dart'; // Asegúrate de que la ruta sea correcta
 import 'auth_controller.dart';
 
 class InterestSelectionController extends GetxController {
+    final RxString errorMessage = ''.obs;
   final ApiService _apiService = Get.find<ApiService>();
   final StorageService _storageService = Get.find<StorageService>();
   
@@ -60,8 +61,17 @@ class InterestSelectionController extends GetxController {
 
   // Cargar tags desde la API - CORREGIDO
   Future<void> _loadTags() async {
+    isLoading.value = true;
+    errorMessage.value = '';
+    bool completed = false;
+    Future timeout = Future.delayed(const Duration(seconds: 15), () {
+      if (!completed) {
+        errorMessage.value = 'No se pudo cargar. Comprueba tu conexión o reintenta.';
+        isLoading.value = false;
+        update();
+      }
+    });
     try {
-      isLoading.value = true;
       print('🟢 [InterestController] _loadTags called');
       final types = ['MusicType', 'Musician', 'EventType', 'ChildhoodIdol'];
       for (final type in types) {
@@ -92,14 +102,17 @@ class InterestSelectionController extends GetxController {
       tagOptions.forEach((key, value) {
         print('   $key: ${value.length} items');
       });
+      completed = true;
+      isLoading.value = false;
+      update();
     } catch (e) {
       print('🔴 [InterestController] Error loading tags: $e');
       _loadFallbackTags();
+      completed = true;
+      isLoading.value = false;
+      errorMessage.value = 'No se pudo cargar. Comprueba tu conexión o reintenta.';
+      update();
     }
-    // Asegura que isLoading siempre se pone a false aunque haya error
-    print('🟢 [InterestController] _loadTags finally. Setting isLoading to false');
-    isLoading.value = false;
-    update();
   }
 
   // Datos de fallback - CORREGIDO

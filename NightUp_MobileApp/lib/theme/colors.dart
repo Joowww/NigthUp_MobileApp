@@ -31,6 +31,7 @@ class AppColors {
   static const Color softPink = Color(0xFFFF69B4);
   static const Color neonBlue = Color(0xFF00BFFF);  
   static const Color neonGreen = Color(0xFF39FF14);  
+  static const Color white = Color(0xFFFFFFFF);
 
   // Nuevos gradientes neón
   static const Gradient neonGradient = LinearGradient(

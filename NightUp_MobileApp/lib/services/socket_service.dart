@@ -1,15 +1,15 @@
+// lib/services/socket_service.dart
 import 'dart:developer';
 import 'package:get/get.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../services/storage_service.dart';
-import '../utils/constants.dart';
+import '../services/api_service.dart';
 
 class SocketService extends GetxService {
-    void resetUnreadNotifications() {
-      _unreadNotifications.value = 0;
-    }
   late IO.Socket _socket;
   final StorageService _storageService = Get.find<StorageService>();
+  final ApiService _apiService = Get.find<ApiService>();
+  
   final RxBool _isConnected = false.obs;
   final RxList<dynamic> _messages = <dynamic>[].obs;
   final RxInt _unreadNotifications = 0.obs;
@@ -29,107 +29,204 @@ class SocketService extends GetxService {
   }
 
   void _initSocket() {
-    final token = _storageService.read('token');
-    if (token == null) {
-      log('No token found for socket connection');
+    final userId = _apiService.getUserId();
+    if (userId == null) {
+      log('⚠️ No userId found for socket connection');
       return;
     }
 
-    // Conectar al servidor Socket.io de tu backend
+    log('🔌 Connecting socket with userId: $userId');
+
+    // ✅ CORREGIDO: Conectar con autenticación correcta
     _socket = IO.io(
-      ApiConstants.baseUrl.replaceFirst('/api', ''), 
+      'http://localhost:3000', // ✅ Sin /api
       IO.OptionBuilder()
         .setTransports(['websocket'])
         .enableAutoConnect()
-        .setExtraHeaders({'Authorization': 'Bearer $token'})
+        .setAuth({'userId': userId}) // ✅ Pasar userId en auth
         .build(),
     );
 
     _socket.onConnect((_) {
       _isConnected.value = true;
-      log('Socket connected');
+      log('✅ Socket connected with userId: $userId');
     });
 
     _socket.onDisconnect((_) {
       _isConnected.value = false;
-      log('Socket disconnected');
+      log('❌ Socket disconnected');
     });
 
     _socket.onError((data) {
-      log('Socket error: $data');
+      log('❌ Socket error: $data');
     });
 
-    // Escuchar mensajes nuevos
+    // ===== EVENTOS DEL BACKEND =====
+    
+    // Nuevo mensaje
     _socket.on('newMessage', (data) {
+      log('📨 New message received: $data');
       _messages.add(data);
-      log('New message received: $data');
-    });
-
-    // Notificación de nuevo mensaje (badge)
-    _socket.on('newMessageNotification', (data) {
       _unreadNotifications.value++;
-      log('New message notification: $data');
     });
 
-    // Polls en grupos
-    _socket.on('newGroupPoll', (data) {
-      _polls.add(data);
-      log('New group poll: $data');
-    });
-    _socket.on('pollUpdated', (data) {
-      // Actualizar poll existente
-      int idx = _polls.indexWhere((p) => p['_id'] == data['_id']);
-      if (idx != -1) {
-        _polls[idx] = data;
-      } else {
-        _polls.add(data);
-      }
-      log('Poll updated: $data');
-    });
-
-    // Estado de amigos online/offline
-    _socket.on('friend-status-change', (data) {
-      if (data is Map && data.containsKey('userId') && data.containsKey('status')) {
-        _friendStatus[data['userId']] = data['status'];
-        log('Friend status change: $data');
+    // Mensaje editado
+    _socket.on('messageEdited', (data) {
+      log('✏️ Message edited: $data');
+      final index = _messages.indexWhere((m) => m['_id'] == data['_id']);
+      if (index != -1) {
+        _messages[index] = data;
       }
     });
 
-    // Escuchar cuando un usuario se une
-    _socket.on('userJoined', (data) {
-      log('User joined: $data');
+    // Mensaje eliminado
+    _socket.on('messageDeleted', (data) {
+      log('🗑️ Message deleted: ${data['messageId']}');
+      final index = _messages.indexWhere((m) => m['_id'] == data['messageId']);
+      if (index != -1) {
+        _messages[index] = {
+          ..._messages[index],
+          'isDeleted': true,
+          'text': 'Mensaje eliminado'
+        };
+      }
     });
 
-    // Escuchar cuando un usuario abandona
-    _socket.on('userLeft', (data) {
-      log('User left: $data');
+    // Reacción a mensaje
+    _socket.on('messageReacted', (data) {
+      log('👍 Message reacted: ${data['messageId']}');
+      final index = _messages.indexWhere((m) => m['_id'] == data['messageId']);
+      if (index != -1) {
+        _messages[index] = {
+          ..._messages[index],
+          'reactions': data['reactions']
+        };
+      }
+    });
+
+    // Nuevo grupo creado
+    _socket.on('newGroup', (data) {
+      log('👥 New group created: $data');
+    });
+
+    // Usuario escribiendo
+    _socket.on('userTyping', (data) {
+      log('✍️ User typing: ${data['userId']}');
+    });
+
+    // Usuario dejó de escribir
+    _socket.on('userStoppedTyping', (data) {
+      log('User stopped typing: ${data['userId']}');
+    });
+
+    // Mensaje bloqueado por moderación
+    _socket.on('messageBlocked', (data) {
+      log('🚫 Message blocked: $data');
+      Get.snackbar(
+        'Mensaje bloqueado',
+        data['reason'] ?? 'Tu mensaje contiene contenido inapropiado',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    });
+
+    // Edición bloqueada por moderación
+    _socket.on('editBlocked', (data) {
+      log('🚫 Edit blocked: $data');
+      Get.snackbar(
+        'Edición bloqueada',
+        data['reason'] ?? 'Tu edición contiene contenido inapropiado',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     });
 
     _socket.connect();
   }
 
+  // ===== MÉTODOS PARA EMITIR EVENTOS =====
+
+  void joinRoom(String conversationId) {
+    if (!_isConnected.value) {
+      log('⚠️ Cannot join room: socket not connected');
+      return;
+    }
+    log('🚪 Joining room: $conversationId');
+    _socket.emit('joinRoom', conversationId);
+  }
+
+  void leaveRoom(String conversationId) {
+    if (!_isConnected.value) return;
+    log('🚪 Leaving room: $conversationId');
+    _socket.emit('leaveRoom', conversationId);
+  }
+
   void sendMessage(Map<String, dynamic> message) {
+    if (!_isConnected.value) {
+      log('⚠️ Cannot send message: socket not connected');
+      return;
+    }
+    log('📤 Sending message: $message');
     _socket.emit('sendMessage', message);
   }
 
+  void editMessage(String messageId, String text) {
+    if (!_isConnected.value) return;
+    log('✏️ Editing message: $messageId');
+    _socket.emit('editMessage', {
+      'messageId': messageId,
+      'text': text,
+    });
+  }
+
+  void deleteMessage(String messageId) {
+    if (!_isConnected.value) return;
+    log('🗑️ Deleting message: $messageId');
+    _socket.emit('deleteMessage', {'messageId': messageId});
+  }
+
+  void reactToMessage(String messageId, String emoji) {
+    if (!_isConnected.value) return;
+    log('👍 Reacting to message: $messageId with $emoji');
+    _socket.emit('reactToMessage', {
+      'messageId': messageId,
+      'emoji': emoji,
+    });
+  }
+
+  void typing(String conversationId) {
+    if (!_isConnected.value) return;
+    _socket.emit('typing', {'conversationId': conversationId});
+  }
+
+  void stopTyping(String conversationId) {
+    if (!_isConnected.value) return;
+    _socket.emit('stopTyping', {'conversationId': conversationId});
+  }
+
+  void createGroup(String name, List<String> participants) {
+    if (!_isConnected.value) return;
+    log('👥 Creating group: $name');
+    _socket.emit('createGroup', {
+      'name': name,
+      'participants': participants,
+    });
+  }
+
   void joinConversation(String conversationId) {
-    _socket.emit('joinConversation', conversationId);
+    joinRoom(conversationId);
   }
 
   void leaveConversation(String conversationId) {
-    _socket.emit('leaveConversation', conversationId);
+    leaveRoom(conversationId);
   }
 
-  void typing(String conversationId, bool isTyping) {
-    _socket.emit('typing', {
-      'conversationId': conversationId,
-      'isTyping': isTyping
-    });
+  void resetUnreadNotifications() {
+    _unreadNotifications.value = 0;
   }
 
   @override
   void onClose() {
     _socket.disconnect();
+    _socket.dispose();
     super.onClose();
   }
 }

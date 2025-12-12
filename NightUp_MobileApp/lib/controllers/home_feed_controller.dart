@@ -7,13 +7,14 @@ import '../models/event.dart';
 import '../services/api_service.dart';
 import '../theme/colors.dart';
 
-class HomeFeedController extends GetxController with GetSingleTickerProviderStateMixin {
+class HomeFeedController extends GetxController
+    with GetSingleTickerProviderStateMixin {
   final ApiService _apiService = Get.find<ApiService>();
 
   // Estado del TabBar y PageView
   late TabController tabController;
   final PageController pageController = PageController();
-  
+
   // Datos reactivos (observables)
   var discoverEvents = <Event>[].obs;
   var friendsPosts = <Post>[].obs;
@@ -36,45 +37,63 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
 
   void _handleTabChange() {
     if (tabController.indexIsChanging) {
-      update(['tab_selection', 'discover_feed', 'friends_feed']);
+      update([
+        'tab_selection',
+        'discover_feed',
+        'friends_feed',
+        'bottom_actions',
+      ]);
     }
   }
 
-  // Obtener eventos para el feed Discover (Para Ti)
   void fetchDiscoverEvents() async {
     final userId = _apiService.getUserId();
+    log('👤 User ID from token: $userId'); // Log añadido
+
     if (userId == null) {
-      log('⚠️ No token, no se cargan eventos');
+      log('⚠️ No token or User ID invalid, no se cargan eventos');
       isLoadingDiscover.value = false;
       return;
     }
     isLoadingDiscover.value = true;
     try {
       log('🔄 Fetching events from /event endpoint...');
-      
-      final response = await _apiService.get('/event?limit=20');
-      
+
+      // He quitado el límite para probar si es eso, o puedes dejarlo
+      final response = await _apiService.get('/event');
+
+      log('📦 Raw API Response: ${response.data}'); // Ver qué llega EXACTAMENTE
+
       if (response.data is Map && response.data['events'] is List) {
         final eventsList = response.data['events'] as List;
-        log('📋 Found ${eventsList.length} events');
-        
+        log(
+          '📋 Found ${eventsList.length} events in list',
+        ); // Cuántos hay en la lista
+
         discoverEvents.value = eventsList.map((i) {
           return Event.fromJson(i);
         }).toList();
-        
+
         // CARGAR ESTADOS DE LIKE DESPUÉS DE OBTENER LOS EVENTOS
         await loadLikeStatusForEvents();
+      } else if (response.data is List) {
+        // Soporte por si el backend devuelve lista directa
+        log('📋 Response is a direct List, converting...');
+        final eventsList = response.data as List;
+        discoverEvents.value = eventsList
+            .map((i) => Event.fromJson(i))
+            .toList();
+        await loadLikeStatusForEvents();
       } else {
-        log('❌ Unexpected response format: ${response.data}');
+        log('❌ Unexpected response format: ${response.data.runtimeType}');
         discoverEvents.value = [];
       }
-      
     } catch (e) {
       log('❌ Error loading events: $e');
       discoverEvents.value = [];
     } finally {
       isLoadingDiscover.value = false;
-      update(['discover_feed']);
+      update(['discover_feed', 'bottom_actions']);
     }
   }
 
@@ -89,11 +108,11 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
     isLoadingFriends.value = true;
     try {
       log('🔄 Fetching friends posts from backend...');
-      
+
       final response = await _apiService.get('/post/feed/friends');
-      
+
       log('✅ Friends posts response: ${response.data}');
-      
+
       friendsPosts.value = (response.data as List)
           .map((i) => Post.fromFriendPostJson(i))
           .toList();
@@ -102,9 +121,9 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
     } catch (e) {
       log('❌ Error loading friends posts: $e');
       Get.snackbar(
-        'Error', 
-        'No se pudo cargar el feed de Amigos: $e', 
-        snackPosition: SnackPosition.BOTTOM
+        'Error',
+        'No se pudo cargar el feed de Amigos: $e',
+        snackPosition: SnackPosition.BOTTOM,
       );
     } finally {
       isLoadingFriends.value = false;
@@ -112,13 +131,11 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
     }
   }
 
-  // --- MÉTODOS DE INTERACCIÓN CON EVENTOS CORREGIDOS ---
-
   Future<void> toggleLikeEvent(Event event) async {
     try {
       final apiService = Get.find<ApiService>();
       final userId = apiService.getUserId();
-      
+
       if (userId == null) {
         Get.snackbar('Error', 'Usuario no identificado');
         return;
@@ -141,10 +158,10 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
             likes: event.likes + 1,
           );
         }
-        update(['discover_feed', 'current_page']);
+        update(['discover_feed', 'bottom_actions']);
       }
 
-      // Hacer la llamada API - ENVIAR CUERPO VACÍO para evitar errores de validación
+      // Hacer la llamada API
       if (event.isLiked) {
         await apiService.post('/event/${event.id}/unlike', data: {});
         log('✅ Like removed from event: ${event.id}');
@@ -152,16 +169,15 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
         await apiService.post('/event/${event.id}/like', data: {});
         log('✅ Like added to event: ${event.id}');
       }
-      
     } catch (e) {
       log('❌ Error toggling like: $e');
       // Revertir cambios en caso de error
       final index = discoverEvents.indexWhere((e) => e.id == event.id);
       if (index != -1) {
         discoverEvents[index] = event; // Volver al estado original
-        update(['discover_feed', 'current_page']);
+        update(['discover_feed', 'bottom_actions']);
       }
-      
+
       Get.snackbar(
         'Error',
         'No se pudo actualizar el like: $e',
@@ -172,11 +188,12 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
 
   Future<void> shareEvent(Event event) async {
     try {
-      final shareText = '¡Mira este evento: ${event.title} en ${event.venue}! ${event.displayPrice} - ${event.formattedDate}';
+      final shareText =
+          '¡Mira este evento: ${event.title} en ${event.venue}! ${event.displayPrice} - ${event.formattedDate}';
       final eventUrl = 'https://nightup.com/events/${event.id}';
-      
+
       log('📤 Sharing event: ${event.id}');
-      
+
       // Diálogo simple y funcional que SIEMPRE funciona
       await Get.dialog(
         Dialog(
@@ -216,7 +233,7 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
                     ],
                   ),
                 ),
-                
+
                 // Content
                 Padding(
                   padding: EdgeInsets.all(20),
@@ -224,10 +241,7 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
                     children: [
                       Text(
                         'Copia el texto para compartir:',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(color: Colors.white, fontSize: 16),
                       ),
                       SizedBox(height: 16),
                       Container(
@@ -240,10 +254,7 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
                         ),
                         child: SelectableText(
                           '$shareText\n$eventUrl',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.white, fontSize: 14),
                         ),
                       ),
                       SizedBox(height: 16),
@@ -257,8 +268,8 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
                     ],
                   ),
                 ),
-                
-                // Actions - Botón simple que SIEMPRE funciona
+
+                // Actions
                 Container(
                   padding: EdgeInsets.all(16),
                   child: Row(
@@ -266,7 +277,7 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
                       Expanded(
                         child: TextButton(
                           onPressed: () {
-                            Get.back(); // Cerrar el diálogo
+                            Get.back();
                           },
                           style: TextButton.styleFrom(
                             backgroundColor: AppColors.primary,
@@ -291,12 +302,10 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
             ),
           ),
         ),
-        barrierDismissible: true, // Permitir cerrar haciendo clic fuera
+        barrierDismissible: true,
       );
-      
     } catch (e) {
       log('❌ Error sharing event: $e');
-      // Fallback: mostrar snackbar simple
       Get.snackbar(
         'Compartir',
         'Texto listo para compartir: ${event.title}',
@@ -310,37 +319,41 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
     try {
       final apiService = Get.find<ApiService>();
       final userId = apiService.getUserId();
-      
+
       if (userId == null) {
         log('⚠️ No user ID found for loading like status');
         return;
       }
-      
+
       log('🔄 Loading like status for ${discoverEvents.length} events...');
-      
+
       for (int i = 0; i < discoverEvents.length; i++) {
         final event = discoverEvents[i];
         try {
-          final response = await apiService.get('/event/${event.id}/like-status');
+          final response = await apiService.get(
+            '/event/${event.id}/like-status',
+          );
           final isLiked = response.data['liked'] ?? false;
           final likesCount = response.data['likesCount'] ?? event.likes;
-          
+
           // Verificar si el usuario está unido al evento
           final isJoined = await _checkUserParticipation(event.id, userId);
-          
+
           discoverEvents[i] = event.copyWith(
             isLiked: isLiked,
             likes: likesCount,
             isJoined: isJoined,
           );
-          
-          log('   ✅ Event ${event.id}: Liked=$isLiked, Likes=$likesCount, Joined=$isJoined');
+
+          log(
+            '   ✅ Event ${event.id}: Liked=$isLiked, Likes=$likesCount, Joined=$isJoined',
+          );
         } catch (e) {
           debugPrint('❌ Error loading like status for event ${event.id}: $e');
         }
       }
-      
-      update(['discover_feed']);
+
+      update(['discover_feed', 'bottom_actions']);
       log('✅ Like status loaded for all events');
     } catch (e) {
       debugPrint('❌ Error loading like status: $e');
@@ -353,8 +366,9 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
       final response = await _apiService.get('/event/$eventId');
       if (response.data['participants'] is List) {
         final participants = response.data['participants'] as List;
-        return participants.any((participant) => 
-          participant != null && participant.toString() == userId
+        return participants.any(
+          (participant) =>
+              participant != null && participant.toString() == userId,
         );
       }
       return false;
@@ -370,10 +384,14 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
     fetchFriendsPosts();
   }
 
-  // Cambiar tab manualmente
   void changeTab(int index) {
     tabController.animateTo(index);
-    update(['tab_selection', 'discover_feed', 'friends_feed']);
+    update([
+      'tab_selection',
+      'discover_feed',
+      'friends_feed',
+      'bottom_actions',
+    ]);
   }
 
   // Método para refrescar estados cuando se vuelve de EventDetail
@@ -391,15 +409,18 @@ class HomeFeedController extends GetxController with GetSingleTickerProviderStat
 
   // Restaurar la página guardada
   void restoreLastPage() {
-    if (discoverEvents.isNotEmpty && lastViewedPage.value < discoverEvents.length) {
+    if (discoverEvents.isNotEmpty &&
+        lastViewedPage.value < discoverEvents.length) {
       currentPage.value = lastViewedPage.value;
       if (pageController.hasClients) {
         pageController.jumpToPage(lastViewedPage.value);
       }
       log('📖 Restored to page: ${lastViewedPage.value}');
-      update(['current_page']);
+      update(['current_page', 'bottom_actions']);
     } else {
-      log('⚠️ Cannot restore page - events: ${discoverEvents.length}, last page: ${lastViewedPage.value}');
+      log(
+        '⚠️ Cannot restore page - events: ${discoverEvents.length}, last page: ${lastViewedPage.value}',
+      );
     }
   }
 

@@ -73,28 +73,52 @@ class _InterestSelectionScreenState extends State<InterestSelectionScreen> {
 
   Widget _buildLoadingOverlay() {
     print('🟣 [InterestScreen] _buildLoadingOverlay called. isLoading: ${_controller.isLoading.value}');
-    return Container(
+    return Obx(() => Container(
       color: Colors.black54,
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.neonPink),
-            ),
-            const SizedBox(height: 16),
-            Obx(() {
-              final msg = _controller.isLoading.value ? 'Cargando opciones...' : 'Procesando...';
-              print('🟣 [InterestScreen] LoadingOverlay Obx: $msg');
-              return Text(
-                msg,
-                style: const TextStyle(color: Colors.white),
-              );
-            }),
-          ],
-        ),
+        child: _controller.errorMessage.value.isNotEmpty
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _controller.errorMessage.value,
+                    style: const TextStyle(color: Colors.redAccent),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      _controller.errorMessage.value = '';
+                      _controller.reloadTags();
+                    },
+                    child: const Text('Reintentar'),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    onPressed: () async {
+                      await Get.find<AuthController>().logout();
+                      Get.offAllNamed('/');
+                    },
+                    child: const Text('Forzar logout'),
+                  ),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.neonPink),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _controller.isLoading.value ? 'Cargando opciones...' : 'Procesando...',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
       ),
-    );
+    ));
   }
 
   Widget _buildBackgroundGradients() {

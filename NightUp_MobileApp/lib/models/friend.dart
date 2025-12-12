@@ -1,4 +1,4 @@
-
+// lib/models/friend.dart
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 
@@ -66,5 +66,26 @@ class Friend {
         distance: json['distance']?.toDouble(),
       );
     }
+  }
+
+  // ✅ AÑADIDO
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'username': username,
+      'avatar': profilePictureUrl,
+      'isOnline': isOnline,
+      if (lat != null && lng != null) 'location': {
+        'type': 'Point',
+        'coordinates': [lng, lat],
+      },
+      if (distance != null) 'distance': distance,
+    };
+  }
+
+  // ✅ AÑADIDO
+  @override
+  String toString() {
+    return 'Friend(id: $id, username: $username, isOnline: $isOnline)';
   }
 }

@@ -7,11 +7,10 @@ import 'screens/home_feed.dart';
 import 'screens/search_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/user_profile.dart';
-import 'screens/interestSelection_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/event_detail_screen.dart';
 import 'screens/panic_screen.dart';
-import 'screens/event_calendar_screen.dart';
+import 'screens/event_calendar.dart'; // ✅ CAMBIADO
 import 'screens/full_map_screen.dart';
 import 'widgets/menu_modal.dart';
 import 'widgets/bottom_navigation.dart';
@@ -40,7 +39,6 @@ class _AppState extends State<App> {
   }
 
   void _initApp() async {
-    // Inicializar FCM solo una vez al arranque
     await FcmService.initializeFCM();
     _checkAuthStatus();
   }
@@ -48,22 +46,19 @@ class _AppState extends State<App> {
   void _checkAuthStatus() async {
     final AuthController authController = Get.find<AuthController>();
     final status = await authController.checkAuthStatus();
-    
+
     print('🔐 Auth status: $status');
-    
+
     if (status['isLoggedIn'] == true) {
-      if (status['onboardingComplete'] == true) {
-        _changeScreen(AppScreen.main);
-      } else {
-        _changeScreen(AppScreen.interestSelection);
-      }
+      // BYPASS: Siempre ir al main, ignorar onboarding por ahora
+      changeScreen(AppScreen.main);
     } else {
-      _changeScreen(AppScreen.login);
+      changeScreen(AppScreen.login);
     }
   }
 
-  void _changeScreen(AppScreen screen) {
-    // Inicializa controladores privados solo al entrar a la app principal
+  // ✅ CAMBIADO: Quitar guion bajo para hacerlo público
+  void changeScreen(AppScreen screen) {
     if (screen == AppScreen.main) {
       _initPrivateControllers();
     }
@@ -73,11 +68,9 @@ class _AppState extends State<App> {
   }
 
   void _initPrivateControllers() {
-    // Los controladores y servicios se inicializan ahora solo vía Bindings
     if (!Get.isRegistered<SocketService>()) {
       Get.put(SocketService());
     }
-    // Otros controladores se gestionan por Bindings
   }
 
   void _changeTab(int index) {
@@ -93,34 +86,32 @@ class _AppState extends State<App> {
         return SplashScreen(onComplete: () => _checkAuthStatus());
       case AppScreen.login:
         return LoginScreen(
-          onLogin: () => _changeScreen(AppScreen.main),
-          onRegister: () => _changeScreen(AppScreen.register),
-          onForgotPassword: () => _changeScreen(AppScreen.forgotPassword),
+          onLogin: () => changeScreen(AppScreen.main),
+          onRegister: () => changeScreen(AppScreen.register),
+          onForgotPassword: () => changeScreen(AppScreen.forgotPassword),
         );
       case AppScreen.register:
         return RegisterScreen(
-          onBack: () => _changeScreen(AppScreen.login),
-          onRegister: () => _changeScreen(AppScreen.interestSelection),
+          onBack: () => changeScreen(AppScreen.login),
+          onRegister: () => changeScreen(AppScreen.main),
         );
-      case AppScreen.interestSelection:
-        return const InterestSelectionScreen();
       case AppScreen.forgotPassword:
         return ForgotPasswordScreen(
-          onBack: () => _changeScreen(AppScreen.login),
+          onBack: () => changeScreen(AppScreen.login),
         );
       case AppScreen.main:
         return _buildMainContent();
       case AppScreen.settings:
-        return SettingsScreen(onBack: () => _changeScreen(AppScreen.main));
+        return SettingsScreen(onBack: () => changeScreen(AppScreen.main));
       case AppScreen.eventDetail:
         return EventDetailScreen(
-          onBack: () => _changeScreen(AppScreen.main),
+          onBack: () => changeScreen(AppScreen.main),
           eventId: _selectedEventId ?? '',
         );
       case AppScreen.panic:
-        return PanicScreen(onBack: () => _changeScreen(AppScreen.main));
+        return PanicScreen(onBack: () => changeScreen(AppScreen.main));
       case AppScreen.calendar:
-        return EventCalendarScreen(onBack: () => _changeScreen(AppScreen.main));
+        return const EventsCalendar();
       case AppScreen.fullMap:
         return const FullMapScreen();
       case AppScreen.menuModal:
@@ -138,9 +129,8 @@ class _AppState extends State<App> {
             onEventClick: (eventId) {
               log('🚀 NAVIGATING TO EVENT DETAIL:');
               log('   Original eventId: $eventId');
-              log('   Type: [33m[1m[4m${eventId.runtimeType}[0m');
+              log('   Type: ${eventId.runtimeType}');
               log('   Length: ${eventId.length}');
-              // Forzar nueva instancia con UniqueKey y navegación directa
               setState(() {
                 _selectedEventId = eventId;
                 _currentScreen = AppScreen.eventDetail;
@@ -148,13 +138,18 @@ class _AppState extends State<App> {
             },
           ),
           SearchScreen(),
-          Container(color: Colors.black, child: Center(child: Text('Camera', style: TextStyle(color: Colors.white)))), // Camera placeholder
+          Container(
+            color: Colors.black,
+            child: const Center(
+              child: Text('Camera', style: TextStyle(color: Colors.white)),
+            ),
+          ),
           ChatScreen(),
           UserProfile(
-            onSettingsOpen: () => _changeScreen(AppScreen.settings),
-            onCalendarOpen: () => _changeScreen(AppScreen.calendar),
-            onPanicOpen: () => _changeScreen(AppScreen.panic),
-            onMapOpen: () => _changeScreen(AppScreen.fullMap),
+            onSettingsOpen: () => changeScreen(AppScreen.settings),
+            onCalendarOpen: () => changeScreen(AppScreen.calendar),
+            onPanicOpen: () => changeScreen(AppScreen.panic),
+            onMapOpen: () => changeScreen(AppScreen.fullMap),
           ),
         ],
       ),
@@ -175,7 +170,6 @@ enum AppScreen {
   splash,
   login,
   register,
-  interestSelection,
   forgotPassword,
   main,
   settings,

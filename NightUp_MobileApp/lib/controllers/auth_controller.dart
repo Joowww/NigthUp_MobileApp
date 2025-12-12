@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../services/api_service.dart';
+import '../screens/home_feed.dart';
 import '../models/user.dart';
 import '../services/storage_service.dart';
 import '../services/google_service.dart';
@@ -8,8 +9,6 @@ import 'dart:js' as js;
 import 'dart:convert';
 
 class AuthController extends GetxController {
-    // Controla si se debe mostrar la sugerencia de intereses tras renovar token
-    final RxBool showOnboardingSuggestion = false.obs;
   // ================== SERVICIOS ==================
   final ApiService _apiService = Get.find<ApiService>();
 
@@ -29,7 +28,8 @@ class AuthController extends GetxController {
 
   // ================== SETTERS ==================
   void setToken(String token) => _token.value = token;
-  void setRefreshToken(String refreshToken) => _refreshToken.value = refreshToken;
+  void setRefreshToken(String refreshToken) =>
+      _refreshToken.value = refreshToken;
   void setUser(User user) => _currentUser.value = user;
   void clearError() => _error.value = '';
 
@@ -40,23 +40,21 @@ class AuthController extends GetxController {
       _error.value = '';
       print('🔐 Attempting login with email: $email');
 
-      final response = await _apiService.login(LoginRequest(
-        username: email,
-        password: password,
-      ));
+      final response = await _apiService.login(
+        LoginRequest(username: email, password: password),
+      );
 
       _token.value = response.token;
       _refreshToken.value = response.refreshToken;
       _currentUser.value = response.user;
 
-
       await _saveAuthData();
 
-      // Si el usuario es 'JoelMoreno', marca el onboarding como completo automáticamente
+      // Si el usuario es 'JoelMoreno' o 'MINIM2ok', marca el onboarding como completo automáticamente
       final storage = Get.find<StorageService>();
-      if (response.user.username == 'JoelMoreno') {
+      if (response.user.username == 'JoelMoreno' ||
+          response.user.username == 'MINIM2ok') {
         await storage.write('onboarding_complete', true);
-        print('✅ Onboarding saltado para usuario JoelMoreno');
       } else {
         // Si el usuario ya completó el onboarding antes, márcalo en el storage local
         final onboardingComplete = storage.read('onboarding_complete');
@@ -67,6 +65,10 @@ class AuthController extends GetxController {
       }
 
       print('✅ Login successful for user: ${response.user.username}');
+
+      // ✅ NAVEGACIÓN AUTOMÁTICA
+      await _navigateAfterLogin();
+
       return true;
     } catch (e) {
       _error.value = e.toString();
@@ -79,41 +81,39 @@ class AuthController extends GetxController {
 
   // ================== GOOGLE LOGIN ==================
   // ================== GOOGLE LOGIN WEB ==================
-  // ================== GOOGLE LOGIN WEB ==================
-Future<Map<String, dynamic>> googleLoginWeb(String idToken) async { // ← Cambiar return type
-  try {
-    _isLoading.value = true;
-    _error.value = '';
-    print('🔐 Google Login Web - Token length: [32m${idToken.length}[0m');
+  Future<Map<String, dynamic>> googleLoginWeb(String idToken) async {
+    try {
+      _isLoading.value = true;
+      _error.value = '';
+      print('🔐 Google Login Web - Token length: ${idToken.length}');
 
-    if (idToken.isEmpty) {
-      _error.value = 'Invalid Google token';
-      return {'success': false, 'isNewUser': false}; // ← Devolver mapa
+      if (idToken.isEmpty) {
+        _error.value = 'Invalid Google token';
+        return {'success': false, 'isNewUser': false};
+      }
+
+      final response = await _apiService.googleAuth(idToken);
+      _token.value = response.token;
+      _refreshToken.value = response.refreshToken;
+      _currentUser.value = response.user;
+
+      await _saveAuthData();
+
+      print('✅ Google Login Web - Success for user: ${response.user.username}');
+      print('👤 User is new: ${response.isNewUser}');
+
+      // ✅ NAVEGACIÓN AUTOMÁTICA
+      await _navigateAfterLogin();
+
+      return {'success': true, 'isNewUser': response.isNewUser};
+    } catch (e) {
+      _error.value = e.toString();
+      print('❌ Google login web error: $e');
+      return {'success': false, 'isNewUser': false};
+    } finally {
+      _isLoading.value = false;
     }
-
-    final response = await _apiService.googleAuth(idToken);
-    _token.value = response.token;
-    _refreshToken.value = response.refreshToken;
-    _currentUser.value = response.user;
-
-    await _saveAuthData();
-    
-    print('✅ Google Login Web - Success for user: [32m${response.user.username}[0m');
-    print('👤 User is new: ${response.isNewUser}'); // ← Log importante
-    
-    return { // ← Devolver resultado con isNewUser
-      'success': true, 
-      'isNewUser': response.isNewUser
-    };
-    
-  } catch (e) {
-    _error.value = e.toString();
-    print('❌ Google login web error: $e');
-    return {'success': false, 'isNewUser': false};
-  } finally {
-    _isLoading.value = false;
   }
-}
 
   // Móvil
   Future<bool> googleLogin() async {
@@ -128,6 +128,10 @@ Future<Map<String, dynamic>> googleLoginWeb(String idToken) async { // ← Cambi
         _refreshToken.value = response.refreshToken;
         _currentUser.value = response.user;
         await _saveAuthData();
+
+        // ✅ NAVEGACIÓN AUTOMÁTICA
+        await _navigateAfterLogin();
+
         return true;
       }
 
@@ -149,6 +153,10 @@ Future<Map<String, dynamic>> googleLoginWeb(String idToken) async { // ← Cambi
       _refreshToken.value = response.refreshToken;
       _currentUser.value = response.user;
       await _saveAuthData();
+
+      // ✅ NAVEGACIÓN AUTOMÁTICA
+      await _navigateAfterLogin();
+
       return true;
     } catch (e) {
       _error.value = e.toString();
@@ -173,15 +181,17 @@ Future<Map<String, dynamic>> googleLoginWeb(String idToken) async { // ← Cambi
       _isLoading.value = true;
       _error.value = '';
 
-      final response = await _apiService.register(RegisterRequest(
-        username: username,
-        email: email,
-        password: password,
-        phoneNumber: phoneNumber,
-        birthday: birthday,
-        securityQuestionKey: securityQuestionKey,
-        securityAnswer: securityAnswer,
-      ));
+      final response = await _apiService.register(
+        RegisterRequest(
+          username: username,
+          email: email,
+          password: password,
+          phoneNumber: phoneNumber,
+          birthday: birthday,
+          securityQuestionKey: securityQuestionKey,
+          securityAnswer: securityAnswer,
+        ),
+      );
 
       _token.value = response.token;
       _refreshToken.value = response.refreshToken;
@@ -190,12 +200,31 @@ Future<Map<String, dynamic>> googleLoginWeb(String idToken) async { // ← Cambi
       await _saveAuthData();
 
       print('✅ Registration successful, user should go to interest selection');
+
+      // ✅ NAVEGACIÓN AUTOMÁTICA después de registro
+      // Por ahora saltamos la selección de intereses
+      Get.offAll(() => HomeFeed());
+
       return true;
     } catch (e) {
       _error.value = e.toString();
       return false;
     } finally {
       _isLoading.value = false;
+    }
+  }
+
+  // ================== NAVEGACIÓN DESPUÉS DE LOGIN ==================
+  Future<void> _navigateAfterLogin() async {
+    try {
+      // BYPASS: Siempre ir al home directamente por petición del usuario
+      // Saltamos la comprobación de onboarding/intereses
+      print('Navigating to main screen (Interests disabled)');
+      Get.offAll(() => HomeFeed());
+    } catch (e) {
+      print('Error navigating after login: $e');
+      // Fallback: navegar al main de todas formas
+      Get.offAll(() => HomeFeed());
     }
   }
 
@@ -282,8 +311,10 @@ Future<Map<String, dynamic>> googleLoginWeb(String idToken) async { // ← Cambi
           'email': response.email,
         };
       } else if (newPassword == null && securityAnswer != null) {
-        final response =
-            await _apiService.verifySecurityAnswer(email, securityAnswer);
+        final response = await _apiService.verifySecurityAnswer(
+          email,
+          securityAnswer,
+        );
         return {'success': true, 'resetToken': response.resetToken};
       } else if (newPassword != null && resetToken != null) {
         await _apiService.resetPassword(resetToken, newPassword);
@@ -324,8 +355,6 @@ Future<Map<String, dynamic>> googleLoginWeb(String idToken) async { // ← Cambi
       await _saveAuthData();
 
       print('✅ Token refreshed successfully');
-      // Mostrar sugerencia de intereses tras renovar token
-      showOnboardingSuggestion.value = true;
       return true;
     } catch (e) {
       print('❌ Error refreshing token: $e');
@@ -362,7 +391,7 @@ Future<Map<String, dynamic>> googleLoginWeb(String idToken) async { // ← Cambi
             google.accounts.id.disableAutoSelect();
             google.accounts.id.revoke();
           }
-          '''
+          ''',
         ]);
       } else {
         await GoogleSignInService.signOut();
@@ -446,7 +475,5 @@ Future<Map<String, dynamic>> googleLoginWeb(String idToken) async { // ← Cambi
     } catch (e) {
       print('Error loading auth data: $e');
     }
-    // The following block was invalid for a Future<void> return type and has been removed.
-    // If you need to check auth status, use the checkAuthStatus() method instead.
   }
 }

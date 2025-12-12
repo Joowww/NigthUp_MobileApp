@@ -1,4 +1,7 @@
+//menu_modal.dart
 import '../screens/friend_profile_screen.dart';
+import '../screens/chat_screen.dart';
+import '../controllers/chat_controller.dart';
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -33,9 +36,9 @@ class MenuModal extends StatelessWidget {
             child: Container(
               width: MediaQuery.of(context).size.width * 0.85,
               height: double.infinity,
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.only(
+              decoration: BoxDecoration(
+                color: Colors.grey[850],
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   bottomLeft: Radius.circular(20),
                 ),
@@ -43,32 +46,184 @@ class MenuModal extends StatelessWidget {
               child: SizedBox.expand(
                 child: Column(
                   children: [
+                    // HEADER NEÓN CYBERPUNK
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-                      decoration: const BoxDecoration(
-                        gradient: AppColors.neonGradient,
-                        borderRadius: BorderRadius.only(
+                      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(20),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            onPressed: () => Get.back(),
-                            icon: const Icon(Icons.close, color: Colors.white),
+                        border: Border(
+                          bottom: BorderSide(
+                            color: AppColors.primary.withOpacity(0.5),
+                            width: 1,
                           ),
-                          const SizedBox(width: 16),
-                          const Text(
-                            'Explore',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.3),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        children: [
+                          // Partículas decorativas de fondo
+                          Positioned(
+                            right: 20,
+                            top: 10,
+                            child: Row(
+                              children: List.generate(3, (index) => 
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  margin: const EdgeInsets.only(left: 8),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: AppColors.primary.withOpacity(0.6),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.primary.withOpacity(0.8),
+                                        blurRadius: 8,
+                                        spreadRadius: 2,
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              ),
                             ),
+                          ),
+                          
+                          // Contenido principal
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  // Botón cerrar con neón
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: AppColors.primary,
+                                        width: 2,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.primary.withOpacity(0.5),
+                                          blurRadius: 10,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
+                                    ),
+                                    child: IconButton(
+                                      onPressed: () => Get.back(),
+                                      icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(
+                                        minWidth: 36,
+                                        minHeight: 36,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 20),
+                                  
+                                  // Barra vertical decorativa
+                                  Container(
+                                    width: 3,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          AppColors.primary,
+                                          AppColors.secondary,
+                                        ],
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.primary.withOpacity(0.6),
+                                          blurRadius: 8,
+                                          spreadRadius: 1,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  
+                                  // Texto EXPLORE
+                                  Expanded(
+                                    child: ShaderMask(
+                                      shaderCallback: (bounds) => LinearGradient(
+                                        colors: [
+                                          AppColors.primary,
+                                          AppColors.secondary,
+                                          AppColors.primary,
+                                        ],
+                                      ).createShader(bounds),
+                                      child: const Text(
+                                        'E X P L O R E',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 4,
+                                          shadows: [
+                                            Shadow(
+                                              color: AppColors.primary,
+                                              blurRadius: 20,
+                                            ),
+                                            Shadow(
+                                              color: AppColors.primary,
+                                              blurRadius: 40,
+                                            ),
+                                            Shadow(
+                                              color: AppColors.secondary,
+                                              blurRadius: 60,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              
+                              const SizedBox(height: 12),
+                              
+                              // Barra decorativa inferior con gradiente neón
+                              Padding(
+                                padding: const EdgeInsets.only(left: 76),
+                                child: Container(
+                                  height: 2,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        AppColors.primary,
+                                        AppColors.secondary,
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.primary.withOpacity(0.6),
+                                        blurRadius: 10,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
+                    
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Obx(() => Row(
@@ -151,168 +306,7 @@ class MenuModal extends StatelessWidget {
           itemCount: businesses.length,
           itemBuilder: (context, index) {
             final business = businesses[index];
-            return Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              child: GlassCard(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: ImageWithFallback(
-                                imageUrl: business.safeImageUrl,
-                                fallbackAsset: 'assets/images/default-business.jpg',
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  business.name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  business.displayAddress,
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 14,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.phone, color: Colors.white70, size: 14),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        business.displayContact,
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 12,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.access_time, color: Colors.white70, size: 14),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      business.displayHours,
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      height: 120,
-                      margin: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.glassBorder),
-                      ),
-                      child: Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              color: AppColors.glassWhite,
-                            ),
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () {
-                                      final controller = Get.find<MenuModalController>();
-                                      Get.to(() => FullMapScreen(
-                                        businesses: controller.businesses,
-                                        events: controller.events,
-                                        // initialTab: 'business', // Removed because it's not defined in FullMapScreen
-                                        selectedBusiness: business,
-                                      ));
-                                    },
-                                    child: Column(
-                                      children: [
-                                        SizedBox(
-                                          width: double.infinity,
-                                          height: 80,
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(12),
-                                            child: Image.asset(
-                                              'assets/images/default-mapa.jpg',
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          business.lat != null && business.lng != null 
-                                              ? 'Location Available' 
-                                              : 'No Location',
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: GlassCard(
-                              padding: EdgeInsets.zero,
-                              child: IconButton(
-                                icon: const Icon(Icons.share, color: Colors.white, size: 20),
-                                onPressed: () {
-                                  _shareLocation(business);
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+            return _buildBusinessCard(business);
           },
         ),
       );
@@ -424,16 +418,15 @@ class MenuModal extends StatelessWidget {
                         children: [
                           GestureDetector(
                             onTap: () {
-                              // Abrir el mapa con todos los negocios y resaltar el seleccionado
                               final controller = Get.find<MenuModalController>();
                               Get.to(() => FullMapScreen(
                                 businesses: controller.businesses,
+                                events: controller.events,
                                 selectedBusiness: business,
                               ));
                             },
                             child: Column(
                               children: [
-                                // Imagen de mapa ajustada al cuadrado
                                 SizedBox(
                                   width: double.infinity,
                                   height: 80,
@@ -507,176 +500,7 @@ class MenuModal extends StatelessWidget {
           itemCount: events.length,
           itemBuilder: (context, index) {
             final event = events[index];
-            // LOG DETALLADO DE EVENTO (para todas las plataformas)
-            final eventLog = '🟢 EVENTO[$index]: id: \\${event.id}, title: \\${event.title}, venue: \\${event.venue}, image: \\${event.safeImageUrl}, price: \\${event.price}, date: \\${event.date}, tags: \\${event.tags}, likes: \\${event.likes}, participants: \\${event.participantsCount}';
-            log(eventLog);
-            print(eventLog);
-            if (index == 0) {
-              final total = events.length;
-              log('🟡 TOTAL EVENTOS: $total');
-              print('🟡 TOTAL EVENTOS: $total');
-            }
-            if (index == events.length - 1) {
-              log('🔴 FIN DE EVENTOS (${events.length})');
-              print('🔴 FIN DE EVENTOS (${events.length})');
-            }
-            return Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              child: GlassCard(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: ImageWithFallback(
-                                imageUrl: event.safeImageUrl,
-                                fallbackAsset: 'assets/images/default-event.jpg',
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  event.title,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  event.venue,
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 14,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Text(
-                                      event.displayPrice,
-                                      style: const TextStyle(
-                                        color: AppColors.primary,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      event.formattedDate,
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${event.participantsCount} attending',
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      height: 120,
-                      margin: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.glassBorder),
-                      ),
-                      child: Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              color: AppColors.glassWhite,
-                            ),
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  GestureDetector(
-                                      onTap: () {
-                                        final controller = Get.find<MenuModalController>();
-                                        Get.to(() => FullMapScreen(
-                                          businesses: controller.businesses,
-                                          events: controller.events,
-                                          selectedEvent: event,
-                                        ));
-                                      },
-                                      child: Column(
-                                      children: [
-                                        SizedBox(
-                                          width: double.infinity,
-                                          height: 80,
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(12),
-                                            child: Image.asset(
-                                              'assets/images/default-mapa.jpg',
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        const Text(
-                                          'Event Location',
-                                          style: TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: GlassCard(
-                              padding: EdgeInsets.zero,
-                              child: IconButton(
-                                icon: const Icon(Icons.share, color: Colors.white, size: 20),
-                                onPressed: () {
-                                  _shareLocationFromEvent(event);
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+            return _buildEventCard(event);
           },
         ),
       );
@@ -786,9 +610,9 @@ class MenuModal extends StatelessWidget {
                         children: [
                           GestureDetector(
                             onTap: () {
-                              // Abrir el mapa con todos los eventos y resaltar el seleccionado
                               final controller = Get.find<MenuModalController>();
                               Get.to(() => FullMapScreen(
+                                businesses: controller.businesses,
                                 events: controller.events,
                                 selectedEvent: event,
                               ));
@@ -961,7 +785,6 @@ class MenuModal extends StatelessWidget {
     });
   }
 
-
   Widget _buildEmptyState(IconData icon, String title, String message) {
     return Center(
       child: Padding(
@@ -1014,12 +837,145 @@ class MenuModal extends StatelessWidget {
     );
   }
 
-  void _openChatWithFriend(Friend friend) {
-    log('💬 Opening chat with ${friend.username}');
-    Get.snackbar(
-      'Chat',
-      'Opening chat with ${friend.username}',
-      snackPosition: SnackPosition.BOTTOM,
-    );
+  // ✅ FUNCIÓN MODIFICADA CON MEJOR DEBUGGING
+  void _openChatWithFriend(Friend friend) async {
+    try {
+      log('💬 Opening chat with ${friend.username}');
+      log('   Friend ID: "${friend.id}"');
+      log('   Friend ID length: ${friend.id.length}');
+      log('   Friend ID type: ${friend.id.runtimeType}');
+      log('   Full friend object: ${friend.toString()}');
+      
+      // Validar que el ID no esté vacío
+      if (friend.id.isEmpty) {
+        throw Exception('Friend ID is empty');
+      }
+      
+      // Validar que el ID tenga el formato correcto (MongoDB ObjectId tiene 24 caracteres)
+      if (friend.id.length != 24) {
+        log('⚠️ Warning: Friend ID length is ${friend.id.length}, expected 24');
+      }
+      
+      // 1. Asegurar que el ChatController existe
+      if (!Get.isRegistered<ChatController>()) {
+        log('⚠️ ChatController not found, creating new instance');
+        Get.put(ChatController());
+      }
+      
+      final ChatController chatController = Get.find<ChatController>();
+      
+      // 2. Mostrar loading con diseño mejorado
+      Get.dialog(
+        Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.black.withOpacity(0.9),
+                  Colors.grey[900]!.withOpacity(0.9),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.primary.withOpacity(0.5),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 20,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 3,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Abriendo chat con',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  friend.username,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+      );
+      
+      // 3. Crear o encontrar la conversación
+      log('📡 Calling createPrivateChat with friendId: ${friend.id}');
+      await chatController.createPrivateChat(friend.id);
+      log('✅ Private chat created/found successfully');
+      
+      // 4. Cerrar loading
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+      
+      // 5. Cerrar el MenuModal
+      Get.back();
+      
+      // 6. Esperar un poco para asegurar que la UI se actualice
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      // 7. Navegar a la pantalla de chat
+      log('🚀 Navigating to ChatScreen');
+      Get.to(() => const ChatScreen());
+      
+      log('✅ Successfully navigated to chat with ${friend.username}');
+      
+    } catch (e, stackTrace) {
+      log('❌ Error opening chat with ${friend.username}');
+      log('Error details: $e');
+      log('Stack trace: $stackTrace');
+      
+      // Cerrar loading si está abierto
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+      
+      // Mostrar error detallado al usuario
+      String errorMessage = 'No se pudo abrir el chat con ${friend.username}';
+      
+      if (e.toString().contains('500')) {
+        errorMessage += '\n\nError del servidor. Por favor verifica:\n1. Que sois amigos aceptados\n2. Que el backend esté corriendo\n3. Los logs del backend para más detalles';
+      } else if (e.toString().contains('404')) {
+        errorMessage += '\n\nUsuario no encontrado';
+      } else if (e.toString().contains('401') || e.toString().contains('403')) {
+        errorMessage += '\n\nNo tienes permisos para crear esta conversación';
+      }
+      
+      Get.snackbar(
+        'Error',
+        errorMessage,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 6),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        icon: const Icon(Icons.error_outline, color: Colors.white),
+      );
+    }
   }
 }

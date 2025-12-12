@@ -8,7 +8,7 @@ import '../widgets/gradient_button.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   final VoidCallback onBack;
-  
+
   const ForgotPasswordScreen({super.key, required this.onBack});
 
   @override
@@ -20,7 +20,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _securityAnswerController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   final AuthController _authController = Get.find<AuthController>();
   String? _selectedSecurityQuestion;
   int _currentStep = 0;
@@ -32,12 +32,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   void _updatePasswordStrength() {
     final password = _newPasswordController.text;
     double strength = 0;
-    
+
     if (password.length >= 8) strength += 0.3;
     if (password.contains(RegExp(r'[A-Z]'))) strength += 0.3;
     if (password.contains(RegExp(r'[0-9]'))) strength += 0.3;
     if (password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) strength += 0.1;
-    
+
     setState(() {
       _passwordStrength = strength.clamp(0.0, 1.0);
     });
@@ -45,8 +45,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   void _validatePasswordMatch() {
     setState(() {
-      _passwordsMatch = _newPasswordController.text == _confirmPasswordController.text || 
-                       _confirmPasswordController.text.isEmpty;
+      _passwordsMatch =
+          _newPasswordController.text == _confirmPasswordController.text ||
+          _confirmPasswordController.text.isEmpty;
     });
   }
 
@@ -99,7 +100,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   void _resetPassword() async {
-    if (_newPasswordController.text.isEmpty || _confirmPasswordController.text.isEmpty) {
+    if (_newPasswordController.text.isEmpty ||
+        _confirmPasswordController.text.isEmpty) {
       _showErrorDialog(translate('forgot_password.password_required'));
       return;
     }
@@ -166,10 +168,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           translate('error.title'),
           style: const TextStyle(color: Colors.white),
         ),
-        content: Text(
-          error,
-          style: const TextStyle(color: Colors.white70),
-        ),
+        content: Text(error, style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -192,7 +191,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           _buildBackgroundGradients(),
           SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 40,
+              ),
               child: Column(
                 children: [
                   _buildBackButton(),
@@ -282,13 +284,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: color,
-              blurRadius: 8,
-              spreadRadius: 2,
-            ),
-          ],
+          boxShadow: [BoxShadow(color: color, blurRadius: 8, spreadRadius: 2)],
         ),
       ),
     );
@@ -321,33 +317,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             fontWeight: FontWeight.bold,
             color: Colors.white,
             shadows: [
-              Shadow(
-                blurRadius: 10,
-                color: AppColors.neonPink,
-              ),
-              Shadow(
-                blurRadius: 20,
-                color: AppColors.neonPink,
-              ),
+              Shadow(blurRadius: 10, color: AppColors.neonPink),
+              Shadow(blurRadius: 20, color: AppColors.neonPink),
             ],
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          _currentStep == 0 
-            ? translate('forgot_password.step1_message')
-            : _currentStep == 1
+          _currentStep == 0
+              ? translate('forgot_password.step1_message')
+              : _currentStep == 1
               ? translate('forgot_password.step2_message')
               : translate('forgot_password.step3_message'),
           style: const TextStyle(
             color: Color(0xCCFFFFFF),
             fontSize: 16,
-            shadows: [
-              Shadow(
-                blurRadius: 5,
-                color: Color(0x80FF00FF),
-              ),
-            ],
+            shadows: [Shadow(blurRadius: 5, color: Color(0x80FF00FF))],
           ),
           textAlign: TextAlign.center,
         ),
@@ -394,64 +379,67 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 style: const TextStyle(
                   color: Color(0xCCFFFFFF),
                   fontSize: 16,
-                  shadows: [
-                    Shadow(
-                      blurRadius: 5,
-                      color: Color(0x80FF00FF),
-                    ),
-                  ],
+                  shadows: [Shadow(blurRadius: 5, color: Color(0x80FF00FF))],
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                _getSecurityQuestionText(_selectedSecurityQuestion!),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  shadows: [
-                    Shadow(
-                      blurRadius: 5,
-                      color: Color(0x80FF00FF),
+              if (_selectedSecurityQuestion != null &&
+                  _selectedSecurityQuestion!.isNotEmpty) ...[
+                Text(
+                  _getSecurityQuestionText(_selectedSecurityQuestion!),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    shadows: [Shadow(blurRadius: 5, color: Color(0x80FF00FF))],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _securityAnswerController,
+                  decoration: InputDecoration(
+                    labelText: translate(
+                      'forgot_password.security_answer_label',
                     ),
-                  ],
+                    labelStyle: const TextStyle(color: Color(0xB3FFFFFF)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppColors.glassBorder,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.neonPink),
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.question_answer,
+                      color: Color(0xB3FFFFFF),
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.white),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _securityAnswerController,
-                decoration: InputDecoration(
-                  labelText: translate('forgot_password.security_answer_label'),
-                  labelStyle: const TextStyle(color: Color(0xB3FFFFFF)),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.glassBorder),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.neonPink),
-                  ),
-                  prefixIcon: const Icon(Icons.question_answer, color: Color(0xB3FFFFFF)),
+                const SizedBox(height: 20),
+                GradientButton(
+                  onPressed: _verifySecurityAnswer,
+                  text: translate('forgot_password.continue_button'),
                 ),
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(height: 20),
-              GradientButton(
-                onPressed: _verifySecurityAnswer,
-                text: translate('forgot_password.verify_button'),
-              ),
+              ] else ...[
+                Text(
+                  translate('forgot_password.security_question_error'),
+                  style: const TextStyle(color: Colors.red, fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ] else if (_currentStep == 2) ...[
               TextField(
                 controller: _newPasswordController,
                 obscureText: true,
-                onChanged: (value) {
-                  _updatePasswordStrength();
-                  _validatePasswordMatch();
-                },
+                onChanged: (value) => _updatePasswordStrength(),
                 decoration: InputDecoration(
                   labelText: translate('forgot_password.new_password'),
                   labelStyle: const TextStyle(color: Color(0xB3FFFFFF)),
@@ -499,7 +487,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: _passwordsMatch ? AppColors.glassBorder : Colors.red,
+                      color: _passwordsMatch
+                          ? AppColors.glassBorder
+                          : Colors.red,
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
@@ -508,8 +498,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       color: _passwordsMatch ? AppColors.neonPink : Colors.red,
                     ),
                   ),
-                  errorText: _passwordsMatch ? null : translate('register.password_match_error'),
-                  prefixIcon: const Icon(Icons.lock_outline, color: Color(0xB3FFFFFF)),
+                  errorText: _passwordsMatch
+                      ? null
+                      : translate('register.password_match_error'),
+                  prefixIcon: const Icon(
+                    Icons.lock_outline,
+                    color: Color(0xB3FFFFFF),
+                  ),
                 ),
                 style: const TextStyle(color: Colors.white),
               ),
@@ -518,7 +513,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 onPressed: _resetPassword,
                 text: translate('forgot_password.reset_button'),
               ),
-            ]
+            ],
           ],
         ),
       ),
@@ -528,27 +523,53 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   String _getSecurityQuestionText(String key) {
     final questions = {
       "security.question.pet_name": translate('security_questions.pet_name'),
-      "security.question.birth_city": translate('security_questions.birth_city'),
-      "security.question.mother_maiden_name": translate('security_questions.mother_maiden_name'),
-      "security.question.first_school": translate('security_questions.first_school'),
-      "security.question.favorite_food": translate('security_questions.favorite_food'),
-      "security.question.childhood_street": translate('security_questions.childhood_street'),
-      "security.question.best_friend": translate('security_questions.best_friend'),
+      "security.question.birth_city": translate(
+        'security_questions.birth_city',
+      ),
+      "security.question.mother_maiden_name": translate(
+        'security_questions.mother_maiden_name',
+      ),
+      "security.question.first_school": translate(
+        'security_questions.first_school',
+      ),
+      "security.question.favorite_food": translate(
+        'security_questions.favorite_food',
+      ),
+      "security.question.childhood_street": translate(
+        'security_questions.childhood_street',
+      ),
+      "security.question.best_friend": translate(
+        'security_questions.best_friend',
+      ),
       "security.question.first_job": translate('security_questions.first_job'),
-      "security.question.favorite_book": translate('security_questions.favorite_book'),
-      "security.question.birth_hospital": translate('security_questions.birth_hospital'),
-      "security.question.father_middle_name": translate('security_questions.father_middle_name'),
+      "security.question.favorite_book": translate(
+        'security_questions.favorite_book',
+      ),
+      "security.question.birth_hospital": translate(
+        'security_questions.birth_hospital',
+      ),
+      "security.question.father_middle_name": translate(
+        'security_questions.father_middle_name',
+      ),
       "security.question.first_car": translate('security_questions.first_car'),
-      "security.question.favorite_teacher": translate('security_questions.favorite_teacher'),
-      "security.question.graduation_year": translate('security_questions.graduation_year'),
-      "security.question.favorite_movie": translate('security_questions.favorite_movie')
+      "security.question.favorite_teacher": translate(
+        'security_questions.favorite_teacher',
+      ),
+      "security.question.graduation_year": translate(
+        'security_questions.graduation_year',
+      ),
+      "security.question.favorite_movie": translate(
+        'security_questions.favorite_movie',
+      ),
     };
     return questions[key] ?? key;
   }
 
   String _getPasswordStrengthText() {
-    if (_passwordStrength < 0.4) return translate('register.password_strength.weak');
-    if (_passwordStrength < 0.7) return translate('register.password_strength.medium');
+    if (_passwordStrength < 0.4)
+      return translate('register.password_strength.weak');
+    if (_passwordStrength < 0.7)
+      return translate('register.password_strength.medium');
     return translate('register.password_strength.strong');
   }
 }

@@ -1,7 +1,5 @@
 import 'package:intl/intl.dart';
 import '../utils/constants.dart';
-import 'package:flutter/foundation.dart';
-import 'dart:developer';
 
 class Event {
   final double? lat;
@@ -27,6 +25,7 @@ class Event {
       },
     };
   }
+
   final String id;
   final String title;
   final String venue;
@@ -68,11 +67,9 @@ class Event {
         lat = (coords[1] as num?)?.toDouble();
       }
     }
-    // DEBUG del ID
+
     final rawId = json['_id'];
-    log('🔍 Mapping event ID:');
-    log('   Raw _id: $rawId (type: ${rawId.runtimeType})');
-    
+
     String eventId;
     if (rawId is String) {
       eventId = rawId;
@@ -80,9 +77,7 @@ class Event {
       eventId = rawId.toString();
     } else {
       eventId = 'NO_ID';
-      log('⚠️ WARNING: Event has no ID!');
     }
-    log('   Final ID: $eventId');
 
     // Obtener lista de IDs de participantes
     List<String> participantsIds = [];
@@ -125,7 +120,9 @@ class Event {
     if (location is String) {
       return location;
     } else if (location is Map<String, dynamic>) {
-      return location['name'] ?? location['address'] ?? 'Ubicación no especificada';
+      return location['name'] ??
+          location['address'] ??
+          'Ubicación no especificada';
     }
     return 'Ubicación no especificada';
   }
@@ -135,7 +132,6 @@ class Event {
       try {
         return DateTime.parse(schedule).toLocal();
       } catch (e) {
-        log('Error parsing date: $e');
         return DateTime.now().add(const Duration(days: 1));
       }
     }
@@ -144,12 +140,12 @@ class Event {
 
   static List<String> _parseTags(Map<String, dynamic> json) {
     final tags = <String>[];
-    
+
     // Añadir categoría como tag principal
     if (json['category'] is String) {
       tags.add(json['category']);
     }
-    
+
     return tags;
   }
 
@@ -164,7 +160,7 @@ class Event {
   String get formattedDate {
     final now = DateTime.now();
     final difference = date.difference(now);
-    
+
     if (difference.inDays == 0) {
       return 'Hoy ${DateFormat('HH:mm').format(date)}';
     } else if (difference.inDays == 1) {
@@ -183,13 +179,13 @@ class Event {
     if (image.isEmpty) {
       return '';
     }
-    
+
     // Si la imagen es una ruta relativa (como '/default-images/default-event.jpg')
     // construir URL completa con tu base URL
     if (image.startsWith('/')) {
       return ApiConstants.baseUrl.replaceFirst('/api', '') + image;
     }
-    
+
     // Si ya es una URL completa, usarla directamente
     return image;
   }

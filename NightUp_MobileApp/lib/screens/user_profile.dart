@@ -29,39 +29,139 @@ class _UserProfileState extends State<UserProfile>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final AuthController _authController = Get.find<AuthController>();
-  final RxList<Map<String, dynamic>> _userEvents =
-      <Map<String, dynamic>>[].obs;
-  final RxList<Map<String, dynamic>> _pendingRequests =
-      <Map<String, dynamic>>[].obs;
+  final ApiService _apiService = Get.find<ApiService>();
+  
+  // Observables
+  final RxList<Map<String, dynamic>> _userEvents = <Map<String, dynamic>>[].obs;
+  final RxList<Map<String, dynamic>> _pendingRequests = <Map<String, dynamic>>[].obs;
+  final RxList<Map<String, dynamic>> _userGroups = <Map<String, dynamic>>[].obs;
+  final RxList<Map<String, dynamic>> _userReviews = <Map<String, dynamic>>[].obs;
+  
   final RxBool _loadingRequests = false.obs;
+  final RxBool _loadingStats = true.obs;
+  
+  // Stats
+  final RxDouble _trustScore = 0.0.obs;
+  final RxInt _totalRatings = 0.obs;
+  final RxInt _friendsCount = 0.obs;
+  final RxInt _groupsCount = 0.obs;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _fetchUserEvents();
-    _fetchPendingRequests();
+    _fetchAllData();
+  }
+
+  Future<void> _fetchAllData() async {
+    await Future.wait([
+      _fetchUserEvents(),
+      _fetchPendingRequests(),
+      _fetchUserStats(),
+      _fetchUserGroups(),
+      _fetchUserReviews(),
+    ]);
   }
 
   // -------------------- FETCH METHODS --------------------
 
+  Future<void> _fetchUserStats() async {
+    _loadingStats.value = true;
+    try {
+      final user = _authController.currentUser;
+      if (user == null) return;
+
+      // 1. Fetch Trust Score
+      try {
+        final trustResponse = await _apiService.get('/user-trust/user/summary/${user.id}');
+        if (trustResponse.data is Map) {
+          _trustScore.value = (trustResponse.data['averageTrust'] ?? 0.0).toDouble();
+          _totalRatings.value = trustResponse.data['totalRatings'] ?? 0;
+        }
+      } catch (e) {
+        print('Error fetching trust score: $e');
+      }
+
+      // 2. Fetch Friends Count
+      try {
+        final friendsResponse = await _apiService.get('/friendship/friends');
+        if (friendsResponse.data is List) {
+          // ✅ Contar solo amistades con status "accepted"
+          final acceptedFriends = (friendsResponse.data as List).where((friendship) {
+            return friendship is Map && friendship['status'] == 'accepted';
+          }).toList();
+          _friendsCount.value = acceptedFriends.length;
+          print('✅ Friends count: ${_friendsCount.value}');
+        } else {
+          _friendsCount.value = 0;
+        }
+      } catch (e) {
+        print('Error fetching friends count: $e');
+        _friendsCount.value = 0;
+      }
+
+    } catch (e) {
+      print('Error fetching user stats: $e');
+    } finally {
+      _loadingStats.value = false;
+    }
+  }
+
+  Future<void> _fetchUserGroups() async {
+    try {
+      final response = await _apiService.get('/group/my-groups');
+      
+      if (response.data is List) {
+        _userGroups.value = List<Map<String, dynamic>>.from(response.data);
+        _groupsCount.value = _userGroups.length;
+      } else if (response.data is Map && response.data['groups'] is List) {
+        _userGroups.value = List<Map<String, dynamic>>.from(response.data['groups']);
+        _groupsCount.value = _userGroups.length;
+      } else {
+        _userGroups.clear();
+        _groupsCount.value = 0;
+      }
+    } catch (e) {
+      print('Error fetching user groups: $e');
+      _userGroups.clear();
+      _groupsCount.value = 0;
+    }
+  }
+
+  Future<void> _fetchUserReviews() async {
+    try {
+      final user = _authController.currentUser;
+      if (user == null) return;
+
+      final response = await _apiService.get('/user-trust/user/ratings/${user.id}');
+      
+      if (response.data is List) {
+        _userReviews.value = List<Map<String, dynamic>>.from(response.data);
+      } else {
+        _userReviews.clear();
+      }
+    } catch (e) {
+      print('Error fetching user reviews: $e');
+      _userReviews.clear();
+    }
+  }
+
   Future<void> _fetchPendingRequests() async {
     _loadingRequests.value = true;
     try {
-      final response =
-          await Get.find<ApiService>().get('/friendship/pending');
+      final response = await _apiService.get('/friendship/pending');
 
       if (response.data is List) {
-        _pendingRequests.value =
-            List<Map<String, dynamic>>.from(response.data);
-      } else if (response.data is Map &&
-          response.data['pending'] is List) {
-        _pendingRequests.value =
-            List<Map<String, dynamic>>.from(response.data['pending']);
+        _pendingRequests.value = List<Map<String, dynamic>>.from(response.data);
+      } else if (response.data is Map && response.data['pending'] is List) {
+        _pendingRequests.value = List<Map<String, dynamic>>.from(response.data['pending']);
+      } else if (response.data is Map && response.data['received'] is List) {
+        _pendingRequests.value = List<Map<String, dynamic>>.from(response.data['received']);
       } else {
         _pendingRequests.clear();
       }
     } catch (e) {
+      print('Error fetching pending requests: $e');
       _pendingRequests.clear();
     } finally {
       _loadingRequests.value = false;
@@ -70,10 +170,10 @@ class _UserProfileState extends State<UserProfile>
 
   Future<void> _acceptRequest(String friendshipId) async {
     try {
-      await Get.find<ApiService>()
-          .patch('/friendship/request/$friendshipId/accept');
+      await _apiService.patch('/friendship/request/$friendshipId/accept');
       Get.snackbar('Solicitud aceptada', 'Ahora son amigos.');
       await _fetchPendingRequests();
+      await _fetchUserStats(); // Refresh friends count
     } catch (e) {
       Get.snackbar('Error', 'No se pudo aceptar la solicitud.');
     }
@@ -81,8 +181,7 @@ class _UserProfileState extends State<UserProfile>
 
   Future<void> _rejectRequest(String friendshipId) async {
     try {
-      await Get.find<ApiService>()
-          .delete('/friendship/request/$friendshipId/reject');
+      await _apiService.delete('/friendship/request/$friendshipId/reject');
       Get.snackbar('Solicitud rechazada', 'Solicitud eliminada.');
       await _fetchPendingRequests();
     } catch (e) {
@@ -95,20 +194,17 @@ class _UserProfileState extends State<UserProfile>
     if (user == null) return;
 
     try {
-      final response = await Get.find<ApiService>()
-          .get('/event/by-participant/${user.id}');
+      final response = await _apiService.get('/event/by-participant/${user.id}');
 
-      if (response.data is Map &&
-          response.data['events'] is List) {
-        _userEvents.value =
-            List<Map<String, dynamic>>.from(response.data['events']);
+      if (response.data is Map && response.data['events'] is List) {
+        _userEvents.value = List<Map<String, dynamic>>.from(response.data['events']);
       } else if (response.data is List) {
-        _userEvents.value =
-            List<Map<String, dynamic>>.from(response.data);
+        _userEvents.value = List<Map<String, dynamic>>.from(response.data);
       } else {
         _userEvents.clear();
       }
     } catch (e) {
+      print('Error fetching user events: $e');
       _userEvents.clear();
     }
   }
@@ -127,6 +223,23 @@ class _UserProfileState extends State<UserProfile>
     }
 
     return value.toString();
+  }
+
+  String _formatDate(dynamic date) {
+    if (date == null) return '';
+    try {
+      DateTime dateTime = DateTime.parse(date.toString());
+      final now = DateTime.now();
+      final diff = now.difference(dateTime);
+      
+      if (diff.inDays == 0) return 'Hoy';
+      if (diff.inDays == 1) return 'Ayer';
+      if (diff.inDays < 7) return 'Hace ${diff.inDays} días';
+      if (diff.inDays < 30) return 'Hace ${(diff.inDays / 7).floor()} semanas';
+      return 'Hace ${(diff.inDays / 30).floor()} meses';
+    } catch (e) {
+      return '';
+    }
   }
 
   // -------------------- UI SECTIONS --------------------
@@ -178,8 +291,7 @@ class _UserProfileState extends State<UserProfile>
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
@@ -187,8 +299,7 @@ class _UserProfileState extends State<UserProfile>
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.verified,
-                            color: AppColors.primary, size: 14),
+                        Icon(Icons.verified, color: AppColors.primary, size: 14),
                         SizedBox(width: 4),
                         Text(
                           'Verified',
@@ -202,27 +313,49 @@ class _UserProfileState extends State<UserProfile>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Trust Score: 4.8⭐',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
+                  Obx(() => _loadingStats.value
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
+                        )
+                      : Row(
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              _totalRatings.value > 0
+                                  ? '${_trustScore.value.toStringAsFixed(1)} (${_totalRatings.value})'
+                                  : 'Sin valoraciones',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        )),
                 ],
               ),
 
               const SizedBox(height: 8),
 
-              Row(
-                children: [
-                  _buildStatItem('234', 'Friends'),
-                  const SizedBox(width: 16),
-                  _buildStatItem('45', 'Events'),
-                  const SizedBox(width: 16),
-                  _buildStatItem('12', 'Groups'),
-                ],
-              ),
+              Obx(() => _loadingStats.value
+                  ? const SizedBox(
+                      width: 100,
+                      height: 20,
+                      child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
+                      ),
+                    )
+                  : Row(
+                      children: [
+                        _buildStatItem(_friendsCount.value.toString(), 'Friends'),
+                        const SizedBox(width: 16),
+                        _buildStatItem(_userEvents.length.toString(), 'Events'),
+                        const SizedBox(width: 16),
+                        _buildStatItem(_groupsCount.value.toString(), 'Groups'),
+                      ],
+                    )),
             ],
           ),
         )
@@ -253,6 +386,17 @@ class _UserProfileState extends State<UserProfile>
   }
 
   Widget _buildInfoTab(User user) {
+    // ✅ Calcular edad correctamente
+    int? age;
+    if (user.birthday != null) {
+      final now = DateTime.now();
+      age = now.year - user.birthday!.year;
+      if (now.month < user.birthday!.month || 
+          (now.month == user.birthday!.month && now.day < user.birthday!.day)) {
+        age--;
+      }
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: GlassCard(
@@ -272,47 +416,48 @@ class _UserProfileState extends State<UserProfile>
               const SizedBox(height: 8),
               Text(
                 user.bio ?? 'No bio yet',
-                style: const TextStyle(
-                    color: Colors.white70, fontSize: 14),
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
 
               const SizedBox(height: 16),
 
-              // ✅ CORREGIDO: Wrap en vez de Row con Expanded
               Wrap(
                 spacing: 16,
                 runSpacing: 8,
                 children: [
-                  _buildInfoItem(
-                      Icons.location_on,
-                      safeString(user.safeLocationString)),
-                  if (user.birthday != null)
+                  // ✅ Mostrar ciudad y país en lugar de coordenadas
+                  if (user.city != null && user.city!.isNotEmpty)
                     _buildInfoItem(
-                        Icons.cake,
-                        '${user.birthday!.year} years old'),
+                      Icons.location_on,
+                      '${user.city}${user.country != null && user.country!.isNotEmpty ? ", ${user.country}" : ""}'
+                    )
+                  else if (user.country != null && user.country!.isNotEmpty)
+                    _buildInfoItem(Icons.location_on, user.country!)
+                  else
+                    _buildInfoItem(Icons.location_on, 'No location'),
+                  
+                  // ✅ Calcular edad correctamente
+                  if (age != null)
+                    _buildInfoItem(Icons.cake, '$age years old'),
                 ],
               ),
 
               const SizedBox(height: 16),
 
-              if (user.interests != null &&
-                  user.interests!.isNotEmpty) ...[
+              // ✅ Mostrar intereses (ahora ya son strings limpios)
+              if (user.interests != null && user.interests!.isNotEmpty) ...[
                 const Text(
                   'Interests',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600),
+                      color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: user.interests!
-                      .take(5)
-                      .map((i) =>
-                          _buildPreferenceChip(safeString(i)))
-                      .toList(),
+                  children: user.interests!.take(10).map((interest) {
+                    return _buildPreferenceChip(interest);
+                  }).toList(),
                 ),
               ],
             ],
@@ -330,8 +475,7 @@ class _UserProfileState extends State<UserProfile>
         const SizedBox(width: 6),
         Text(
           text,
-          style: const TextStyle(
-              color: Colors.white70, fontSize: 14),
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
         ),
       ],
     );
@@ -339,13 +483,11 @@ class _UserProfileState extends State<UserProfile>
 
   Widget _buildPreferenceChip(String text) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.primary.withOpacity(0.2),
         borderRadius: BorderRadius.circular(16),
-        border:
-            Border.all(color: AppColors.primary.withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
       ),
       child: Text(
         text,
@@ -386,8 +528,7 @@ class _UserProfileState extends State<UserProfile>
                         height: 80,
                         child: ImageWithFallback(
                           imageUrl: safeString(event['image']),
-                          fallbackAsset:
-                              'assets/images/default-event.jpg',
+                          fallbackAsset: 'assets/images/default-event.jpg',
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -395,11 +536,10 @@ class _UserProfileState extends State<UserProfile>
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            safeString(event['title']),
+                            safeString(event['name']),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -408,17 +548,8 @@ class _UserProfileState extends State<UserProfile>
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            safeString(event['formattedDate']),
-                            style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            safeString(event['venue']),
-                            style: const TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 14),
+                            safeString(event['location']),
+                            style: const TextStyle(color: AppColors.primary, fontSize: 14),
                           ),
                         ],
                       ),
@@ -434,111 +565,93 @@ class _UserProfileState extends State<UserProfile>
   }
 
   Widget _buildReviewsTab() {
-    final reviews = [
-      {
-        'user': 'Sarah M.',
-        'avatar': 'https://i.pravatar.cc/150?img=1',
-        'rating': 5,
-        'date': '2 days ago',
-        'comment':
-            'Great person to party with! Always knows the best spots.',
-      },
-      {
-        'user': 'Mike R.',
-        'avatar': 'https://i.pravatar.cc/150?img=12',
-        'rating': 4,
-        'date': '1 week ago',
-        'comment':
-            'Awesome vibes and great taste in music.',
-      },
-      {
-        'user': 'Emma W.',
-        'avatar': 'https://i.pravatar.cc/150?img=5',
-        'rating': 5,
-        'date': '2 weeks ago',
-        'comment':
-            'Met at the techno night, had an amazing time!',
-      },
-    ];
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: reviews.length,
-      itemBuilder: (context, i) {
-        final review = reviews[i];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          child: GlassCard(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: SizedBox(
-                          width: 40,
-                          height: 40,
-                          child: ImageWithFallback(
-                            imageUrl:
-                                safeString(review['avatar']),
-                            fallbackAsset:
-                                'assets/images/default-avatar.png',
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              safeString(review['user']),
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                            Row(
-                              children: List.generate(5, (s) {
-                                final rating =
-                                    review['rating'] is int
-                                        ? review['rating'] as int
-                                        : 0;
-                                return Icon(Icons.star,
-                                    color: s < rating
-                                        ? Colors.yellow
-                                        : Colors.white30,
-                                    size: 14);
-                              }),
-                            )
-                          ],
-                        ),
-                      ),
-                      Text(
-                        safeString(review['date']),
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    safeString(review['comment']),
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
+    return Obx(() {
+      if (_userReviews.isEmpty) {
+        return const Center(
+          child: Text(
+            'No tienes valoraciones todavía',
+            style: TextStyle(color: Colors.white70),
           ),
         );
-      },
-    );
+      }
+
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _userReviews.length,
+        itemBuilder: (context, i) {
+          final review = _userReviews[i];
+          final rater = review['rater'] is Map ? review['rater'] : null;
+          final username = rater != null ? rater['username']?.toString() : 'Usuario';
+          final avatar = rater != null ? rater['avatar']?.toString() : null;
+          final score = review['score'] is int ? review['score'] as int : 0;
+          final comment = review['comment']?.toString() ?? '';
+          final date = _formatDate(review['createdAt']);
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: GlassCard(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: ImageWithFallback(
+                              imageUrl: avatar ?? '',
+                              fallbackAsset: 'assets/images/default-avatar.png',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                username!,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                              Row(
+                                children: List.generate(5, (s) {
+                                  return Icon(Icons.star,
+                                      color: s < score ? Colors.yellow : Colors.white30,
+                                      size: 14);
+                                }),
+                              )
+                            ],
+                          ),
+                        ),
+                        Text(
+                          date,
+                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        )
+                      ],
+                    ),
+                    if (comment.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        comment,
+                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    });
   }
 
   Widget _buildPendingRequestsTab() {
@@ -558,45 +671,36 @@ class _UserProfileState extends State<UserProfile>
         itemCount: _pendingRequests.length,
         itemBuilder: (context, i) {
           final req = _pendingRequests[i];
-          final user =
-              req['requester'] is Map ? req['requester'] : null;
+          final user = req['requester'] is Map ? req['requester'] : null;
+          final username = user != null ? user['username']?.toString() : 'Usuario';
+          final avatar = user != null ? user['avatar']?.toString() : null;
 
-          final username =
-              user != null ? user['username']?.toString() : 'Usuario';
-
-          final avatar =
-              user != null ? user['avatar']?.toString() : null;
-
-          return GlassCard(
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundImage: avatar != null && avatar.isNotEmpty
-                    ? NetworkImage(avatar)
-                    : const AssetImage(
-                            'assets/images/default-avatar.jpg')
-                        as ImageProvider,
-              ),
-              title: Text(username!,
-                  style: const TextStyle(color: Colors.white)),
-              subtitle: const Text(
-                  'Te ha enviado una solicitud de amistad',
-                  style: TextStyle(color: Colors.white70)),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon:
-                        const Icon(Icons.check, color: Colors.green),
-                    onPressed: () =>
-                        _acceptRequest(req['_id'] ?? ''),
-                  ),
-                  IconButton(
-                    icon:
-                        const Icon(Icons.close, color: Colors.red),
-                    onPressed: () =>
-                        _rejectRequest(req['_id'] ?? ''),
-                  ),
-                ],
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: GlassCard(
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundImage: avatar != null && avatar.isNotEmpty
+                      ? NetworkImage(avatar)
+                      : const AssetImage('assets/images/default-avatar.jpg')
+                          as ImageProvider,
+                ),
+                title: Text(username!, style: const TextStyle(color: Colors.white)),
+                subtitle: const Text('Te ha enviado una solicitud de amistad',
+                    style: TextStyle(color: Colors.white70)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.check, color: Colors.green),
+                      onPressed: () => _acceptRequest(req['_id'] ?? ''),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.red),
+                      onPressed: () => _rejectRequest(req['_id'] ?? ''),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -616,70 +720,73 @@ class _UserProfileState extends State<UserProfile>
         ),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _actionButton(
-              icon: Icons.settings,
-              text: 'Settings',
-              onTap: widget.onSettingsOpen),
-          const SizedBox(width: 12),
-          _actionButton(
-              icon: Icons.calendar_today,
-              text: 'Calendar',
-              onTap: widget.onCalendarOpen),
-          const SizedBox(width: 12),
-          _actionButton(
-              icon: Icons.map,
-              text: 'Map',
-              onTap: widget.onMapOpen),
-          const SizedBox(width: 12),
-          _panicButton(),
+          _iconButton(
+            icon: Icons.settings,
+            label: 'Settings',
+            onTap: widget.onSettingsOpen,
+          ),
+          _iconButton(
+            icon: Icons.calendar_today,
+            label: 'Calendar',
+            onTap: widget.onCalendarOpen,
+          ),
+          _iconButton(
+            icon: Icons.map,
+            label: 'Map',
+            onTap: widget.onMapOpen,
+          ),
+          _iconButton(
+            icon: Icons.warning,
+            label: 'Emergency',
+            onTap: widget.onPanicOpen,
+            color: Colors.red,
+          ),
         ],
       ),
     );
   }
 
-  Widget _actionButton({
+  Widget _iconButton({
     required IconData icon,
-    required String text,
+    required String label,
     required VoidCallback onTap,
+    Color? color,
   }) {
-    return Expanded(
-      child: OutlinedButton(
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.white,
-          side: const BorderSide(color: AppColors.glassBorder),
-          backgroundColor: AppColors.glassWhite,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 70,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16),
-            const SizedBox(width: 8),
-            Text(text),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _panicButton() {
-    return Expanded(
-      child: OutlinedButton(
-        onPressed: widget.onPanicOpen,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.red,
-          side: const BorderSide(color: Colors.red),
-          backgroundColor: Colors.red.withOpacity(0.1),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.warning, size: 16),
-            SizedBox(width: 8),
-            Text('Emergency'),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: (color ?? AppColors.primary).withOpacity(0.1),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: color ?? AppColors.primary,
+                  width: 2,
+                ),
+              ),
+              child: Icon(icon, color: color ?? Colors.white, size: 24),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: color ?? Colors.white70,
+                fontSize: 10,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),

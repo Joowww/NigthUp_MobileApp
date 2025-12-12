@@ -12,7 +12,7 @@ class MapController extends GetxController {
   var nearbyBusinesses = [].obs;
   var isVisibleOnMap = true.obs;
   var isLoading = true.obs;
-  
+
   // Posición por defecto (Madrid)
   var currentPosition = Position(
     longitude: -3.6929536,
@@ -64,14 +64,16 @@ class MapController extends GetxController {
       }
 
       if (permission == LocationPermission.deniedForever) {
-        print('📍 Location permissions permanently denied - using default location');
+        print(
+          '📍 Location permissions permanently denied - using default location',
+        );
         return;
       }
 
       Position position = await Geolocator.getCurrentPosition();
       currentPosition.value = position;
       print('📍 Current location: ${position.latitude}, ${position.longitude}');
-      
+
       _updateUserLocationIfAuthenticated(position.latitude, position.longitude);
     } catch (e) {
       print('❌ Error getting location: $e - using default location');
@@ -136,17 +138,17 @@ class MapController extends GetxController {
             'username': 'Ana García',
             'profilePictureUrl': '',
             'location': {
-              'coordinates': [-3.70256, 40.4165]
-            }
+              'coordinates': [-3.70256, 40.4165],
+            },
           }),
           Friend.fromJson({
             '_id': 'friend_2',
             'username': 'Carlos López',
             'profilePictureUrl': '',
             'location': {
-              'coordinates': [-3.70379, 40.4192]
-            }
-          })
+              'coordinates': [-3.70379, 40.4192],
+            },
+          }),
         ];
         print('⚠️ Using fallback friends data');
       }
@@ -167,16 +169,16 @@ class MapController extends GetxController {
     try {
       // ✅ CORREGIDO: Usar endpoint de eventos que SÍ existe
       final response = await _apiService.get('/event?limit=50');
-      
+
       if (response.statusCode == 200) {
         List<dynamic> eventsList = [];
-        
+
         if (response.data is Map && response.data['events'] is List) {
           eventsList = response.data['events'];
         } else if (response.data is List) {
           eventsList = response.data;
         }
-        
+
         nearbyEvents.value = eventsList;
         print('✅ Loaded ${nearbyEvents.length} events');
       } else {
@@ -187,19 +189,19 @@ class MapController extends GetxController {
             'name': 'Fiesta Techno',
             'location': {
               'coordinates': [-3.70256, 40.4165],
-              'name': 'Sala Capital'
+              'name': 'Sala Capital',
             },
-            'image': ''
+            'image': '',
           },
           {
             '_id': 'event_2',
             'name': 'Concierto Rock',
             'location': {
-              'coordinates': [-3.70379, 40.4192], 
-              'name': 'Teatro Principal'
+              'coordinates': [-3.70379, 40.4192],
+              'name': 'Teatro Principal',
             },
-            'image': ''
-          }
+            'image': '',
+          },
         ];
         print('⚠️ Using fallback events data');
       }
@@ -218,16 +220,16 @@ class MapController extends GetxController {
     try {
       // ✅ CORREGIDO: Usar endpoint de negocios que SÍ existe
       final response = await _apiService.get('/business?limit=50');
-      
+
       if (response.statusCode == 200) {
         List<dynamic> businessesList = [];
-        
+
         if (response.data is Map && response.data['businesses'] is List) {
           businessesList = response.data['businesses'];
         } else if (response.data is List) {
           businessesList = response.data;
         }
-        
+
         nearbyBusinesses.value = businessesList;
         print('✅ Loaded ${nearbyBusinesses.length} businesses');
       } else {
@@ -238,19 +240,19 @@ class MapController extends GetxController {
             'name': 'Bar Central',
             'location': {
               'coordinates': [-3.70379, 40.4192],
-              'name': 'Calle Mayor 123'
+              'name': 'Calle Mayor 123',
             },
-            'avatar': ''
+            'avatar': '',
           },
           {
             '_id': 'business_2',
             'name': 'Restaurante Luna',
             'location': {
               'coordinates': [-3.70123, 40.4178],
-              'name': 'Plaza del Sol 45'
+              'name': 'Plaza del Sol 45',
             },
-            'avatar': ''
-          }
+            'avatar': '',
+          },
         ];
         print('⚠️ Using fallback businesses data');
       }
@@ -263,11 +265,16 @@ class MapController extends GetxController {
   Future<void> updateUserLocation(double lat, double lng) async {
     try {
       // ✅ CORREGIDO: Si el endpoint no existe, solo log
-      final response = await _apiService.post('/map/location', data: [lng, lat]);
+      final response = await _apiService.post(
+        '/map/location',
+        data: [lng, lat],
+      );
       if (response.statusCode == 200 || response.statusCode == 201) {
         print('✅ Location updated to: $lat, $lng');
       } else {
-        print('📍 Location update endpoint not available (status: ${response.statusCode})');
+        print(
+          '📍 Location update endpoint not available (status: ${response.statusCode})',
+        );
       }
     } catch (e) {
       print('📍 Location update not available: $e');
@@ -276,7 +283,10 @@ class MapController extends GetxController {
 
   Future<void> setVisibilityOnMap(bool isVisible) async {
     try {
-      final response = await _apiService.patch('/map/visibility', data: {"isVisible": isVisible});
+      final response = await _apiService.patch(
+        '/map/visibility',
+        data: {"isVisible": isVisible},
+      );
       if (response.statusCode == 200) {
         isVisibleOnMap.value = isVisible;
         print('✅ User visibility updated: $isVisible');

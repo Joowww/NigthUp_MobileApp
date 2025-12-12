@@ -66,6 +66,7 @@ dependencies:
   flutter_svg: ^2.0.9
   url_launcher: ^6.2.4
   permission_handler: ^11.2.0
+  flutter_dotenv: ^5.1.0
 
   # NUEVAS PARA POSTS Y FEEDS
   video_player: ^2.8.2
@@ -93,6 +94,7 @@ flutter:
     - assets/images/default-business.jpg
     - assets/images/google.png
     - assets/images/default-mapa.jpg
+    - assets/.env
   
   fonts:
     - family: Poppins
