@@ -10,8 +10,9 @@ import 'screens/user_profile.dart';
 import 'screens/settings_screen.dart';
 import 'screens/event_detail_screen.dart';
 import 'screens/panic_screen.dart';
-import 'screens/event_calendar.dart'; // ✅ CAMBIADO
+import 'screens/event_calendar_screen.dart';
 import 'screens/full_map_screen.dart';
+import 'screens/create_post/camera_screen.dart';
 import 'widgets/menu_modal.dart';
 import 'widgets/bottom_navigation.dart';
 import 'controllers/auth_controller.dart';
@@ -111,7 +112,7 @@ class _AppState extends State<App> {
       case AppScreen.panic:
         return PanicScreen(onBack: () => changeScreen(AppScreen.main));
       case AppScreen.calendar:
-        return const EventsCalendar();
+        return EventCalendarScreen(onBack: () => changeScreen(AppScreen.main));
       case AppScreen.fullMap:
         return const FullMapScreen();
       case AppScreen.menuModal:
@@ -138,12 +139,7 @@ class _AppState extends State<App> {
             },
           ),
           SearchScreen(),
-          Container(
-            color: Colors.black,
-            child: const Center(
-              child: Text('Camera', style: TextStyle(color: Colors.white)),
-            ),
-          ),
+          const CameraScreen(),
           ChatScreen(),
           UserProfile(
             onSettingsOpen: () => changeScreen(AppScreen.settings),

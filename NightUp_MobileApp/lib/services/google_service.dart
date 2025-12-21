@@ -1,12 +1,9 @@
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import '../utils/logger.dart';
 
 class GoogleSignInService {
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-      'profile',
-    ],
+    scopes: ['email', 'profile'],
     // Configuración específica para evitar problemas en web
     signInOption: SignInOption.standard,
   );
@@ -16,7 +13,7 @@ class GoogleSignInService {
     try {
       return await _googleSignIn.signIn();
     } catch (error) {
-      print('Google Sign-In Error: $error');
+      logger.e('Google Sign-In Error: $error');
       return null;
     }
   }
@@ -31,7 +28,7 @@ class GoogleSignInService {
       }
       return null;
     } catch (error) {
-      print('Google Token Error: $error');
+      logger.e('Google Token Error: $error');
       return null;
     }
   }
@@ -41,7 +38,7 @@ class GoogleSignInService {
     try {
       await _googleSignIn.signOut();
     } catch (error) {
-      print('Google Sign-Out Error: $error');
+      logger.e('Google Sign-Out Error: $error');
     }
   }
 
@@ -50,7 +47,7 @@ class GoogleSignInService {
     try {
       return await _googleSignIn.isSignedIn();
     } catch (error) {
-      print('Google isSignedIn Error: $error');
+      logger.e('Google isSignedIn Error: $error');
       return false;
     }
   }
@@ -60,7 +57,7 @@ class GoogleSignInService {
     try {
       return _googleSignIn.currentUser;
     } catch (error) {
-      print('Google getCurrentUser Error: $error');
+      logger.e('Google getCurrentUser Error: $error');
       return null;
     }
   }

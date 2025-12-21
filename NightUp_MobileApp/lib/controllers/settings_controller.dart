@@ -1,8 +1,9 @@
 import 'package:get/get.dart';
 import '../services/api_service.dart';
+import '../services/image_picker_service.dart';
 import '../models/user.dart';
 import 'auth_controller.dart';
-import 'package:image_picker/image_picker.dart';
+import '../utils/logger.dart';
 
 class SettingsController extends GetxController {
   final ApiService _apiService = Get.find<ApiService>();
@@ -10,7 +11,7 @@ class SettingsController extends GetxController {
   var user = Rxn<User>();
   var isLoading = true.obs;
   var isUpdating = false.obs;
-  
+
   // Configuraciones
   var notificationsEnabled = true.obs;
   var locationEnabled = true.obs;
@@ -31,9 +32,19 @@ class SettingsController extends GetxController {
     try {
       final currentUser = _authController.currentUser;
       if (currentUser != null) {
-        final response = await _apiService.get('/user/profile/${currentUser.username}');
+        final response = await _apiService.get(
+          '/user/profile/${currentUser.username}',
+        );
+        logger.d('User profile response: ${response.data}');
         user.value = User.fromJson(response.data);
-        print('✅ User profile loaded: ${user.value?.username}');
+        // Important: Update AuthController so other screens (like Profile) update too
+        if (user.value != null) {
+          _authController.setUser(user.value!);
+        }
+        logger.i('User profile successfully mapped: ${user.value?.username}');
+        logger.d('Avatar URL: ${user.value?.profilePictureUrl}');
+        logger.d('avatar field: ${user.value?.avatar}');
+        logger.d('Cover URL: ${user.value?.coverPhoto}');
       }
     } catch (e) {
       Get.snackbar('Error', 'No se pudo cargar el perfil: $e');
@@ -44,12 +55,59 @@ class SettingsController extends GetxController {
 
   Future<void> updateProfile(Map<String, dynamic> data) async {
     isUpdating.value = true;
+
+    // 1. Actualización Optimista: Actualizamos la UI localmente de inmediato
+    final oldUser = _authController.currentUser;
+    if (oldUser != null) {
+      final updatedJson = oldUser.toJson();
+      updatedJson.addAll(data);
+      _authController.setUser(User.fromJson(updatedJson));
+    }
+
     try {
-      await _apiService.put('/user/profile', data: data);
-      await fetchUserProfile(); // Refrescar datos
+      logger.i('Persistiendo en el Servidor (Plano): $data');
+
+      final response = await _apiService.put('/user/profile', data: data);
+      logger.d('Respuesta del servidor: ${response.statusCode}');
+
+      // 2. Esperar un poco antes de refrescar para dar tiempo a la DB
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // 3. Refrescar datos reales del servidor
+      await fetchUserProfile();
+
+      // 4. VALIDACIÓN: Si el servidor me devolvió valores por defecto, fuerzo los de Cloudinary
+      final currentUser = _authController.currentUser;
+      if (currentUser != null) {
+        bool needsFix = false;
+        // Comprobamos avatar
+        if (data.containsKey('avatar') &&
+            (currentUser.avatar == null ||
+                currentUser.avatar!.contains('default')))
+          needsFix = true;
+        // Comprobamos portada
+        if (data.containsKey('coverPhoto') &&
+            (currentUser.coverPhoto == null ||
+                currentUser.coverPhoto!.contains('default')))
+          needsFix = true;
+
+        if (needsFix) {
+          logger.w(
+            'El servidor devolvió datos stale. Re-aplicando URLs de Cloudinary.',
+          );
+          final json = currentUser.toJson();
+          json.addAll(data);
+          final forcedUser = User.fromJson(json);
+          _authController.setUser(forcedUser);
+          user.value = forcedUser;
+        }
+      }
+
       Get.snackbar('Éxito', 'Perfil actualizado correctamente');
     } catch (e) {
-      Get.snackbar('Error', 'No se pudo actualizar el perfil: $e');
+      logger.e('Error en updateProfile: $e');
+      if (oldUser != null) _authController.setUser(oldUser);
+      Get.snackbar('Error', 'No se pudo sincronizar con el servidor');
     } finally {
       isUpdating.value = false;
     }
@@ -57,48 +115,53 @@ class SettingsController extends GetxController {
 
   Future<void> updateAvatar() async {
     try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-      
+      final image = await ImagePickerService.pickImage();
       if (image != null) {
-        await _apiService.uploadFile(
-          '/user/avatar',
-          filePath: image.path,
-          fieldName: 'avatar',
-        );
-        await fetchUserProfile();
-        Get.snackbar('Éxito', 'Avatar actualizado correctamente');
+        isUpdating.value = true;
+        final imageUrl = await _apiService.uploadToCloudinary(image, 'profile');
+        if (imageUrl != null) {
+          await updateProfile({'avatar': imageUrl});
+        }
       }
     } catch (e) {
-      Get.snackbar('Error', 'No se pudo actualizar el avatar: $e');
+      Get.snackbar('Error', 'No se pudo actualizar la foto de perfil: $e');
+    } finally {
+      isUpdating.value = false;
     }
   }
 
   Future<void> updateCoverPhoto() async {
     try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-      
+      final image = await ImagePickerService.pickImage();
+
       if (image != null) {
-        await _apiService.uploadFile(
-          '/user/cover-photo',
-          filePath: image.path,
-          fieldName: 'coverPhoto',
-        );
-        await fetchUserProfile();
-        Get.snackbar('Éxito', 'Foto de portada actualizada correctamente');
+        isUpdating.value = true;
+
+        // 1. Subir a Cloudinary
+        final imageUrl = await _apiService.uploadToCloudinary(image, 'covers');
+
+        if (imageUrl != null) {
+          // Usamos la clave EXACTA que pide el Backend: "coverPhoto"
+          await updateProfile({'coverPhoto': imageUrl});
+          Get.snackbar('Éxito', 'Foto de portada actualizada correctamente');
+        }
       }
     } catch (e) {
-      Get.snackbar('Error', 'No se pudo actualizar la foto de portada: $e');
+      Get.snackbar('Error', 'No se pudo actualizar la portada: $e');
+    } finally {
+      isUpdating.value = false;
     }
   }
 
-  Future<void> changePassword(String currentPassword, String newPassword) async {
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
     try {
-      await _apiService.post('/user/change-password', data: {
-        'currentPassword': currentPassword,
-        'newPassword': newPassword,
-      });
+      await _apiService.post(
+        '/user/change-password',
+        data: {'currentPassword': currentPassword, 'newPassword': newPassword},
+      );
       Get.snackbar('Éxito', 'Contraseña actualizada correctamente');
     } catch (e) {
       Get.snackbar('Error', 'No se pudo cambiar la contraseña: $e');
@@ -107,10 +170,13 @@ class SettingsController extends GetxController {
 
   Future<void> updatePrivacySettings() async {
     try {
-      await _apiService.put('/user/privacy-settings', data: {
-        'isVisibleOnMap': isVisibleOnMap.value,
-        'notificationsEnabled': notificationsEnabled.value,
-      });
+      await _apiService.put(
+        '/user/privacy-settings',
+        data: {
+          'isVisibleOnMap': isVisibleOnMap.value,
+          'notificationsEnabled': notificationsEnabled.value,
+        },
+      );
       Get.snackbar('Éxito', 'Configuración de privacidad actualizada');
     } catch (e) {
       Get.snackbar('Error', 'No se pudo actualizar la configuración: $e');
@@ -119,9 +185,10 @@ class SettingsController extends GetxController {
 
   Future<void> updateLocationVisibility(bool visible) async {
     try {
-      await _apiService.post('/map/location', data: {
-        'isVisibleOnMap': visible,
-      });
+      await _apiService.post(
+        '/map/location',
+        data: {'isVisibleOnMap': visible},
+      );
       isVisibleOnMap.value = visible;
       Get.snackbar('Éxito', 'Visibilidad en el mapa actualizada');
     } catch (e) {

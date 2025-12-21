@@ -26,7 +26,7 @@ class Conversation {
         id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
         isGroup: json['isGroup'] ?? false,
         name: json['name']?.toString() ?? 'Desconocido',
-        avatar: json['avatar']?.toString() ?? 'https://via.placeholder.com/150',
+        avatar: json['avatar']?.toString() ?? 'assets/images/google.png',
         lastMessage: json['lastMessage']?.toString() ?? '',
         lastMessageTime: json['lastMessageTime'] != null
             ? DateTime.parse(json['lastMessageTime'])
@@ -44,15 +44,15 @@ class Conversation {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'isGroup': isGroup,
-        'name': name,
-        'avatar': avatar,
-        'lastMessage': lastMessage,
-        'lastMessageTime': lastMessageTime.toIso8601String(),
-        'participants': participants,
-        'unreadCount': unreadCount,
-      };
+    'id': id,
+    'isGroup': isGroup,
+    'name': name,
+    'avatar': avatar,
+    'lastMessage': lastMessage,
+    'lastMessageTime': lastMessageTime.toIso8601String(),
+    'participants': participants,
+    'unreadCount': unreadCount,
+  };
 
   // Getter para mostrar el nombre en la UI
   String get displayName => name;

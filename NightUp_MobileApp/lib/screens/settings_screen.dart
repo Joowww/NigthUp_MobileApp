@@ -6,11 +6,12 @@ import '../theme/colors.dart';
 import '../models/user.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/gradient_button.dart';
+import '../widgets/image_with_fallback.dart';
 import 'login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback onBack;
-  
+
   const SettingsScreen({super.key, required this.onBack});
 
   @override
@@ -30,7 +31,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final user = _settingsController.user.value;
       if (user != null) {
         _bioController.text = user.bio ?? '';
-        _locationController.text = user.location != null ? user.location as String : '';
+        _locationController.text = user.location != null
+            ? user.location as String
+            : '';
       }
     });
   }
@@ -65,7 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (_settingsController.isLoading.value) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  
+
                   final user = _settingsController.user.value;
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,25 +86,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     onTap: _settingsController.updateAvatar,
                                     child: Stack(
                                       children: [
-                                        CircleAvatar(
-                                          radius: 40,
-                                          backgroundImage: user?.profilePictureUrl != null 
-                                              ? NetworkImage(user!.profilePictureUrl!)
-                                              : null,
-                                          child: user?.profilePictureUrl == null
-                                              ? const Icon(Icons.person, size: 40, color: Colors.white70)
-                                              : null,
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.white,
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child: ImageWithFallback(
+                                            imageUrl:
+                                                user?.safeProfilePictureUrl,
+                                            width: 80,
+                                            height: 80,
+                                            isCircle: true,
+                                            fallbackAsset:
+                                                'assets/images/default-avatar.png',
+                                          ),
                                         ),
                                         Positioned(
                                           bottom: 0,
                                           right: 0,
                                           child: Container(
                                             padding: const EdgeInsets.all(4),
-                                            decoration: BoxDecoration(
+                                            decoration: const BoxDecoration(
                                               color: AppColors.primary,
                                               shape: BoxShape.circle,
                                             ),
-                                            child: const Icon(Icons.edit, size: 16, color: Colors.white),
+                                            child: const Icon(
+                                              Icons.edit,
+                                              size: 16,
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -110,7 +126,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           user?.username ?? 'Username',
@@ -129,12 +146,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         ),
                                         const SizedBox(height: 8),
                                         GestureDetector(
-                                          onTap: _settingsController.updateCoverPhoto,
+                                          onTap: _settingsController
+                                              .updateCoverPhoto,
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 6,
+                                            ),
                                             decoration: BoxDecoration(
-                                              border: Border.all(color: AppColors.primary),
-                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: AppColors.primary,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                             child: const Text(
                                               'Change Cover Photo',
@@ -159,10 +183,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   labelStyle: TextStyle(color: Colors.white70),
                                   border: OutlineInputBorder(),
                                   enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.white70),
+                                    borderSide: BorderSide(
+                                      color: Colors.white70,
+                                    ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: AppColors.primary),
+                                    borderSide: BorderSide(
+                                      color: AppColors.primary,
+                                    ),
                                   ),
                                 ),
                                 style: const TextStyle(color: Colors.white),
@@ -175,10 +203,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   labelStyle: TextStyle(color: Colors.white70),
                                   border: OutlineInputBorder(),
                                   enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.white70),
+                                    borderSide: BorderSide(
+                                      color: Colors.white70,
+                                    ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: AppColors.primary),
+                                    borderSide: BorderSide(
+                                      color: AppColors.primary,
+                                    ),
                                   ),
                                 ),
                                 style: const TextStyle(color: Colors.white),
@@ -198,7 +230,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 24),
                       _buildSectionTitle('Security'),
                       _buildSettingItem(
@@ -215,53 +247,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: Colors.green,
                         onTap: _showPrivacySettingsDialog,
                       ),
-                      
+
                       const SizedBox(height: 24),
                       _buildSectionTitle('Preferences'),
-                      Obx(() => _buildSwitchSetting(
-                        icon: Icons.notifications,
-                        title: 'Push Notifications',
-                        subtitle: 'Receive event updates and messages',
-                        value: _settingsController.notificationsEnabled.value,
-                        onChanged: (value) {
-                          _settingsController.notificationsEnabled.value = value;
-                          _settingsController.saveSettings();
-                        },
-                        color: Colors.orange,
-                      )),
-                      Obx(() => _buildSwitchSetting(
-                        icon: Icons.location_on,
-                        title: 'Location Services',
-                        subtitle: 'Share your location for better recommendations',
-                        value: _settingsController.locationEnabled.value,
-                        onChanged: (value) {
-                          _settingsController.locationEnabled.value = value;
-                          _settingsController.saveSettings();
-                        },
-                        color: Colors.blue,
-                      )),
-                      Obx(() => _buildSwitchSetting(
-                        icon: Icons.visibility,
-                        title: 'Visible on Map',
-                        subtitle: 'Allow friends to see your location on the map',
-                        value: _settingsController.isVisibleOnMap.value,
-                        onChanged: (value) {
-                          _settingsController.updateLocationVisibility(value);
-                        },
-                        color: AppColors.primary,
-                      )),
-                      Obx(() => _buildSwitchSetting(
-                        icon: Icons.dark_mode,
-                        title: 'Dark Mode',
-                        subtitle: 'Use dark theme across the app',
-                        value: _settingsController.darkModeEnabled.value,
-                        onChanged: (value) {
-                          _settingsController.darkModeEnabled.value = value;
-                          _settingsController.saveSettings();
-                        },
-                        color: Colors.indigo,
-                      )),
-                      
+                      Obx(
+                        () => _buildSwitchSetting(
+                          icon: Icons.notifications,
+                          title: 'Push Notifications',
+                          subtitle: 'Receive event updates and messages',
+                          value: _settingsController.notificationsEnabled.value,
+                          onChanged: (value) {
+                            _settingsController.notificationsEnabled.value =
+                                value;
+                            _settingsController.saveSettings();
+                          },
+                          color: Colors.orange,
+                        ),
+                      ),
+                      Obx(
+                        () => _buildSwitchSetting(
+                          icon: Icons.location_on,
+                          title: 'Location Services',
+                          subtitle:
+                              'Share your location for better recommendations',
+                          value: _settingsController.locationEnabled.value,
+                          onChanged: (value) {
+                            _settingsController.locationEnabled.value = value;
+                            _settingsController.saveSettings();
+                          },
+                          color: Colors.blue,
+                        ),
+                      ),
+                      Obx(
+                        () => _buildSwitchSetting(
+                          icon: Icons.visibility,
+                          title: 'Visible on Map',
+                          subtitle:
+                              'Allow friends to see your location on the map',
+                          value: _settingsController.isVisibleOnMap.value,
+                          onChanged: (value) {
+                            _settingsController.updateLocationVisibility(value);
+                          },
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      Obx(
+                        () => _buildSwitchSetting(
+                          icon: Icons.dark_mode,
+                          title: 'Dark Mode',
+                          subtitle: 'Use dark theme across the app',
+                          value: _settingsController.darkModeEnabled.value,
+                          onChanged: (value) {
+                            _settingsController.darkModeEnabled.value = value;
+                            _settingsController.saveSettings();
+                          },
+                          color: Colors.indigo,
+                        ),
+                      ),
+
                       const SizedBox(height: 24),
                       _buildSectionTitle('Support'),
                       _buildSettingItem(
@@ -292,7 +335,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: Colors.red,
                         onTap: () {},
                       ),
-                      
+
                       const SizedBox(height: 24),
                       _buildSectionTitle('About'),
                       GlassCard(
@@ -307,20 +350,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 32),
                       GradientButton(
                         onPressed: () async {
                           await Get.find<AuthController>().logout();
                           // Navega a login eliminando el historial
-                          Get.offAll(() => LoginScreen(
-                            onLogin: () {
-                              // Puedes personalizar esto si tu app usa otro flujo
-                              // Por ejemplo, Get.offAllNamed('/main') después de login
-                            },
-                            onRegister: () {},
-                            onForgotPassword: () {},
-                          ));
+                          Get.offAll(
+                            () => LoginScreen(
+                              onLogin: () {
+                                // Puedes personalizar esto si tu app usa otro flujo
+                                // Por ejemplo, Get.offAllNamed('/main') después de login
+                              },
+                              onRegister: () {},
+                              onForgotPassword: () {},
+                            ),
+                          );
                         },
                         text: 'Log Out',
                       ),
@@ -337,9 +382,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showChangePasswordDialog() {
-    final TextEditingController currentPasswordController = TextEditingController();
+    final TextEditingController currentPasswordController =
+        TextEditingController();
     final TextEditingController newPasswordController = TextEditingController();
-    final TextEditingController confirmPasswordController = TextEditingController();
+    final TextEditingController confirmPasswordController =
+        TextEditingController();
 
     Get.dialog(
       GlassCard(
@@ -425,12 +472,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Expanded(
                     child: GradientButton(
                       onPressed: () {
-                        if (newPasswordController.text != confirmPasswordController.text) {
+                        if (newPasswordController.text !=
+                            confirmPasswordController.text) {
                           Get.snackbar('Error', 'Passwords do not match');
                           return;
                         }
                         if (newPasswordController.text.length < 6) {
-                          Get.snackbar('Error', 'Password must be at least 6 characters');
+                          Get.snackbar(
+                            'Error',
+                            'Password must be at least 6 characters',
+                          );
                           return;
                         }
                         _settingsController.changePassword(
@@ -453,81 +504,88 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showPrivacySettingsDialog() {
     Get.dialog(
-      Obx(() => GlassCard(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Privacy Settings',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+      Obx(
+        () => GlassCard(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Privacy Settings',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              _buildPrivacySwitch(
-                'Visible on Map',
-                'Allow friends to see your location on the map',
-                _settingsController.isVisibleOnMap.value,
-                (value) {
-                  _settingsController.updateLocationVisibility(value);
-                },
-              ),
-              _buildPrivacySwitch(
-                'Push Notifications',
-                'Receive event updates and messages',
-                _settingsController.notificationsEnabled.value,
-                (value) {
-                  _settingsController.notificationsEnabled.value = value;
-                  _settingsController.saveSettings();
-                },
-              ),
-              _buildPrivacySwitch(
-                'Location Services',
-                'Share your location for better recommendations',
-                _settingsController.locationEnabled.value,
-                (value) {
-                  _settingsController.locationEnabled.value = value;
-                  _settingsController.saveSettings();
-                },
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white70),
+                const SizedBox(height: 16),
+                _buildPrivacySwitch(
+                  'Visible on Map',
+                  'Allow friends to see your location on the map',
+                  _settingsController.isVisibleOnMap.value,
+                  (value) {
+                    _settingsController.updateLocationVisibility(value);
+                  },
+                ),
+                _buildPrivacySwitch(
+                  'Push Notifications',
+                  'Receive event updates and messages',
+                  _settingsController.notificationsEnabled.value,
+                  (value) {
+                    _settingsController.notificationsEnabled.value = value;
+                    _settingsController.saveSettings();
+                  },
+                ),
+                _buildPrivacySwitch(
+                  'Location Services',
+                  'Share your location for better recommendations',
+                  _settingsController.locationEnabled.value,
+                  (value) {
+                    _settingsController.locationEnabled.value = value;
+                    _settingsController.saveSettings();
+                  },
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.white70),
+                        ),
+                        child: const Text('Cancel'),
                       ),
-                      child: const Text('Cancel'),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GradientButton(
-                      onPressed: () {
-                        _settingsController.saveSettings();
-                        Get.back();
-                      },
-                      text: 'Save',
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GradientButton(
+                        onPressed: () {
+                          _settingsController.saveSettings();
+                          Get.back();
+                        },
+                        text: 'Save',
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-      )),
+      ),
     );
   }
 
-  Widget _buildPrivacySwitch(String title, String subtitle, bool value, ValueChanged<bool> onChanged) {
+  Widget _buildPrivacySwitch(
+    String title,
+    String subtitle,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -538,17 +596,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
                 ),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
             ),
@@ -607,12 +659,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           subtitle: Text(
             subtitle,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
-          trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+          trailing: const Icon(
+            Icons.arrow_forward_ios,
+            color: Colors.white70,
+            size: 16,
+          ),
           onTap: onTap,
         ),
       ),
@@ -650,10 +703,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           subtitle: Text(
             subtitle,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
           trailing: Switch(
             value: value,
@@ -673,10 +723,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
           Text(
             value,

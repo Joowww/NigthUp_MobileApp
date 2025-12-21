@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
-import '../screens/home_feed.dart'; // Asegúrate de que la ruta sea correcta
+import '../app.dart'; // Asegúrate de que la ruta sea correcta
 import 'auth_controller.dart';
 
 class InterestSelectionController extends GetxController {
-    final RxString errorMessage = ''.obs;
+  final RxString errorMessage = ''.obs;
   final ApiService _apiService = Get.find<ApiService>();
   final StorageService _storageService = Get.find<StorageService>();
-  
+
   // PageController removed: navigation is now managed by currentPage only
   final RxInt currentPage = 0.obs;
   final RxBool isLoading = false.obs;
@@ -18,7 +18,7 @@ class InterestSelectionController extends GetxController {
   // Almacena las selecciones por tipo
   final Map<String, String> selections = {
     'MusicType': '',
-    'Musician': '', 
+    'Musician': '',
     'EventType': '',
     'ChildhoodIdol': '',
   };
@@ -48,9 +48,11 @@ class InterestSelectionController extends GetxController {
       final authController = Get.find<AuthController>();
       final user = authController.currentUser;
       if (user != null && user.username == 'JoelMoreno') {
-        print('🟢 [InterestController] Usuario JoelMoreno detectado, saltando onboarding');
+        print(
+          '🟢 [InterestController] Usuario JoelMoreno detectado, saltando onboarding',
+        );
         _storageService.write('onboarding_complete', true);
-        Future.delayed(Duration.zero, () => Get.offAll(() => HomeFeed()));
+        Future.delayed(Duration.zero, () => Get.offAll(() => const App()));
         return;
       }
     } catch (e) {
@@ -66,7 +68,8 @@ class InterestSelectionController extends GetxController {
     bool completed = false;
     Future timeout = Future.delayed(const Duration(seconds: 15), () {
       if (!completed) {
-        errorMessage.value = 'No se pudo cargar. Comprueba tu conexión o reintenta.';
+        errorMessage.value =
+            'No se pudo cargar. Comprueba tu conexión o reintenta.';
         isLoading.value = false;
         update();
       }
@@ -85,11 +88,13 @@ class InterestSelectionController extends GetxController {
               return {
                 'id': tag['_id']?.toString() ?? '',
                 'name': tag['name']?.toString() ?? '',
-                'color': tag['color']?.toString() ?? '#3b82f6'
+                'color': tag['color']?.toString() ?? '#3b82f6',
               };
             }).toList();
           } else {
-            print('🔴 [InterestController] Unexpected response format for $type: $response');
+            print(
+              '🔴 [InterestController] Unexpected response format for $type: $response',
+            );
             tagOptions[type] = [];
           }
         } catch (e) {
@@ -110,7 +115,8 @@ class InterestSelectionController extends GetxController {
       _loadFallbackTags();
       completed = true;
       isLoading.value = false;
-      errorMessage.value = 'No se pudo cargar. Comprueba tu conexión o reintenta.';
+      errorMessage.value =
+          'No se pudo cargar. Comprueba tu conexión o reintenta.';
       update();
     }
   }
@@ -118,7 +124,7 @@ class InterestSelectionController extends GetxController {
   // Datos de fallback - CORREGIDO
   void _loadFallbackTags() {
     print('🔄 Loading fallback tags...');
-    
+
     tagOptions['MusicType'] = [
       {'id': '1', 'name': 'Techno', 'color': '#8b5cf6'},
       {'id': '2', 'name': 'House', 'color': '#3b82f6'},
@@ -148,7 +154,7 @@ class InterestSelectionController extends GetxController {
       {'id': '17', 'name': 'Hannah Montana', 'color': '#ef4444'},
       {'id': '18', 'name': 'Goku', 'color': '#f59e0b'},
     ];
-    
+
     update(); // 👈 AÑADIR ESTO
   }
 
@@ -161,13 +167,17 @@ class InterestSelectionController extends GetxController {
 
   // Navegar a la siguiente página - CORREGIDO
   void nextPage() {
-    print('🟢 [InterestController] nextPage called. currentPage: ${currentPage.value}');
+    print(
+      '🟢 [InterestController] nextPage called. currentPage: ${currentPage.value}',
+    );
     if (currentPage.value < 3) {
       print('🟢 [InterestController] Moving to page ${currentPage.value + 1}');
       currentPage.value++;
       update();
     } else {
-      print('🟢 [InterestController] Final page reached, submitting interests...');
+      print(
+        '🟢 [InterestController] Final page reached, submitting interests...',
+      );
       _submitInterests();
     }
   }
@@ -187,7 +197,9 @@ class InterestSelectionController extends GetxController {
       isLoading.value = true;
       print('🟢 [InterestController] _submitInterests called');
       // Verificar que todas las selecciones estén completas
-      final missingSelections = selections.entries.where((entry) => entry.value.isEmpty).toList();
+      final missingSelections = selections.entries
+          .where((entry) => entry.value.isEmpty)
+          .toList();
       if (missingSelections.isNotEmpty) {
         print('🔴 [InterestController] Missing selections: $missingSelections');
         Get.snackbar(
@@ -203,13 +215,16 @@ class InterestSelectionController extends GetxController {
         'musicType': _getNameFromId('MusicType', selections['MusicType']!),
         'musician': _getNameFromId('Musician', selections['Musician']!),
         'eventType': _getNameFromId('EventType', selections['EventType']!),
-        'childhoodIdol': _getNameFromId('ChildhoodIdol', selections['ChildhoodIdol']!),
+        'childhoodIdol': _getNameFromId(
+          'ChildhoodIdol',
+          selections['ChildhoodIdol']!,
+        ),
       };
       print('🟢 [InterestController] Enviando intereses: $dataToSend');
       await _apiService.saveInitialInterests(dataToSend);
       await _storageService.write('onboarding_complete', true);
       print('🟢 [InterestController] Intereses guardados exitosamente');
-      Get.offAll(() => HomeFeed());
+      Get.offAll(() => const App());
     } catch (e) {
       print('🔴 [InterestController] Error submitting interests: $e');
       Get.snackbar(
@@ -219,7 +234,9 @@ class InterestSelectionController extends GetxController {
         colorText: Colors.white,
       );
     } finally {
-      print('🟢 [InterestController] _submitInterests finally. Setting isLoading to false');
+      print(
+        '🟢 [InterestController] _submitInterests finally. Setting isLoading to false',
+      );
       isLoading.value = false;
     }
   }
@@ -242,7 +259,7 @@ class InterestSelectionController extends GetxController {
   void skipOnboarding() async {
     print('🟢 [InterestController] skipOnboarding called');
     await _storageService.write('onboarding_complete', true);
-    Get.offAll(() => HomeFeed());
+    Get.offAll(() => const App());
   }
 
   // Método para recargar tags - AÑADIR ESTE MÉTODO
@@ -254,11 +271,16 @@ class InterestSelectionController extends GetxController {
   // Obtener la categoría actual basada en la página
   String get currentCategory {
     switch (currentPage.value) {
-      case 0: return 'MusicType';
-      case 1: return 'Musician';
-      case 2: return 'EventType';
-      case 3: return 'ChildhoodIdol';
-      default: return 'MusicType';
+      case 0:
+        return 'MusicType';
+      case 1:
+        return 'Musician';
+      case 2:
+        return 'EventType';
+      case 3:
+        return 'ChildhoodIdol';
+      default:
+        return 'MusicType';
     }
   }
 

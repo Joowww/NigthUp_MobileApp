@@ -6,6 +6,7 @@ import '../widgets/glass_card.dart';
 import '../widgets/image_with_fallback.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
+import '../utils/logger.dart';
 
 class UserProfile extends StatefulWidget {
   final VoidCallback onSettingsOpen;
@@ -30,16 +31,21 @@ class _UserProfileState extends State<UserProfile>
   late TabController _tabController;
   final AuthController _authController = Get.find<AuthController>();
   final ApiService _apiService = Get.find<ApiService>();
-  
+
+  // Usamos un getter para facilitar el acceso reactivo
+  User? get user => _authController.currentUser;
+
   // Observables
   final RxList<Map<String, dynamic>> _userEvents = <Map<String, dynamic>>[].obs;
-  final RxList<Map<String, dynamic>> _pendingRequests = <Map<String, dynamic>>[].obs;
+  final RxList<Map<String, dynamic>> _pendingRequests =
+      <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> _userGroups = <Map<String, dynamic>>[].obs;
-  final RxList<Map<String, dynamic>> _userReviews = <Map<String, dynamic>>[].obs;
-  
+  final RxList<Map<String, dynamic>> _userReviews =
+      <Map<String, dynamic>>[].obs;
+
   final RxBool _loadingRequests = false.obs;
   final RxBool _loadingStats = true.obs;
-  
+
   // Stats
   final RxDouble _trustScore = 0.0.obs;
   final RxInt _totalRatings = 0.obs;
@@ -73,13 +79,16 @@ class _UserProfileState extends State<UserProfile>
 
       // 1. Fetch Trust Score
       try {
-        final trustResponse = await _apiService.get('/user-trust/user/summary/${user.id}');
+        final trustResponse = await _apiService.get(
+          '/user-trust/user/summary/${user.id}',
+        );
         if (trustResponse.data is Map) {
-          _trustScore.value = (trustResponse.data['averageTrust'] ?? 0.0).toDouble();
+          _trustScore.value = (trustResponse.data['averageTrust'] ?? 0.0)
+              .toDouble();
           _totalRatings.value = trustResponse.data['totalRatings'] ?? 0;
         }
       } catch (e) {
-        print('Error fetching trust score: $e');
+        logger.e('Error fetching trust score: $e');
       }
 
       // 2. Fetch Friends Count
@@ -87,21 +96,22 @@ class _UserProfileState extends State<UserProfile>
         final friendsResponse = await _apiService.get('/friendship/friends');
         if (friendsResponse.data is List) {
           // ✅ Contar solo amistades con status "accepted"
-          final acceptedFriends = (friendsResponse.data as List).where((friendship) {
+          final acceptedFriends = (friendsResponse.data as List).where((
+            friendship,
+          ) {
             return friendship is Map && friendship['status'] == 'accepted';
           }).toList();
           _friendsCount.value = acceptedFriends.length;
-          print('✅ Friends count: ${_friendsCount.value}');
+          logger.d('Friends count: ${_friendsCount.value}');
         } else {
           _friendsCount.value = 0;
         }
       } catch (e) {
-        print('Error fetching friends count: $e');
+        logger.e('Error fetching friends count: $e');
         _friendsCount.value = 0;
       }
-
     } catch (e) {
-      print('Error fetching user stats: $e');
+      logger.e('Error fetching user stats: $e');
     } finally {
       _loadingStats.value = false;
     }
@@ -110,19 +120,21 @@ class _UserProfileState extends State<UserProfile>
   Future<void> _fetchUserGroups() async {
     try {
       final response = await _apiService.get('/group/my-groups');
-      
+
       if (response.data is List) {
         _userGroups.value = List<Map<String, dynamic>>.from(response.data);
         _groupsCount.value = _userGroups.length;
       } else if (response.data is Map && response.data['groups'] is List) {
-        _userGroups.value = List<Map<String, dynamic>>.from(response.data['groups']);
+        _userGroups.value = List<Map<String, dynamic>>.from(
+          response.data['groups'],
+        );
         _groupsCount.value = _userGroups.length;
       } else {
         _userGroups.clear();
         _groupsCount.value = 0;
       }
     } catch (e) {
-      print('Error fetching user groups: $e');
+      logger.e('Error fetching user groups: $e');
       _userGroups.clear();
       _groupsCount.value = 0;
     }
@@ -133,15 +145,17 @@ class _UserProfileState extends State<UserProfile>
       final user = _authController.currentUser;
       if (user == null) return;
 
-      final response = await _apiService.get('/user-trust/user/ratings/${user.id}');
-      
+      final response = await _apiService.get(
+        '/user-trust/user/ratings/${user.id}',
+      );
+
       if (response.data is List) {
         _userReviews.value = List<Map<String, dynamic>>.from(response.data);
       } else {
         _userReviews.clear();
       }
     } catch (e) {
-      print('Error fetching user reviews: $e');
+      logger.e('Error fetching user reviews: $e');
       _userReviews.clear();
     }
   }
@@ -154,14 +168,18 @@ class _UserProfileState extends State<UserProfile>
       if (response.data is List) {
         _pendingRequests.value = List<Map<String, dynamic>>.from(response.data);
       } else if (response.data is Map && response.data['pending'] is List) {
-        _pendingRequests.value = List<Map<String, dynamic>>.from(response.data['pending']);
+        _pendingRequests.value = List<Map<String, dynamic>>.from(
+          response.data['pending'],
+        );
       } else if (response.data is Map && response.data['received'] is List) {
-        _pendingRequests.value = List<Map<String, dynamic>>.from(response.data['received']);
+        _pendingRequests.value = List<Map<String, dynamic>>.from(
+          response.data['received'],
+        );
       } else {
         _pendingRequests.clear();
       }
     } catch (e) {
-      print('Error fetching pending requests: $e');
+      logger.e('Error fetching pending requests: $e');
       _pendingRequests.clear();
     } finally {
       _loadingRequests.value = false;
@@ -194,17 +212,21 @@ class _UserProfileState extends State<UserProfile>
     if (user == null) return;
 
     try {
-      final response = await _apiService.get('/event/by-participant/${user.id}');
+      final response = await _apiService.get(
+        '/event/by-participant/${user.id}',
+      );
 
       if (response.data is Map && response.data['events'] is List) {
-        _userEvents.value = List<Map<String, dynamic>>.from(response.data['events']);
+        _userEvents.value = List<Map<String, dynamic>>.from(
+          response.data['events'],
+        );
       } else if (response.data is List) {
         _userEvents.value = List<Map<String, dynamic>>.from(response.data);
       } else {
         _userEvents.clear();
       }
     } catch (e) {
-      print('Error fetching user events: $e');
+      logger.e('Error fetching user events: $e');
       _userEvents.clear();
     }
   }
@@ -231,7 +253,7 @@ class _UserProfileState extends State<UserProfile>
       DateTime dateTime = DateTime.parse(date.toString());
       final now = DateTime.now();
       final diff = now.difference(dateTime);
-      
+
       if (diff.inDays == 0) return 'Hoy';
       if (diff.inDays == 1) return 'Ayer';
       if (diff.inDays < 7) return 'Hace ${diff.inDays} días';
@@ -278,6 +300,22 @@ class _UserProfileState extends State<UserProfile>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ✅ Nuevo Avatar añadido
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: ImageWithFallback(
+                  imageUrl: user.safeProfilePictureUrl,
+                  width: 80,
+                  height: 80,
+                  isCircle: true,
+                  fallbackAsset: 'assets/images/default-avatar.png',
+                ),
+              ),
+
               Text(
                 user.username,
                 style: const TextStyle(
@@ -291,7 +329,10 @@ class _UserProfileState extends State<UserProfile>
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
@@ -299,7 +340,11 @@ class _UserProfileState extends State<UserProfile>
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.verified, color: AppColors.primary, size: 14),
+                        Icon(
+                          Icons.verified,
+                          color: AppColors.primary,
+                          size: 14,
+                        ),
                         SizedBox(width: 4),
                         Text(
                           'Verified',
@@ -313,52 +358,75 @@ class _UserProfileState extends State<UserProfile>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Obx(() => _loadingStats.value
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
-                        )
-                      : Row(
-                          children: [
-                            const Icon(Icons.star, color: Colors.amber, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              _totalRatings.value > 0
-                                  ? '${_trustScore.value.toStringAsFixed(1)} (${_totalRatings.value})'
-                                  : 'Sin valoraciones',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
-                              ),
+                  Obx(
+                    () => _loadingStats.value
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white70,
                             ),
-                          ],
-                        )),
+                          )
+                        : Row(
+                            children: [
+                              const Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _totalRatings.value > 0
+                                    ? '${_trustScore.value.toStringAsFixed(1)} (${_totalRatings.value})'
+                                    : 'Sin valoraciones',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
                 ],
               ),
 
               const SizedBox(height: 8),
 
-              Obx(() => _loadingStats.value
-                  ? const SizedBox(
-                      width: 100,
-                      height: 20,
-                      child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
+              Obx(
+                () => _loadingStats.value
+                    ? const SizedBox(
+                        width: 100,
+                        height: 20,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          _buildStatItem(
+                            _friendsCount.value.toString(),
+                            'Friends',
+                          ),
+                          const SizedBox(width: 16),
+                          _buildStatItem(
+                            _userEvents.length.toString(),
+                            'Events',
+                          ),
+                          const SizedBox(width: 16),
+                          _buildStatItem(
+                            _groupsCount.value.toString(),
+                            'Groups',
+                          ),
+                        ],
                       ),
-                    )
-                  : Row(
-                      children: [
-                        _buildStatItem(_friendsCount.value.toString(), 'Friends'),
-                        const SizedBox(width: 16),
-                        _buildStatItem(_userEvents.length.toString(), 'Events'),
-                        const SizedBox(width: 16),
-                        _buildStatItem(_groupsCount.value.toString(), 'Groups'),
-                      ],
-                    )),
+              ),
             ],
           ),
-        )
+        ),
       ],
     );
   }
@@ -376,10 +444,7 @@ class _UserProfileState extends State<UserProfile>
         ),
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
       ],
     );
@@ -391,7 +456,7 @@ class _UserProfileState extends State<UserProfile>
     if (user.birthday != null) {
       final now = DateTime.now();
       age = now.year - user.birthday!.year;
-      if (now.month < user.birthday!.month || 
+      if (now.month < user.birthday!.month ||
           (now.month == user.birthday!.month && now.day < user.birthday!.day)) {
         age--;
       }
@@ -429,16 +494,15 @@ class _UserProfileState extends State<UserProfile>
                   if (user.city != null && user.city!.isNotEmpty)
                     _buildInfoItem(
                       Icons.location_on,
-                      '${user.city}${user.country != null && user.country!.isNotEmpty ? ", ${user.country}" : ""}'
+                      '${user.city}${user.country != null && user.country!.isNotEmpty ? ", ${user.country}" : ""}',
                     )
                   else if (user.country != null && user.country!.isNotEmpty)
                     _buildInfoItem(Icons.location_on, user.country!)
                   else
                     _buildInfoItem(Icons.location_on, 'No location'),
-                  
+
                   // ✅ Calcular edad correctamente
-                  if (age != null)
-                    _buildInfoItem(Icons.cake, '$age years old'),
+                  if (age != null) _buildInfoItem(Icons.cake, '$age years old'),
                 ],
               ),
 
@@ -449,7 +513,10 @@ class _UserProfileState extends State<UserProfile>
                 const Text(
                   'Interests',
                   style: TextStyle(
-                      color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -473,10 +540,7 @@ class _UserProfileState extends State<UserProfile>
       children: [
         Icon(icon, color: AppColors.primary, size: 16),
         const SizedBox(width: 6),
-        Text(
-          text,
-          style: const TextStyle(color: Colors.white70, fontSize: 14),
-        ),
+        Text(text, style: const TextStyle(color: Colors.white70, fontSize: 14)),
       ],
     );
   }
@@ -491,10 +555,7 @@ class _UserProfileState extends State<UserProfile>
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          color: AppColors.primary,
-          fontSize: 12,
-        ),
+        style: const TextStyle(color: AppColors.primary, fontSize: 12),
       ),
     );
   }
@@ -549,11 +610,14 @@ class _UserProfileState extends State<UserProfile>
                           const SizedBox(height: 4),
                           Text(
                             safeString(event['location']),
-                            style: const TextStyle(color: AppColors.primary, fontSize: 14),
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 14,
+                            ),
                           ),
                         ],
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -581,7 +645,9 @@ class _UserProfileState extends State<UserProfile>
         itemBuilder: (context, i) {
           final review = _userReviews[i];
           final rater = review['rater'] is Map ? review['rater'] : null;
-          final username = rater != null ? rater['username']?.toString() : 'Usuario';
+          final username = rater != null
+              ? rater['username']?.toString()
+              : 'Usuario';
           final avatar = rater != null ? rater['avatar']?.toString() : null;
           final score = review['score'] is int ? review['score'] as int : 0;
           final comment = review['comment']?.toString() ?? '';
@@ -617,31 +683,42 @@ class _UserProfileState extends State<UserProfile>
                               Text(
                                 username!,
                                 style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600),
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               Row(
                                 children: List.generate(5, (s) {
-                                  return Icon(Icons.star,
-                                      color: s < score ? Colors.yellow : Colors.white30,
-                                      size: 14);
+                                  return Icon(
+                                    Icons.star,
+                                    color: s < score
+                                        ? Colors.yellow
+                                        : Colors.white30,
+                                    size: 14,
+                                  );
                                 }),
-                              )
+                              ),
                             ],
                           ),
                         ),
                         Text(
                           date,
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
-                        )
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                     if (comment.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Text(
                         comment,
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ],
@@ -662,8 +739,11 @@ class _UserProfileState extends State<UserProfile>
 
       if (_pendingRequests.isEmpty) {
         return const Center(
-            child: Text('No tienes solicitudes pendientes',
-                style: TextStyle(color: Colors.white70)));
+          child: Text(
+            'No tienes solicitudes pendientes',
+            style: TextStyle(color: Colors.white70),
+          ),
+        );
       }
 
       return ListView.builder(
@@ -672,7 +752,9 @@ class _UserProfileState extends State<UserProfile>
         itemBuilder: (context, i) {
           final req = _pendingRequests[i];
           final user = req['requester'] is Map ? req['requester'] : null;
-          final username = user != null ? user['username']?.toString() : 'Usuario';
+          final username = user != null
+              ? user['username']?.toString()
+              : 'Usuario';
           final avatar = user != null ? user['avatar']?.toString() : null;
 
           return Container(
@@ -683,11 +765,16 @@ class _UserProfileState extends State<UserProfile>
                   backgroundImage: avatar != null && avatar.isNotEmpty
                       ? NetworkImage(avatar)
                       : const AssetImage('assets/images/default-avatar.jpg')
-                          as ImageProvider,
+                            as ImageProvider,
                 ),
-                title: Text(username!, style: const TextStyle(color: Colors.white)),
-                subtitle: const Text('Te ha enviado una solicitud de amistad',
-                    style: TextStyle(color: Colors.white70)),
+                title: Text(
+                  username!,
+                  style: const TextStyle(color: Colors.white),
+                ),
+                subtitle: const Text(
+                  'Te ha enviado una solicitud de amistad',
+                  style: TextStyle(color: Colors.white70),
+                ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -715,9 +802,7 @@ class _UserProfileState extends State<UserProfile>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: AppColors.glassBorder),
-        ),
+        border: Border(top: BorderSide(color: AppColors.glassBorder)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -732,11 +817,7 @@ class _UserProfileState extends State<UserProfile>
             label: 'Calendar',
             onTap: widget.onCalendarOpen,
           ),
-          _iconButton(
-            icon: Icons.map,
-            label: 'Map',
-            onTap: widget.onMapOpen,
-          ),
+          _iconButton(icon: Icons.map, label: 'Map', onTap: widget.onMapOpen),
           _iconButton(
             icon: Icons.warning,
             label: 'Emergency',
@@ -769,20 +850,14 @@ class _UserProfileState extends State<UserProfile>
               decoration: BoxDecoration(
                 color: (color ?? AppColors.primary).withOpacity(0.1),
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: color ?? AppColors.primary,
-                  width: 2,
-                ),
+                border: Border.all(color: color ?? AppColors.primary, width: 2),
               ),
               child: Icon(icon, color: color ?? Colors.white, size: 24),
             ),
             const SizedBox(height: 6),
             Text(
               label,
-              style: TextStyle(
-                color: color ?? Colors.white70,
-                fontSize: 10,
-              ),
+              style: TextStyle(color: color ?? Colors.white70, fontSize: 10),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -797,59 +872,63 @@ class _UserProfileState extends State<UserProfile>
 
   @override
   Widget build(BuildContext context) {
-    final user = _authController.currentUser;
+    return Obx(() {
+      final user = _authController.currentUser;
 
-    if (user == null) {
-      return const Scaffold(
+      if (user == null) {
+        return const Scaffold(
+          backgroundColor: Colors.black,
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
+
+      return Scaffold(
         backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: NestedScrollView(
-        headerSliverBuilder: (context, _) {
-          return [
-            SliverAppBar(
-              expandedHeight: 300,
-              collapsedHeight: 100,
-              pinned: true,
-              floating: false,
-              backgroundColor: Colors.transparent,
-              flexibleSpace: _buildProfileHeader(user),
-            ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _TabBarDelegate(
-                TabBar(
-                  controller: _tabController,
-                  indicatorColor: AppColors.primary,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white70,
-                  tabs: const [
-                    Tab(text: 'Info'),
-                    Tab(text: 'Events'),
-                    Tab(text: 'Reviews'),
-                    Tab(text: 'Solicitudes'),
-                  ],
+        body: NestedScrollView(
+          headerSliverBuilder: (context, _) {
+            return [
+              SliverAppBar(
+                expandedHeight: 300,
+                collapsedHeight: 100,
+                pinned: true,
+                floating: false,
+                backgroundColor: Colors.transparent,
+                flexibleSpace: Obx(
+                  () => _buildProfileHeader(_authController.currentUser!),
                 ),
               ),
-            )
-          ];
-        },
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildInfoTab(user),
-            _buildEventsTab(),
-            _buildReviewsTab(),
-            _buildPendingRequestsTab(),
-          ],
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _TabBarDelegate(
+                  TabBar(
+                    controller: _tabController,
+                    indicatorColor: AppColors.primary,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white70,
+                    tabs: const [
+                      Tab(text: 'Info'),
+                      Tab(text: 'Events'),
+                      Tab(text: 'Reviews'),
+                      Tab(text: 'Solicitudes'),
+                    ],
+                  ),
+                ),
+              ),
+            ];
+          },
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildInfoTab(user),
+              _buildEventsTab(),
+              _buildReviewsTab(),
+              _buildPendingRequestsTab(),
+            ],
+          ),
         ),
-      ),
-      bottomNavigationBar: _buildActionButtons(),
-    );
+        bottomNavigationBar: _buildActionButtons(),
+      );
+    });
   }
 }
 
@@ -862,11 +941,11 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: Colors.black,
-      child: tabBar,
-    );
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(color: Colors.black, child: tabBar);
   }
 
   @override

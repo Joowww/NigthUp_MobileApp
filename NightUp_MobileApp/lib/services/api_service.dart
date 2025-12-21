@@ -1,9 +1,13 @@
 import 'package:dio/dio.dart' as dio;
 import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:get/get.dart';
 import '../models/user.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
+import '../utils/logger.dart';
 
 class ApiService extends GetxService {
   late dio.Dio _dio;
@@ -182,6 +186,37 @@ class ApiService extends GetxService {
     return AuthResponse.fromJson(response.data as Map<String, dynamic>);
   }
 
+  // ========== CLOUDINARY UPLOAD METHOD ==========
+  Future<String?> uploadToCloudinary(XFile file, String folder) async {
+    try {
+      final response = await uploadFile(
+        '/files/upload',
+        file: file,
+        fieldName: 'image', // Requerido por backend
+        data: {'folder': folder}, // Opcional pero recomendado
+      );
+
+      if (response.statusCode == 201) {
+        final data = response.data;
+        if (data['status'] == 'success') {
+          return data['image_url'];
+        }
+      }
+      throw Exception(
+        'Error en respuesta del servidor: ${response.statusCode}',
+      );
+    } catch (e) {
+      if (e is dio.DioException) {
+        logger.e('Cloudinary Upload Error Status: ${e.response?.statusCode}');
+        logger.e('Cloudinary Upload Error Body: ${e.response?.data}');
+        final errorMessage = e.response?.data?['message'] ?? e.message;
+        throw Exception('Error del servidor: $errorMessage');
+      }
+      logger.e('Cloudinary Upload Error: $e');
+      rethrow;
+    }
+  }
+
   // ========== INTEREST & TAGS METHODS ==========
   Future<List<dynamic>> getTagsByType(String type) async {
     final response = await _dio.get('/tag/type/$type');
@@ -195,15 +230,54 @@ class ApiService extends GetxService {
   // ========== FILE UPLOAD METHODS ==========
   Future<dio.Response> uploadFile(
     String path, {
-    required String filePath,
+    required XFile file,
     String fieldName = 'file',
     Map<String, dynamic>? data,
     dio.ProgressCallback? onSendProgress,
   }) async {
-    final formData = dio.FormData.fromMap({
-      fieldName: await dio.MultipartFile.fromFile(filePath),
-      ...?data,
-    });
+    dio.MultipartFile multipartFile;
+
+    String? contentType;
+    String finalFileName = file.name;
+
+    // Detectar extensión y content type
+    if (finalFileName.toLowerCase().endsWith('.jpg') ||
+        finalFileName.toLowerCase().endsWith('.jpeg')) {
+      contentType = 'image/jpeg';
+    } else if (finalFileName.toLowerCase().endsWith('.png')) {
+      contentType = 'image/png';
+    } else if (finalFileName.toLowerCase().endsWith('.webp')) {
+      contentType = 'image/webp';
+    }
+
+    // Mejora para capturas Web que a veces vienen sin extensión o nombre "blob"
+    if (kIsWeb) {
+      if (finalFileName.isEmpty ||
+          finalFileName == 'blob' ||
+          !finalFileName.contains('.')) {
+        finalFileName = 'upload_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      }
+      contentType ??= 'image/jpeg'; // Default para capturas de cámara
+    }
+
+    if (kIsWeb) {
+      final bytes = await file.readAsBytes();
+      multipartFile = dio.MultipartFile.fromBytes(
+        bytes,
+        filename: finalFileName,
+        contentType: contentType != null ? MediaType.parse(contentType) : null,
+      );
+    } else {
+      multipartFile = await dio.MultipartFile.fromFile(
+        file.path,
+        filename: finalFileName,
+        contentType: contentType != null ? MediaType.parse(contentType) : null,
+      );
+    }
+
+    // NOTA: Algunas versiones del backend pueden esperar 'file' en lugar de 'image'
+    // pero mantenemos 'image' si es lo que pide uploadToCloudinary.
+    final formData = dio.FormData.fromMap({fieldName: multipartFile, ...?data});
 
     return await _dio.post(
       path,
@@ -214,16 +288,30 @@ class ApiService extends GetxService {
 
   Future<dio.Response> uploadMultipleFiles(
     String path, {
-    required List<String> filePaths,
+    required List<XFile> files,
     String fieldName = 'files',
     Map<String, dynamic>? data,
     dio.ProgressCallback? onSendProgress,
   }) async {
-    final files = await Future.wait(
-      filePaths.map((filePath) => dio.MultipartFile.fromFile(filePath)),
-    );
+    final multipartFiles = <dio.MultipartFile>[];
 
-    final formData = dio.FormData.fromMap({fieldName: files, ...?data});
+    for (var file in files) {
+      if (kIsWeb) {
+        final bytes = await file.readAsBytes();
+        multipartFiles.add(
+          dio.MultipartFile.fromBytes(bytes, filename: file.name),
+        );
+      } else {
+        multipartFiles.add(
+          await dio.MultipartFile.fromFile(file.path, filename: file.name),
+        );
+      }
+    }
+
+    final formData = dio.FormData.fromMap({
+      fieldName: multipartFiles,
+      ...?data,
+    });
 
     return await _dio.post(
       path,

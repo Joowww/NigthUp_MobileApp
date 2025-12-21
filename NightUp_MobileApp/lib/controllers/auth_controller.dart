@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 import '../services/api_service.dart';
-import '../screens/home_feed.dart';
+import '../app.dart';
 import '../models/user.dart';
 import '../services/storage_service.dart';
 import '../services/google_service.dart';
@@ -203,7 +203,7 @@ class AuthController extends GetxController {
 
       // ✅ NAVEGACIÓN AUTOMÁTICA después de registro
       // Por ahora saltamos la selección de intereses
-      Get.offAll(() => HomeFeed());
+      Get.offAll(() => const App());
 
       return true;
     } catch (e) {
@@ -220,11 +220,11 @@ class AuthController extends GetxController {
       // BYPASS: Siempre ir al home directamente por petición del usuario
       // Saltamos la comprobación de onboarding/intereses
       print('Navigating to main screen (Interests disabled)');
-      Get.offAll(() => HomeFeed());
+      Get.offAll(() => const App());
     } catch (e) {
       print('Error navigating after login: $e');
       // Fallback: navegar al main de todas formas
-      Get.offAll(() => HomeFeed());
+      Get.offAll(() => const App());
     }
   }
 

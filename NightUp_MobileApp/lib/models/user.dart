@@ -76,36 +76,48 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    // Si la respuesta viene envuelta en un campo 'user' o 'data', extraerlo
+    if (json.containsKey('user') && json['user'] is Map<String, dynamic>) {
+      json = json['user'];
+    } else if (json.containsKey('data') &&
+        json['data'] is Map<String, dynamic>) {
+      json = json['data'];
+    }
+
     // ✅ Manejar intereses extrayendo SOLO el campo 'name'
     List<String>? parsedInterests;
     if (json['interests'] != null) {
       try {
-        parsedInterests = List<String>.from(json['interests'].map((i) {
-          if (i == null) return 'Unknown';
-          
-          if (i is String) {
-            // Si es un string que parece un mapa JSON, parsearlo
-            if (i.trim().startsWith('{') && i.trim().endsWith('}')) {
-              try {
-                final normalized = i.replaceAllMapped(
-                  RegExp(r'(\w+):'),
-                  (match) => '"${match[1]}":',
-                ).replaceAll("'", '"');
-                final map = Map<String, dynamic>.from(jsonDecode(normalized));
-                // ✅ Extraer SOLO el campo 'name'
-                return map['name']?.toString() ?? 'Unknown';
-              } catch (_) {
-                return i;
+        parsedInterests = List<String>.from(
+          json['interests'].map((i) {
+            if (i == null) return 'Unknown';
+
+            if (i is String) {
+              // Si es un string que parece un mapa JSON, parsearlo
+              if (i.trim().startsWith('{') && i.trim().endsWith('}')) {
+                try {
+                  final normalized = i
+                      .replaceAllMapped(
+                        RegExp(r'(\w+):'),
+                        (match) => '"${match[1]}":',
+                      )
+                      .replaceAll("'", '"');
+                  final map = Map<String, dynamic>.from(jsonDecode(normalized));
+                  // ✅ Extraer SOLO el campo 'name'
+                  return map['name']?.toString() ?? 'Unknown';
+                } catch (_) {
+                  return i;
+                }
               }
+              return i;
+            } else if (i is Map) {
+              // ✅ Si es un Map directo, extraer SOLO el campo 'name'
+              return i['name']?.toString() ?? 'Unknown';
+            } else {
+              return i.toString();
             }
-            return i;
-          } else if (i is Map) {
-            // ✅ Si es un Map directo, extraer SOLO el campo 'name'
-            return i['name']?.toString() ?? 'Unknown';
-          } else {
-            return i.toString();
-          }
-        }));
+          }),
+        );
       } catch (e) {
         print('Error parsing interests: $e');
         parsedInterests = null;
@@ -117,36 +129,70 @@ class User {
       username: json['username'] ?? '',
       email: json['email'] ?? '',
       phoneNumber: json['phoneNumber'],
-      birthday: json['birthday'] != null ? DateTime.tryParse(json['birthday'].toString()) : null,
+      birthday: json['birthday'] != null
+          ? DateTime.tryParse(json['birthday'].toString())
+          : null,
       role: json['role'] ?? 'user',
       active: json['active'] ?? true,
       authProvider: json['authProvider'],
       googleId: json['googleId'],
-      googleProfile: json['googleProfile'] != null ? Map<String, dynamic>.from(json['googleProfile']) : null,
+      googleProfile: json['googleProfile'] != null
+          ? Map<String, dynamic>.from(json['googleProfile'])
+          : null,
       securityQuestion: json['securityQuestion'],
-      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) : null,
-      updatedAt: json['updatedAt'] != null ? DateTime.tryParse(json['updatedAt'].toString()) : null,
-      profilePictureUrl: json['profilePictureUrl'] ?? json['profilePicture'],
-      avatar: json['avatar'],
-      coverPhoto: json['coverPhoto'],
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'].toString())
+          : null,
+      profilePictureUrl:
+          json['profilePictureUrl'] ??
+          json['profilePicture'] ??
+          json['avatar'] ??
+          json['avatarUrl'] ??
+          json['avatar_url'],
+      avatar:
+          json['avatar'] ?? json['profilePictureUrl'] ?? json['profilePicture'],
+      coverPhoto:
+          json['coverPhoto'] ??
+          json['cover_photo'] ??
+          json['cover'] ??
+          json['coverPhotoUrl'],
       bio: json['bio'],
       city: json['city'],
       country: json['country'],
       website: json['website'],
-      socialMedia: json['socialMedia'] != null ? Map<String, dynamic>.from(json['socialMedia']) : null,
-      friends: json['friends'] != null ? List<String>.from(json['friends'].map((f) => f.toString())) : null,
+      socialMedia: json['socialMedia'] != null
+          ? Map<String, dynamic>.from(json['socialMedia'])
+          : null,
+      friends: json['friends'] != null
+          ? List<String>.from(json['friends'].map((f) => f.toString()))
+          : null,
       interests: parsedInterests,
       gender: json['gender'],
       firstName: json['firstName'],
       lastName: json['lastName'],
       isVisibleOnMap: json['isVisibleOnMap'],
-      location: json['location'] != null ? Map<String, dynamic>.from(json['location']) : null,
-      posts: json['posts'] != null ? List<String>.from(json['posts'].map((p) => p.toString())) : null,
-      events: json['events'] != null ? List<String>.from(json['events'].map((e) => e.toString())) : null,
-      emergencyContacts: json['emergencyContacts'] != null ? List<String>.from(json['emergencyContacts']) : null,
+      location: json['location'] != null
+          ? Map<String, dynamic>.from(json['location'])
+          : null,
+      posts: json['posts'] != null
+          ? List<String>.from(json['posts'].map((p) => p.toString()))
+          : null,
+      events: json['events'] != null
+          ? List<String>.from(json['events'].map((e) => e.toString()))
+          : null,
+      emergencyContacts: json['emergencyContacts'] != null
+          ? List<String>.from(json['emergencyContacts'])
+          : null,
       isOnline: json['isOnline'],
-      lastSeen: json['lastSeen'] != null ? DateTime.tryParse(json['lastSeen'].toString()) : null,
-      lastLocationUpdate: json['lastLocationUpdate'] != null ? DateTime.tryParse(json['lastLocationUpdate'].toString()) : null,
+      lastSeen: json['lastSeen'] != null
+          ? DateTime.tryParse(json['lastSeen'].toString())
+          : null,
+      lastLocationUpdate: json['lastLocationUpdate'] != null
+          ? DateTime.tryParse(json['lastLocationUpdate'].toString())
+          : null,
       onboardingCompleted: json['onboardingCompleted'],
     );
   }
@@ -191,16 +237,23 @@ class User {
     };
   }
 
-  String get safeProfilePictureUrl {
-    if (profilePictureUrl == null || profilePictureUrl!.isEmpty) {
-      return 'assets/images/default_avatar.png';
+  String? get safeProfilePictureUrl {
+    final url = profilePictureUrl?.isNotEmpty == true
+        ? profilePictureUrl
+        : (avatar?.isNotEmpty == true ? avatar : null);
+
+    // Si es una ruta de asset, devolvemos null para que el widget use su propio fallback
+    if (url == null || url.isEmpty || url.startsWith('assets/')) {
+      return null;
     }
-    return profilePictureUrl!;
+    return url;
   }
 
-  String get safeCoverPhoto {
-    if (coverPhoto == null || coverPhoto!.isEmpty) {
-      return 'assets/images/default_cover.jpg';
+  String? get safeCoverPhoto {
+    if (coverPhoto == null ||
+        coverPhoto!.isEmpty ||
+        coverPhoto!.startsWith('assets/')) {
+      return null;
     }
     return coverPhoto!;
   }
@@ -208,7 +261,8 @@ class User {
   Object? get safeLocationString {
     if (location == null) return '';
     if (location is String) return location;
-    if (location is Map && location?['name'] != null) return location?['name'].toString();
+    if (location is Map && location?['name'] != null)
+      return location?['name'].toString();
     return location.toString();
   }
 }
@@ -220,10 +274,7 @@ class LoginRequest {
   LoginRequest({required this.username, required this.password});
 
   Map<String, dynamic> toJson() {
-    return {
-      'username': username,
-      'password': password,
-    };
+    return {'username': username, 'password': password};
   }
 }
 
@@ -265,9 +316,7 @@ class ForgotPasswordRequest {
   ForgotPasswordRequest({required this.email});
 
   Map<String, dynamic> toJson() {
-    return {
-      'email': email,
-    };
+    return {'email': email};
   }
 }
 
@@ -281,10 +330,7 @@ class VerifySecurityAnswerRequest {
   });
 
   Map<String, dynamic> toJson() {
-    return {
-      'email': email,
-      'securityAnswer': securityAnswer,
-    };
+    return {'email': email, 'securityAnswer': securityAnswer};
   }
 }
 
@@ -292,16 +338,10 @@ class ResetPasswordRequest {
   final String resetToken;
   final String newPassword;
 
-  ResetPasswordRequest({
-    required this.resetToken,
-    required this.newPassword,
-  });
+  ResetPasswordRequest({required this.resetToken, required this.newPassword});
 
   Map<String, dynamic> toJson() {
-    return {
-      'resetToken': resetToken,
-      'newPassword': newPassword,
-    };
+    return {'resetToken': resetToken, 'newPassword': newPassword};
   }
 }
 
@@ -343,7 +383,7 @@ class SecurityQuestionResponse {
   factory SecurityQuestionResponse.fromJson(Map<String, dynamic> json) {
     return SecurityQuestionResponse(
       securityQuestionKeys: List<String>.from(json['securityQuestionKeys']),
-      fallbackTexts: json['fallbackTexts'] != null 
+      fallbackTexts: json['fallbackTexts'] != null
           ? Map<String, String>.from(json['fallbackTexts'])
           : null,
     );

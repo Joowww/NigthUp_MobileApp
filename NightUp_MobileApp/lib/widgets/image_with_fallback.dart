@@ -5,7 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 class ImageWithFallback extends StatelessWidget {
   final String? imageUrl;
   // Usamos google.png como la imagen de reserva que ya existe en tu assets
-  final String? fallbackAsset; 
+  final String? fallbackAsset;
   final BoxFit fit;
   final double? width;
   final double? height;
@@ -42,7 +42,9 @@ class ImageWithFallback extends StatelessWidget {
     // Validar que imageUrl sea una string válida
     final String? validImageUrl = _validateImageUrl(imageUrl);
     if (validImageUrl == null) {
-      return _buildFinalWidget(_buildAssetImage(fallbackAsset, defaultFallback));
+      return _buildFinalWidget(
+        _buildAssetImage(fallbackAsset, defaultFallback),
+      );
     }
 
     // Widget de CachedNetworkImage para cargar la imagen remota
@@ -55,7 +57,12 @@ class ImageWithFallback extends StatelessWidget {
         width: width,
         height: height,
         color: Colors.grey[900],
-        child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30)),
+        child: const Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.white30,
+          ),
+        ),
       ),
       errorWidget: (context, url, error) {
         return _buildAssetImage(fallbackAsset, defaultFallback);
@@ -64,7 +71,7 @@ class ImageWithFallback extends StatelessWidget {
 
     return _buildFinalWidget(imageWidget);
   }
-  
+
   // Helper para imágenes de assets
   Widget _buildAssetImage(String? asset, Widget errorWidget) {
     if (asset == null || asset.isEmpty) return errorWidget;
@@ -82,14 +89,27 @@ class ImageWithFallback extends StatelessWidget {
   String? _validateImageUrl(dynamic url) {
     if (url == null) return null;
     if (url is String) {
-      if (url.isEmpty || !Uri.parse(url).isAbsolute) {
-        return null;
+      if (url.isEmpty) return null;
+
+      // ✅ Si la URL contiene "default-images", es una imagen semilla del backend.
+      // Devolvemos null para que el widget use el [fallbackAsset] local y evitemos el 404.
+      if (url.contains('default-images')) return null;
+
+      // Si ya es absoluta (http...), la devolvemos tal cual
+      if (Uri.parse(url).isAbsolute) {
+        return url;
       }
-      return url;
+      // Si empieza por /, asumimos es relativa a localhost (para desarrollo)
+      if (url.startsWith('/')) {
+        // Asumiendo que las imágenes se sirven desde la raíz http://localhost:3000
+        return 'http://localhost:3000$url';
+      }
+      // O tal vez es relativa sin / (ej. "uploads/...")
+      return 'http://localhost:3000/$url';
     }
     return null;
   }
-  
+
   // Helper para aplicar Clip Oval/RRect al widget final
   Widget _buildFinalWidget(Widget child) {
     if (isCircle) {

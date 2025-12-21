@@ -120,6 +120,10 @@ class Event {
     if (location is String) {
       return location;
     } else if (location is Map<String, dynamic>) {
+      // If it's a GeoJSON Point or similar Map without name
+      if (location['type'] == 'Point' && location['coordinates'] is List) {
+        return '📍 View on Map';
+      }
       return location['name'] ??
           location['address'] ??
           'Ubicación no especificada';

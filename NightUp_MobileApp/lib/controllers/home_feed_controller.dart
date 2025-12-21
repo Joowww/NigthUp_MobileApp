@@ -108,12 +108,21 @@ class HomeFeedController extends GetxController
     isLoadingFriends.value = true;
     try {
       log('🔄 Fetching friends posts from backend...');
-
       final response = await _apiService.get('/post/feed/friends');
 
-      log('✅ Friends posts response: ${response.data}');
+      log('📦 Friends API Response Raw: ${response.data}');
 
-      friendsPosts.value = (response.data as List)
+      List<dynamic> postsData = [];
+
+      if (response.data is List) {
+        postsData = response.data;
+      } else if (response.data is Map && response.data['posts'] is List) {
+        postsData = response.data['posts'];
+      } else if (response.data is Map && response.data['data'] is List) {
+        postsData = response.data['data'];
+      }
+
+      friendsPosts.value = postsData
           .map((i) => Post.fromFriendPostJson(i))
           .toList();
 
@@ -128,6 +137,30 @@ class HomeFeedController extends GetxController
     } finally {
       isLoadingFriends.value = false;
       update(['friends_feed']);
+    }
+  }
+
+  Future<void> toggleLikePost(Post post) async {
+    try {
+      final index = friendsPosts.indexWhere((p) => p.id == post.id);
+      if (index == -1) return;
+
+      if (!post.isLiked) {
+        await _apiService.post('/post/${post.id}/like', data: {});
+        friendsPosts[index] = post.copyWith(
+          isLiked: true,
+          likes: post.likes + 1,
+        );
+      } else {
+        await _apiService.post('/post/${post.id}/unlike', data: {});
+        friendsPosts[index] = post.copyWith(
+          isLiked: false,
+          likes: post.likes - 1,
+        );
+      }
+      update(['friends_feed']);
+    } catch (e) {
+      log('❌ Error toggling post like: $e');
     }
   }
 

@@ -5,9 +5,9 @@ import '../widgets/glass_card.dart';
 import '../theme/colors.dart';
 import '../controllers/home_feed_controller.dart';
 import '../models/event.dart';
-import '../models/post.dart';
 import '../widgets/image_with_fallback.dart';
 import '../widgets/menu_modal.dart';
+import '../widgets/friend_post_item.dart';
 
 class HomeFeed extends StatefulWidget {
   final void Function(String eventId)? onEventClick;
@@ -77,14 +77,14 @@ class _HomeFeedState extends State<HomeFeed> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.event_busy, size: 64, color: Colors.white70),
+                const Icon(Icons.event_busy, size: 64, color: Colors.white70),
                 const SizedBox(height: 16),
-                Text(
+                const Text(
                   'No hay eventos disponibles',
                   style: TextStyle(color: Colors.white70, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
-                Text(
+                const Text(
                   'Prueba a recargar o verifica tu conexión',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white54, fontSize: 14),
@@ -328,34 +328,55 @@ class _HomeFeedState extends State<HomeFeed> {
       id: 'friends_feed',
       builder: (controller) {
         if (controller.isLoadingFriends.value) {
-          return Container(
-            color: Colors.black,
-            padding: const EdgeInsets.only(top: 80),
-            child: const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            ),
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
           );
         }
 
         if (controller.friendsPosts.isEmpty) {
           return Container(
             color: Colors.black,
-            padding: const EdgeInsets.only(top: 80),
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.people_outline, size: 64, color: Colors.white70),
+                  const Icon(
+                    Icons.people_outline,
+                    size: 64,
+                    color: Colors.white70,
+                  ),
                   const SizedBox(height: 16),
-                  Text(
-                    'Añade amigos para ver sus publicaciones',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  const Text(
+                    'No hay publicaciones de amigos',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'Tus amigos aparecerán aquí cuando\ncompartan eventos y experiencias',
-                    textAlign: TextAlign.center,
+                  const Text(
+                    'Sigue a alguien para ver su contenido aquí',
                     style: TextStyle(color: Colors.white54, fontSize: 14),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => controller.refreshAllFeeds(),
+                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    label: const Text(
+                      'Recargar',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -363,118 +384,21 @@ class _HomeFeedState extends State<HomeFeed> {
           );
         }
 
-        return Container(
-          color: Colors.black,
-          child: ListView.builder(
-            padding: const EdgeInsets.only(top: 80, bottom: 80),
-            itemCount: controller.friendsPosts.length,
-            itemBuilder: (context, index) {
-              final post = controller.friendsPosts[index];
-              return _buildFriendPost(post);
-            },
-          ),
+        return PageView.builder(
+          scrollDirection: Axis.vertical,
+          itemCount: controller.friendsPosts.length,
+          itemBuilder: (context, index) {
+            final post = controller.friendsPosts[index];
+            return FriendPostItem(
+              post: post,
+              onLike: () => controller.toggleLikePost(post),
+              onComment: () {
+                // Obrirem modal de comentaris més endavant
+              },
+            );
+          },
         );
       },
-    );
-  }
-
-  Widget _buildFriendPost(Post post) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: GlassCard(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                ImageWithFallback(
-                  imageUrl: post.user?.profilePictureUrl,
-                  isCircle: true,
-                  width: 40,
-                  height: 40,
-                  fallbackAsset: 'assets/images/google.png',
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.user?.username ?? 'Usuario Desconocido',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        post.location ?? 'Ubicación Desconocida',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.more_vert, color: Colors.white70),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            Container(
-              width: double.infinity,
-              height: 200,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: ImageWithFallback(
-                  imageUrl: post.mediaUrl,
-                  fallbackAsset: 'assets/images/google.png',
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            if (post.caption != null && post.caption!.isNotEmpty)
-              Text(
-                post.caption!,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-              ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(
-                  Icons.favorite_border,
-                  color: Colors.white70,
-                  size: 20,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${post.likes}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                const SizedBox(width: 16),
-                const Icon(
-                  Icons.chat_bubble_outline,
-                  color: Colors.white70,
-                  size: 20,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${post.comments}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                const Spacer(),
-                const Icon(Icons.share, color: Colors.white70, size: 20),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -553,47 +477,51 @@ class _HomeFeedState extends State<HomeFeed> {
 
   // ✅ CAMBIO PRINCIPAL: Usar Obx en lugar de GetBuilder
   Widget _buildBottomActions() {
-    return Obx(() {
-      // ✅ Verificar que estamos en el tab "Para Ti"
-      if (controller.tabController.index != 0) {
-        return const SizedBox.shrink();
-      }
+    return GetBuilder<HomeFeedController>(
+      id: 'bottom_actions',
+      builder: (controller) {
+        // 1. Verificar que estamos en el tab "Para Ti" (índice 0)
+        // Usamos el index del tabController directamente
+        if (controller.tabController.index != 0) {
+          return const SizedBox.shrink();
+        }
 
-      // ✅ Verificar que hay eventos cargados
-      if (controller.discoverEvents.isEmpty) {
-        return const SizedBox.shrink();
-      }
+        // 2. Verificar que hay eventos cargados
+        if (controller.discoverEvents.isEmpty) {
+          return const SizedBox.shrink();
+        }
 
-      // ✅ Verificar que el currentPage es válido
-      final currentIndex = controller.currentPage.value.clamp(
-        0,
-        controller.discoverEvents.length - 1,
-      );
-      final event = controller.discoverEvents[currentIndex];
+        // 3. Obtener el evento actual basado en la página del PageView
+        final currentIndex = controller.currentPage.value.clamp(
+          0,
+          controller.discoverEvents.length - 1,
+        );
+        final event = controller.discoverEvents[currentIndex];
 
-      return Positioned(
-        bottom: 70,
-        right: 24,
-        child: Column(
-          children: [
-            _buildActionButton(
-              event.isLiked ? Icons.favorite : Icons.favorite_border,
-              '${event.likes}',
-              () {
-                log('🖱️ LIKE BUTTON PRESSED - Event: ${event.id}');
-                controller.toggleLikeEvent(event);
-              },
-              isLiked: event.isLiked,
-            ),
-            const SizedBox(height: 16),
-            _buildActionButton(Icons.share, 'Compartir', () {
-              log('🖱️ SHARE BUTTON PRESSED - Event: ${event.id}');
-              controller.shareEvent(event);
-            }),
-          ],
-        ),
-      );
-    });
+        return Positioned(
+          bottom: 70,
+          right: 24,
+          child: Column(
+            children: [
+              _buildActionButton(
+                event.isLiked ? Icons.favorite : Icons.favorite_border,
+                '${event.likes}',
+                () {
+                  log('🖱️ LIKE BUTTON PRESSED - Event: ${event.id}');
+                  controller.toggleLikeEvent(event);
+                },
+                isLiked: event.isLiked,
+              ),
+              const SizedBox(height: 16),
+              _buildActionButton(Icons.share, 'Compartir', () {
+                log('🖱️ SHARE BUTTON PRESSED - Event: ${event.id}');
+                controller.shareEvent(event);
+              }),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildActionButton(

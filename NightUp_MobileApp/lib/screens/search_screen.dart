@@ -17,7 +17,6 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-
   final RxBool _isMinimap = true.obs;
 
   final my_map.MapController _mapController = Get.find<my_map.MapController>();
@@ -30,13 +29,13 @@ class _SearchScreenState extends State<SearchScreen> {
     'events': [],
     'businesses': [],
   }.obs;
-  
+
   final _isSearching = false.obs;
   final _showResults = false.obs; // ✅ Mostrar/ocultar dropdown de resultados
 
   final RxString _activeFilter = 'friends'.obs;
   final MapController _flutterMapController = MapController();
-  
+
   // ✅ NUEVO: Elemento seleccionado para resaltar
   final RxString _selectedId = ''.obs;
   final RxString _selectedType = ''.obs; // 'friend', 'event', 'business'
@@ -44,9 +43,13 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    _mapController.refreshData();
-    
-    Future.delayed(Duration(seconds: 2), () {
+
+    // ✅ FIX: Executing after build to avoid 'setState() called during build' error
+    Future.microtask(() {
+      _mapController.refreshData();
+    });
+
+    Future.delayed(const Duration(seconds: 2), () {
       _centerMapOnMarkers();
     });
 
@@ -57,7 +60,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   void _centerMapOnMarkers() {
     final markers = _getAllValidMarkers();
-    
+
     if (markers.isEmpty) {
       print('⚠️ No markers to center on');
       return;
@@ -81,24 +84,26 @@ class _SearchScreenState extends State<SearchScreen> {
 
     final centerLat = (minLat + maxLat) / 2;
     final centerLng = (minLng + maxLng) / 2;
-    
+
     final latDiff = maxLat - minLat;
     final lngDiff = maxLng - minLng;
     final maxDiff = latDiff > lngDiff ? latDiff : lngDiff;
     double zoom = 13.0;
-    
+
     if (maxDiff > 0.1) zoom = 11.0;
     if (maxDiff > 0.2) zoom = 10.0;
     if (maxDiff > 0.5) zoom = 9.0;
 
     _flutterMapController.move(LatLng(centerLat, centerLng), zoom);
-    
-    print('🎯 MAP CENTERED on ${_activeFilter.value}: $centerLat, $centerLng zoom: $zoom');
+
+    print(
+      '🎯 MAP CENTERED on ${_activeFilter.value}: $centerLat, $centerLng zoom: $zoom',
+    );
   }
 
   List<Marker> _getAllValidMarkers() {
     final List<Marker> markers = [];
-    
+
     switch (_activeFilter.value) {
       case 'friends':
         for (var friend in _mapController.nearbyFriends) {
@@ -106,7 +111,7 @@ class _SearchScreenState extends State<SearchScreen> {
           if (marker != null) markers.add(marker);
         }
         break;
-        
+
       case 'events':
         for (var event in _mapController.nearbyEvents) {
           if (event is Map<String, dynamic>) {
@@ -115,7 +120,7 @@ class _SearchScreenState extends State<SearchScreen> {
           }
         }
         break;
-        
+
       case 'businesses':
         for (var biz in _mapController.nearbyBusinesses) {
           if (biz is Map<String, dynamic>) {
@@ -182,13 +187,14 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.nightup.app',
                   ),
                   MarkerLayer(markers: _getAllValidMarkers()),
                 ],
               ),
-              
+
               Positioned(
                 top: 16,
                 left: 16,
@@ -200,24 +206,37 @@ class _SearchScreenState extends State<SearchScreen> {
                       decoration: BoxDecoration(
                         color: Colors.grey[800]!.withOpacity(0.6),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withOpacity(0.3)),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
                       ),
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
                           hintText: 'Search users, events, businesses...',
                           hintStyle: const TextStyle(color: Colors.white70),
-                          prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Colors.white70,
+                          ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           suffixIcon: Obx(
                             () => _isSearching.value
                                 ? const Padding(
                                     padding: EdgeInsets.all(8.0),
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
                                 : IconButton(
-                                    icon: const Icon(Icons.clear, color: Colors.white70),
+                                    icon: const Icon(
+                                      Icons.clear,
+                                      color: Colors.white70,
+                                    ),
                                     onPressed: () {
                                       _searchController.clear();
                                       _searchResults.value = {
@@ -236,10 +255,10 @@ class _SearchScreenState extends State<SearchScreen> {
                         onChanged: _performSearch,
                       ),
                     ),
-                    
+
                     // ✅ RESULTADOS DE BÚSQUEDA
                     if (_showResults.value) _buildSearchResults(),
-                    
+
                     const SizedBox(height: 10),
                     Row(
                       children: [
@@ -254,11 +273,19 @@ class _SearchScreenState extends State<SearchScreen> {
                             scrollDirection: Axis.horizontal,
                             child: Row(
                               children: [
-                                _filterChip('Friends', 'friends', AppColors.primary),
+                                _filterChip(
+                                  'Friends',
+                                  'friends',
+                                  AppColors.primary,
+                                ),
                                 const SizedBox(width: 8),
                                 _filterChip('Events', 'events', Colors.pink),
                                 const SizedBox(width: 8),
-                                _filterChip('Businesses', 'businesses', Colors.orange),
+                                _filterChip(
+                                  'Businesses',
+                                  'businesses',
+                                  Colors.orange,
+                                ),
                               ],
                             ),
                           ),
@@ -268,7 +295,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ],
                 ),
               ),
-              
+
               Positioned(
                 bottom: 16,
                 right: 16,
@@ -276,18 +303,23 @@ class _SearchScreenState extends State<SearchScreen> {
                   heroTag: 'minimap',
                   onPressed: () {
                     _isMinimap.value = !_isMinimap.value;
-                    Future.delayed(Duration(milliseconds: 300), _centerMapOnMarkers);
+                    Future.delayed(
+                      Duration(milliseconds: 300),
+                      _centerMapOnMarkers,
+                    );
                   },
                   backgroundColor: Colors.white,
                   child: Icon(
-                    _isMinimap.value ? Icons.zoom_in_map : Icons.zoom_out_map, 
+                    _isMinimap.value ? Icons.zoom_in_map : Icons.zoom_out_map,
                     color: AppColors.primary,
                     size: 24,
                   ),
-                  tooltip: _isMinimap.value ? 'Expandir mapa' : 'Vista península',
+                  tooltip: _isMinimap.value
+                      ? 'Expandir mapa'
+                      : 'Vista península',
                 ),
               ),
-              
+
               Positioned(
                 bottom: 86,
                 right: 16,
@@ -310,7 +342,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ],
                 ),
               ),
-              
+
               if (_mapController.isLoading.value)
                 Positioned(
                   top: 100,
@@ -323,7 +355,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const CircularProgressIndicator(color: AppColors.primary),
+                            const CircularProgressIndicator(
+                              color: AppColors.primary,
+                            ),
                             const SizedBox(width: 12),
                             Text(
                               'Loading map data...',
@@ -355,13 +389,14 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.nightup.app',
                   ),
                   MarkerLayer(markers: _getAllValidMarkers()),
                 ],
               ),
-              
+
               Positioned(
                 top: 16,
                 left: 16,
@@ -372,24 +407,37 @@ class _SearchScreenState extends State<SearchScreen> {
                       decoration: BoxDecoration(
                         color: Colors.grey[800]!.withOpacity(0.6),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withOpacity(0.3)),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
                       ),
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
                           hintText: 'Search users, events, businesses...',
                           hintStyle: const TextStyle(color: Colors.white70),
-                          prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Colors.white70,
+                          ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           suffixIcon: Obx(
                             () => _isSearching.value
                                 ? const Padding(
                                     padding: EdgeInsets.all(8.0),
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
                                 : IconButton(
-                                    icon: const Icon(Icons.clear, color: Colors.white70),
+                                    icon: const Icon(
+                                      Icons.clear,
+                                      color: Colors.white70,
+                                    ),
                                     onPressed: () {
                                       _searchController.clear();
                                       _searchResults.value = {
@@ -408,9 +456,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         onChanged: _performSearch,
                       ),
                     ),
-                    
+
                     if (_showResults.value) _buildSearchResults(),
-                    
+
                     const SizedBox(height: 10),
                     Row(
                       children: [
@@ -425,11 +473,19 @@ class _SearchScreenState extends State<SearchScreen> {
                             scrollDirection: Axis.horizontal,
                             child: Row(
                               children: [
-                                _filterChip('Friends', 'friends', AppColors.primary),
+                                _filterChip(
+                                  'Friends',
+                                  'friends',
+                                  AppColors.primary,
+                                ),
                                 const SizedBox(width: 8),
                                 _filterChip('Events', 'events', Colors.pink),
                                 const SizedBox(width: 8),
-                                _filterChip('Businesses', 'businesses', Colors.orange),
+                                _filterChip(
+                                  'Businesses',
+                                  'businesses',
+                                  Colors.orange,
+                                ),
                               ],
                             ),
                           ),
@@ -439,7 +495,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ],
                 ),
               ),
-              
+
               Positioned(
                 bottom: 16,
                 right: 16,
@@ -447,18 +503,23 @@ class _SearchScreenState extends State<SearchScreen> {
                   heroTag: 'minimap',
                   onPressed: () {
                     _isMinimap.value = !_isMinimap.value;
-                    Future.delayed(Duration(milliseconds: 300), _centerMapOnMarkers);
+                    Future.delayed(
+                      Duration(milliseconds: 300),
+                      _centerMapOnMarkers,
+                    );
                   },
                   backgroundColor: Colors.white,
                   child: Icon(
-                    _isMinimap.value ? Icons.zoom_in_map : Icons.zoom_out_map, 
+                    _isMinimap.value ? Icons.zoom_in_map : Icons.zoom_out_map,
                     color: AppColors.primary,
                     size: 24,
                   ),
-                  tooltip: _isMinimap.value ? 'Expandir mapa' : 'Vista península',
+                  tooltip: _isMinimap.value
+                      ? 'Expandir mapa'
+                      : 'Vista península',
                 ),
               ),
-              
+
               Positioned(
                 bottom: 86,
                 right: 16,
@@ -481,7 +542,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ],
                 ),
               ),
-              
+
               if (_mapController.isLoading.value)
                 Positioned(
                   top: 100,
@@ -494,7 +555,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const CircularProgressIndicator(color: AppColors.primary),
+                            const CircularProgressIndicator(
+                              color: AppColors.primary,
+                            ),
                             const SizedBox(width: 12),
                             Text(
                               'Loading map data...',
@@ -518,9 +581,9 @@ class _SearchScreenState extends State<SearchScreen> {
     final users = _searchResults['users'] ?? [];
     final events = _searchResults['events'] ?? [];
     final businesses = _searchResults['businesses'] ?? [];
-    
+
     final totalResults = users.length + events.length + businesses.length;
-    
+
     if (totalResults == 0) {
       return Container(
         margin: const EdgeInsets.only(top: 8),
@@ -537,7 +600,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
       );
     }
-    
+
     return Container(
       margin: const EdgeInsets.only(top: 8),
       constraints: const BoxConstraints(maxHeight: 300),
@@ -559,14 +622,24 @@ class _SearchScreenState extends State<SearchScreen> {
             const Divider(color: Colors.white12),
           ],
           if (businesses.isNotEmpty) ...[
-            _buildResultSection('Businesses', businesses, Colors.orange, 'business'),
+            _buildResultSection(
+              'Businesses',
+              businesses,
+              Colors.orange,
+              'business',
+            ),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildResultSection(String title, List<dynamic> items, Color color, String type) {
+  Widget _buildResultSection(
+    String title,
+    List<dynamic> items,
+    Color color,
+    String type,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -587,16 +660,18 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildResultItem(dynamic item, Color color, String type) {
-    final String name = type == 'user' 
+    final String name = type == 'user'
         ? (item['username'] ?? 'Unknown')
         : (item['name'] ?? item['title'] ?? 'Unknown');
-    
+
     final String? id = item['_id']?.toString();
-    
+
     return ListTile(
       dense: true,
       leading: Icon(
-        type == 'user' ? Icons.person : (type == 'event' ? Icons.event : Icons.store),
+        type == 'user'
+            ? Icons.person
+            : (type == 'event' ? Icons.event : Icons.store),
         color: color,
         size: 20,
       ),
@@ -614,17 +689,17 @@ class _SearchScreenState extends State<SearchScreen> {
   // ✅ NUEVO: Verificar si el elemento está en el mapa
   bool _isItemInMap(String? id, String type) {
     if (id == null) return false;
-    
+
     switch (type) {
       case 'user':
         return _mapController.nearbyFriends.any((f) => f.id == id);
       case 'event':
-        return _mapController.nearbyEvents.any((e) => 
-          e is Map && e['_id']?.toString() == id
+        return _mapController.nearbyEvents.any(
+          (e) => e is Map && e['_id']?.toString() == id,
         );
       case 'business':
-        return _mapController.nearbyBusinesses.any((b) => 
-          b is Map && b['_id']?.toString() == id
+        return _mapController.nearbyBusinesses.any(
+          (b) => b is Map && b['_id']?.toString() == id,
         );
       default:
         return false;
@@ -634,9 +709,9 @@ class _SearchScreenState extends State<SearchScreen> {
   // ✅ NUEVO: Al seleccionar un resultado
   void _onResultSelected(dynamic item, String type) {
     final String? id = item['_id']?.toString();
-    
+
     if (id == null) return;
-    
+
     // Verificar si está en el mapa
     if (_isItemInMap(id, type)) {
       // Cambiar al filtro correcto
@@ -651,18 +726,18 @@ class _SearchScreenState extends State<SearchScreen> {
           _activeFilter.value = 'businesses';
           break;
       }
-      
+
       // Marcar como seleccionado
       _selectedId.value = id;
       _selectedType.value = type;
-      
+
       // Obtener coordenadas y hacer zoom
       LatLng? coords = _getCoordinates(item, type);
-      
+
       if (coords != null) {
         _isMinimap.value = false; // Salir de modo minimap
         _flutterMapController.move(coords, 15.0); // Zoom cercano
-        
+
         Get.snackbar(
           '✅ Found on map',
           'Centered on ${type == 'user' ? item['username'] : item['name'] ?? item['title']}',
@@ -682,7 +757,7 @@ class _SearchScreenState extends State<SearchScreen> {
         duration: const Duration(seconds: 2),
       );
     }
-    
+
     // Cerrar resultados
     _showResults.value = false;
   }
@@ -720,7 +795,9 @@ class _SearchScreenState extends State<SearchScreen> {
   Marker? _createFriendMarker(dynamic friend) {
     try {
       if (friend.lat == null || friend.lng == null) {
-        print('❌ Friend ${friend.username} has invalid coordinates: [${friend.lng}, ${friend.lat}]');
+        print(
+          '❌ Friend ${friend.username} has invalid coordinates: [${friend.lng}, ${friend.lat}]',
+        );
         return null;
       }
       final lat = friend.lat as double;
@@ -728,13 +805,16 @@ class _SearchScreenState extends State<SearchScreen> {
       final username = friend.username ?? 'Friend';
       final avatar = friend.profilePictureUrl ?? '';
       final id = friend.id?.toString() ?? '';
-      
+
       // ✅ Verificar si está seleccionado
-      final isSelected = _selectedId.value == id && _selectedType.value == 'user';
+      final isSelected =
+          _selectedId.value == id && _selectedType.value == 'user';
       final borderColor = isSelected ? Colors.greenAccent : AppColors.primary;
-      
-      print('📍 Friend Marker: $username at $lat, $lng ${isSelected ? "(SELECTED)" : ""}');
-      
+
+      print(
+        '📍 Friend Marker: $username at $lat, $lng ${isSelected ? "(SELECTED)" : ""}',
+      );
+
       return Marker(
         point: LatLng(lat, lng),
         width: 70,
@@ -751,9 +831,17 @@ class _SearchScreenState extends State<SearchScreen> {
                 height: 50,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: borderColor, width: isSelected ? 4 : 3),
+                  border: Border.all(
+                    color: borderColor,
+                    width: isSelected ? 4 : 3,
+                  ),
                   color: Colors.black,
-                  boxShadow: [BoxShadow(color: borderColor.withOpacity(0.5), blurRadius: isSelected ? 15 : 10)],
+                  boxShadow: [
+                    BoxShadow(
+                      color: borderColor.withOpacity(0.5),
+                      blurRadius: isSelected ? 15 : 10,
+                    ),
+                  ],
                 ),
                 child: ClipOval(
                   child: ImageWithFallback(
@@ -774,9 +862,9 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: Text(
                   username,
                   style: TextStyle(
-                    color: isSelected ? Colors.greenAccent : Colors.white, 
-                    fontSize: 11, 
-                    fontWeight: FontWeight.bold
+                    color: isSelected ? Colors.greenAccent : Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -800,18 +888,21 @@ class _SearchScreenState extends State<SearchScreen> {
         print('❌ Event $name has invalid coordinates: $coords');
         return null;
       }
-      
+
       final lng = (coords[0] as num).toDouble();
       final lat = (coords[1] as num).toDouble();
       final name = event['name'] ?? event['title'] ?? 'Event';
       final id = event['_id']?.toString() ?? '';
-      
+
       // ✅ Verificar si está seleccionado
-      final isSelected = _selectedId.value == id && _selectedType.value == 'event';
+      final isSelected =
+          _selectedId.value == id && _selectedType.value == 'event';
       final borderColor = isSelected ? Colors.greenAccent : Colors.pink;
-      
-      print('📍 Event Marker: $name at $lat, $lng ${isSelected ? "(SELECTED)" : ""}');
-      
+
+      print(
+        '📍 Event Marker: $name at $lat, $lng ${isSelected ? "(SELECTED)" : ""}',
+      );
+
       return Marker(
         point: LatLng(lat, lng),
         width: 60,
@@ -828,9 +919,17 @@ class _SearchScreenState extends State<SearchScreen> {
                 height: 45,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: borderColor, width: isSelected ? 4 : 3),
+                  border: Border.all(
+                    color: borderColor,
+                    width: isSelected ? 4 : 3,
+                  ),
                   color: Colors.black,
-                  boxShadow: [BoxShadow(color: borderColor.withOpacity(0.5), blurRadius: isSelected ? 15 : 10)],
+                  boxShadow: [
+                    BoxShadow(
+                      color: borderColor.withOpacity(0.5),
+                      blurRadius: isSelected ? 15 : 10,
+                    ),
+                  ],
                 ),
                 child: Icon(Icons.event, color: borderColor, size: 25),
               ),
@@ -845,9 +944,9 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: Text(
                   name,
                   style: TextStyle(
-                    color: isSelected ? Colors.greenAccent : Colors.white, 
-                    fontSize: 10, 
-                    fontWeight: FontWeight.bold
+                    color: isSelected ? Colors.greenAccent : Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -871,18 +970,21 @@ class _SearchScreenState extends State<SearchScreen> {
         print('❌ Business $name has invalid coordinates: $coords');
         return null;
       }
-      
+
       final lng = (coords[0] as num).toDouble();
       final lat = (coords[1] as num).toDouble();
       final name = business['name'] ?? 'Business';
       final id = business['_id']?.toString() ?? '';
-      
+
       // ✅ Verificar si está seleccionado
-      final isSelected = _selectedId.value == id && _selectedType.value == 'business';
+      final isSelected =
+          _selectedId.value == id && _selectedType.value == 'business';
       final borderColor = isSelected ? Colors.greenAccent : Colors.orange;
-      
-      print('📍 Business Marker: $name at $lat, $lng ${isSelected ? "(SELECTED)" : ""}');
-      
+
+      print(
+        '📍 Business Marker: $name at $lat, $lng ${isSelected ? "(SELECTED)" : ""}',
+      );
+
       return Marker(
         point: LatLng(lat, lng),
         width: 60,
@@ -899,9 +1001,17 @@ class _SearchScreenState extends State<SearchScreen> {
                 height: 45,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: borderColor, width: isSelected ? 4 : 3),
+                  border: Border.all(
+                    color: borderColor,
+                    width: isSelected ? 4 : 3,
+                  ),
                   color: Colors.black,
-                  boxShadow: [BoxShadow(color: borderColor.withOpacity(0.5), blurRadius: isSelected ? 15 : 10)],
+                  boxShadow: [
+                    BoxShadow(
+                      color: borderColor.withOpacity(0.5),
+                      blurRadius: isSelected ? 15 : 10,
+                    ),
+                  ],
                 ),
                 child: Icon(Icons.store, color: borderColor, size: 25),
               ),
@@ -916,9 +1026,9 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: Text(
                   name,
                   style: TextStyle(
-                    color: isSelected ? Colors.greenAccent : Colors.white, 
-                    fontSize: 10, 
-                    fontWeight: FontWeight.bold
+                    color: isSelected ? Colors.greenAccent : Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -937,7 +1047,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _filterChip(String label, String filterValue, Color activeColor) {
     return Obx(() {
       final isActive = _activeFilter.value == filterValue;
-      
+
       return FilterChip(
         label: Text(label),
         selected: isActive,
@@ -965,11 +1075,7 @@ class _SearchScreenState extends State<SearchScreen> {
   // ✅ NUEVO: Buscar en múltiples endpoints
   void _performSearch(String query) async {
     if (query.isEmpty) {
-      _searchResults.value = {
-        'users': [],
-        'events': [],
-        'businesses': [],
-      };
+      _searchResults.value = {'users': [], 'events': [], 'businesses': []};
       _showResults.value = false;
       return;
     }
@@ -1015,14 +1121,12 @@ class _SearchScreenState extends State<SearchScreen> {
         'businesses': businesses,
       };
 
-      print('🔍 Search results: ${users.length} users, ${events.length} events, ${businesses.length} businesses');
+      print(
+        '🔍 Search results: ${users.length} users, ${events.length} events, ${businesses.length} businesses',
+      );
     } catch (e) {
       print('❌ Error searching: $e');
-      _searchResults.value = {
-        'users': [],
-        'events': [],
-        'businesses': [],
-      };
+      _searchResults.value = {'users': [], 'events': [], 'businesses': []};
     } finally {
       _isSearching.value = false;
     }

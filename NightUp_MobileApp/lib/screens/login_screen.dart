@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:js' as js;
-import '../screens/home_feed.dart';
+import '../app.dart';
 import '../controllers/auth_controller.dart';
 import '../theme/colors.dart';
 import '../widgets/glass_card.dart';
@@ -78,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (success) {
       // Siempre ir al home, intereses deshabilitados
-      Get.offAll(() => const HomeFeed());
+      Get.offAll(() => const App());
     } else {
       _showErrorDialog(_authController.error);
     }
@@ -92,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (result['success'] == true) {
       // Siempre ir al home, intereses deshabilitados
-      Get.offAll(() => HomeFeed());
+      Get.offAll(() => const App());
     } else {
       _showErrorDialog(_authController.error);
     }

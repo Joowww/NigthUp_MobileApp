@@ -67,33 +67,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
         setState(() {
           _messages.removeLast();
 
-          final meta = result['meta'] as Map<String, dynamic>?;
-          final criteria =
-              meta?['interpretedCriteria'] as Map<String, dynamic>?;
+          String responseText = result['message'] as String? ?? '';
 
-          String criteriaText = '';
-          if (criteria != null) {
-            final parts = <String>[];
-            if (criteria['keywords'] != null)
-              parts.add('"${criteria['keywords']}"');
-            if (criteria['category'] != null)
-              parts.add('Category: ${criteria['category']}');
-            if (criteria['maxPrice'] != null)
-              parts.add('Max: ${criteria['maxPrice']}');
-            if (criteria['city'] != null) parts.add('in ${criteria['city']}');
-
-            if (parts.isNotEmpty) {
-              criteriaText = '\n\nFilters applied:\n${parts.join(' - ')}';
-            }
-          }
-
-          String responseText = '';
-          if (events.isEmpty) {
-            responseText =
-                'No events found. $criteriaText\nTry different terms.';
-          } else {
-            responseText =
-                'Found ${events.length} events for you! $criteriaText';
+          if (responseText.isEmpty) {
+            responseText = events.isNotEmpty
+                ? 'Here are the results:'
+                : 'No events found for "$text". Try different terms.';
           }
 
           _messages.add(
