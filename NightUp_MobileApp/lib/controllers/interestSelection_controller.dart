@@ -1,9 +1,8 @@
-// interestSelection_controller.dart - COMPLETO Y CORREGIDO
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
-import '../app.dart'; // Asegúrate de que la ruta sea correcta
+import '../app.dart';
 import 'auth_controller.dart';
 
 class InterestSelectionController extends GetxController {
@@ -11,11 +10,9 @@ class InterestSelectionController extends GetxController {
   final ApiService _apiService = Get.find<ApiService>();
   final StorageService _storageService = Get.find<StorageService>();
 
-  // PageController removed: navigation is now managed by currentPage only
   final RxInt currentPage = 0.obs;
   final RxBool isLoading = false.obs;
 
-  // Almacena las selecciones por tipo
   final Map<String, String> selections = {
     'MusicType': '',
     'Musician': '',
@@ -23,7 +20,6 @@ class InterestSelectionController extends GetxController {
     'ChildhoodIdol': '',
   };
 
-  // Opciones cargadas desde la API
   final Map<String, List<Map<String, dynamic>>> tagOptions = {
     'MusicType': [],
     'Musician': [],
@@ -31,7 +27,6 @@ class InterestSelectionController extends GetxController {
     'ChildhoodIdol': [],
   };
 
-  // Información de cada paso
   final List<Map<String, String>> stepsInfo = [
     {'title': 'Tu Vibra Musical', 'subtitle': '¿Qué te hace mover?'},
     {'title': 'Artistas Top', 'subtitle': '¿Quién está en tu playlist?'},
@@ -43,7 +38,7 @@ class InterestSelectionController extends GetxController {
   void onInit() {
     super.onInit();
     print('🟢 [InterestController] onInit called');
-    // Si el usuario es JoelMoreno, saltar onboarding automáticamente
+
     try {
       final authController = Get.find<AuthController>();
       final user = authController.currentUser;
@@ -61,7 +56,6 @@ class InterestSelectionController extends GetxController {
     _loadTags();
   }
 
-  // Cargar tags desde la API - CORREGIDO
   Future<void> _loadTags() async {
     isLoading.value = true;
     errorMessage.value = '';
@@ -121,7 +115,6 @@ class InterestSelectionController extends GetxController {
     }
   }
 
-  // Datos de fallback - CORREGIDO
   void _loadFallbackTags() {
     print('🔄 Loading fallback tags...');
 
@@ -155,17 +148,15 @@ class InterestSelectionController extends GetxController {
       {'id': '18', 'name': 'Goku', 'color': '#f59e0b'},
     ];
 
-    update(); // 👈 AÑADIR ESTO
+    update();
   }
 
-  // Seleccionar una opción - CORREGIDO
   void selectOption(String category, String id) {
     print('🟢 [InterestController] Selecting $category: $id');
     selections[category] = id;
     update();
   }
 
-  // Navegar a la siguiente página - CORREGIDO
   void nextPage() {
     print(
       '🟢 [InterestController] nextPage called. currentPage: ${currentPage.value}',
@@ -182,7 +173,6 @@ class InterestSelectionController extends GetxController {
     }
   }
 
-  // Navegar a la página anterior - AÑADIR ESTE MÉTODO
   void previousPage() {
     if (currentPage.value > 0) {
       print('⬅️ Moving to page ${currentPage.value - 1}');
@@ -191,12 +181,11 @@ class InterestSelectionController extends GetxController {
     }
   }
 
-  // Enviar intereses al backend - CORREGIDO
   Future<void> _submitInterests() async {
     try {
       isLoading.value = true;
       print('🟢 [InterestController] _submitInterests called');
-      // Verificar que todas las selecciones estén completas
+
       final missingSelections = selections.entries
           .where((entry) => entry.value.isEmpty)
           .toList();
@@ -241,7 +230,6 @@ class InterestSelectionController extends GetxController {
     }
   }
 
-  // Helper para obtener el nombre desde el ID - CORREGIDO
   String _getNameFromId(String category, String id) {
     try {
       final option = tagOptions[category]?.firstWhere(
@@ -255,20 +243,17 @@ class InterestSelectionController extends GetxController {
     }
   }
 
-  // Saltar onboarding - CORREGIDO
   void skipOnboarding() async {
     print('🟢 [InterestController] skipOnboarding called');
     await _storageService.write('onboarding_complete', true);
     Get.offAll(() => const App());
   }
 
-  // Método para recargar tags - AÑADIR ESTE MÉTODO
   void reloadTags() {
     print('🟢 [InterestController] reloadTags called');
     _loadTags();
   }
 
-  // Obtener la categoría actual basada en la página
   String get currentCategory {
     switch (currentPage.value) {
       case 0:
@@ -284,7 +269,6 @@ class InterestSelectionController extends GetxController {
     }
   }
 
-  // Verificar si una opción está seleccionada
   bool isSelected(String category, String id) {
     return selections[category] == id;
   }
@@ -298,7 +282,7 @@ class InterestSelectionController extends GetxController {
       return Color(int.parse(hexColor, radix: 16));
     } catch (e) {
       print('❌ Error converting color $hexColor: $e');
-      return Colors.blue; // Color por defecto
+      return Colors.blue;
     }
   }
 }

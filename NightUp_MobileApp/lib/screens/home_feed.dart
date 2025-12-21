@@ -24,7 +24,7 @@ class _HomeFeedState extends State<HomeFeed> {
   @override
   void initState() {
     super.initState();
-    // Restaurar la página cuando volvemos a esta pantalla
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (controller.lastViewedPage.value > 0) {
         controller.restoreLastPage();
@@ -41,7 +41,7 @@ class _HomeFeedState extends State<HomeFeed> {
           _buildContent(),
           _buildTopNavigation(),
           _buildBottomActions(),
-          // Sugerencia de intereses tras renovar token y si onboarding está incompleto
+
           _buildContent(),
           _buildTopNavigation(),
           _buildBottomActions(),
@@ -392,9 +392,7 @@ class _HomeFeedState extends State<HomeFeed> {
             return FriendPostItem(
               post: post,
               onLike: () => controller.toggleLikePost(post),
-              onComment: () {
-                // Obrirem modal de comentaris més endavant
-              },
+              onComment: () {},
             );
           },
         );
@@ -475,23 +473,18 @@ class _HomeFeedState extends State<HomeFeed> {
     );
   }
 
-  // ✅ CAMBIO PRINCIPAL: Usar Obx en lugar de GetBuilder
   Widget _buildBottomActions() {
     return GetBuilder<HomeFeedController>(
       id: 'bottom_actions',
       builder: (controller) {
-        // 1. Verificar que estamos en el tab "Para Ti" (índice 0)
-        // Usamos el index del tabController directamente
         if (controller.tabController.index != 0) {
           return const SizedBox.shrink();
         }
 
-        // 2. Verificar que hay eventos cargados
         if (controller.discoverEvents.isEmpty) {
           return const SizedBox.shrink();
         }
 
-        // 3. Obtener el evento actual basado en la página del PageView
         final currentIndex = controller.currentPage.value.clamp(
           0,
           controller.discoverEvents.length - 1,

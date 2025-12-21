@@ -32,10 +32,8 @@ class _UserProfileState extends State<UserProfile>
   final AuthController _authController = Get.find<AuthController>();
   final ApiService _apiService = Get.find<ApiService>();
 
-  // Usamos un getter para facilitar el acceso reactivo
   User? get user => _authController.currentUser;
 
-  // Observables
   final RxList<Map<String, dynamic>> _userEvents = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> _pendingRequests =
       <Map<String, dynamic>>[].obs;
@@ -46,7 +44,6 @@ class _UserProfileState extends State<UserProfile>
   final RxBool _loadingRequests = false.obs;
   final RxBool _loadingStats = true.obs;
 
-  // Stats
   final RxDouble _trustScore = 0.0.obs;
   final RxInt _totalRatings = 0.obs;
   final RxInt _friendsCount = 0.obs;
@@ -69,15 +66,12 @@ class _UserProfileState extends State<UserProfile>
     ]);
   }
 
-  // -------------------- FETCH METHODS --------------------
-
   Future<void> _fetchUserStats() async {
     _loadingStats.value = true;
     try {
       final user = _authController.currentUser;
       if (user == null) return;
 
-      // 1. Fetch Trust Score
       try {
         final trustResponse = await _apiService.get(
           '/user-trust/user/summary/${user.id}',
@@ -91,11 +85,9 @@ class _UserProfileState extends State<UserProfile>
         logger.e('Error fetching trust score: $e');
       }
 
-      // 2. Fetch Friends Count
       try {
         final friendsResponse = await _apiService.get('/friendship/friends');
         if (friendsResponse.data is List) {
-          // ✅ Contar solo amistades con status "accepted"
           final acceptedFriends = (friendsResponse.data as List).where((
             friendship,
           ) {
@@ -191,7 +183,7 @@ class _UserProfileState extends State<UserProfile>
       await _apiService.patch('/friendship/request/$friendshipId/accept');
       Get.snackbar('Solicitud aceptada', 'Ahora son amigos.');
       await _fetchPendingRequests();
-      await _fetchUserStats(); // Refresh friends count
+      await _fetchUserStats();
     } catch (e) {
       Get.snackbar('Error', 'No se pudo aceptar la solicitud.');
     }
@@ -231,8 +223,6 @@ class _UserProfileState extends State<UserProfile>
     }
   }
 
-  // -------------------- UTILS --------------------
-
   String safeString(dynamic value, {String mapKey = 'name'}) {
     if (value == null) return '';
     if (value is String) return value;
@@ -263,8 +253,6 @@ class _UserProfileState extends State<UserProfile>
       return '';
     }
   }
-
-  // -------------------- UI SECTIONS --------------------
 
   Widget _buildProfileHeader(User user) {
     return Stack(
@@ -300,7 +288,6 @@ class _UserProfileState extends State<UserProfile>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ✅ Nuevo Avatar añadido
               Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
@@ -451,7 +438,6 @@ class _UserProfileState extends State<UserProfile>
   }
 
   Widget _buildInfoTab(User user) {
-    // ✅ Calcular edad correctamente
     int? age;
     if (user.birthday != null) {
       final now = DateTime.now();
@@ -490,7 +476,6 @@ class _UserProfileState extends State<UserProfile>
                 spacing: 16,
                 runSpacing: 8,
                 children: [
-                  // ✅ Mostrar ciudad y país en lugar de coordenadas
                   if (user.city != null && user.city!.isNotEmpty)
                     _buildInfoItem(
                       Icons.location_on,
@@ -501,14 +486,12 @@ class _UserProfileState extends State<UserProfile>
                   else
                     _buildInfoItem(Icons.location_on, 'No location'),
 
-                  // ✅ Calcular edad correctamente
                   if (age != null) _buildInfoItem(Icons.cake, '$age years old'),
                 ],
               ),
 
               const SizedBox(height: 16),
 
-              // ✅ Mostrar intereses (ahora ya son strings limpios)
               if (user.interests != null && user.interests!.isNotEmpty) ...[
                 const Text(
                   'Interests',
@@ -795,8 +778,6 @@ class _UserProfileState extends State<UserProfile>
       );
     });
   }
-
-  // -------------------- BOTTOM ACTION BUTTONS --------------------
 
   Widget _buildActionButtons() {
     return Container(

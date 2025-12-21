@@ -26,16 +26,13 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // ================== CONTROLLERS ==================
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final AuthController _authController = Get.find<AuthController>();
 
-  // ================== STATE ==================
   bool _rememberMe = false;
   bool _isGoogleInitialized = false;
 
-  // ================== INIT ==================
   @override
   @override
   void initState() {
@@ -47,7 +44,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // 👇 NUEVO MÉTODO para registrar el handler global
   void _registerGlobalHandler() {
     try {
       js.context['handleFlutterGoogleSignIn'] = js.allowInterop((credential) {
@@ -62,7 +58,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ================== LOGIN ==================
   void _login() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showErrorDialog(translate('login.validation_error'));
@@ -84,7 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ================== GOOGLE LOGIN WEB ==================
   void _handleGISCredential(String credential) async {
     print('✅ Received Google credential: ${credential.length} characters');
 
@@ -136,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
       console.log('🔧 Initializing Google Identity Services with client: $clientId');
       
       if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-        // Limpiar cualquier inicialización previa
+
         google.accounts.id.cancel();
         
         google.accounts.id.initialize({
@@ -165,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
         
         console.log('✅ GIS initialized successfully');
         
-        // Intentar one-tap automático
+
         google.accounts.id.prompt((notification) => {
           console.log('Prompt notification:', notification);
           if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
@@ -175,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
         
       } else {
         console.error('❌ Google Identity Services not available');
-        // Cargar GIS dinámicamente
+
         const script = document.createElement('script');
         script.src = 'https://accounts.google.com/gsi/client';
         script.async = true;
@@ -197,7 +191,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ================== ERROR DIALOG ==================
   void _showErrorDialog(String error) {
     showDialog(
       context: context,
@@ -221,7 +214,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ================== BUILD ==================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -252,7 +244,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ================== LOADING ==================
   Widget _buildLoadingOverlay() {
     return Container(
       color: Colors.black54,
@@ -264,7 +255,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ================== BACKGROUND ==================
   Widget _buildBackgroundGradients() {
     return Stack(
       children: [
@@ -342,7 +332,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ================== LOGO ==================
   Widget _buildLogo() {
     return Column(
       children: [
@@ -381,7 +370,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ================== LOGIN FORM ==================
   Widget _buildLoginForm() {
     return GlassCard(
       child: Padding(
@@ -492,7 +480,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ================== GOOGLE BUTTONS ==================
   Widget _buildGoogleMobileButton() {
     return OutlinedButton(
       onPressed: () async {
@@ -564,14 +551,14 @@ class _LoginScreenState extends State<LoginScreen> {
       if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
         console.log('🎯 Opening Google Sign-In prompt...');
         
-        // Usar prompt directo para one-tap
+
         google.accounts.id.prompt((notification) => {
           console.log('One Tap notification:', notification);
           
           if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
             console.log('🔧 One Tap not shown, showing fallback button');
             
-            // Crear contenedor para el botón
+
             let container = document.getElementById('googleButtonContainer');
             if (!container) {
               container = document.createElement('div');
@@ -584,7 +571,7 @@ class _LoginScreenState extends State<LoginScreen> {
               document.body.appendChild(container);
             }
             
-            // Renderizar botón de Google
+
             google.accounts.id.renderButton(
               container,
               {
@@ -610,7 +597,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ================== REGISTER PROMPT ==================
   Widget _buildRegisterPrompt() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -644,14 +630,13 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       js.context.callMethod('eval', [
         '''
-      // Verificar si hay código de autorización en la URL
-      const urlParams = new URLSearchParams(window.location.search);
+        const urlParams = new URLSearchParams(window.location.search);
       const authCode = urlParams.get('code');
       const error = urlParams.get('error');
       
       if (authCode) {
         console.log('✅ OAuth code received:', authCode);
-        // Aquí deberías enviar el código a tu backend para intercambiarlo por tokens
+
         if (window.handleFlutterOAuthCode) {
           window.handleFlutterOAuthCode(authCode);
         }
@@ -662,11 +647,10 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
       
-      // Registrar handler para código OAuth
       window.handleFlutterOAuthCode = function(code) {
         console.log('🔄 OAuth code handler called');
-        // Enviar código al backend
       };
+
       
       window.handleFlutterOAuthError = function(error) {
         console.error('❌ OAuth error handler called:', error);

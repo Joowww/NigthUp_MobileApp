@@ -1,4 +1,3 @@
-// lib/services/socket_service.dart
 import 'dart:developer';
 import 'package:get/get.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
@@ -9,7 +8,7 @@ class SocketService extends GetxService {
   late IO.Socket _socket;
   final StorageService _storageService = Get.find<StorageService>();
   final ApiService _apiService = Get.find<ApiService>();
-  
+
   final RxBool _isConnected = false.obs;
   final RxList<dynamic> _messages = <dynamic>[].obs;
   final RxInt _unreadNotifications = 0.obs;
@@ -37,14 +36,13 @@ class SocketService extends GetxService {
 
     log('🔌 Connecting socket with userId: $userId');
 
-    // ✅ CORREGIDO: Conectar con autenticación correcta
     _socket = IO.io(
-      'http://localhost:3000', // ✅ Sin /api
+      'http://localhost:3000',
       IO.OptionBuilder()
-        .setTransports(['websocket'])
-        .enableAutoConnect()
-        .setAuth({'userId': userId}) // ✅ Pasar userId en auth
-        .build(),
+          .setTransports(['websocket'])
+          .enableAutoConnect()
+          .setAuth({'userId': userId})
+          .build(),
     );
 
     _socket.onConnect((_) {
@@ -61,16 +59,12 @@ class SocketService extends GetxService {
       log('❌ Socket error: $data');
     });
 
-    // ===== EVENTOS DEL BACKEND =====
-    
-    // Nuevo mensaje
     _socket.on('newMessage', (data) {
       log('📨 New message received: $data');
       _messages.add(data);
       _unreadNotifications.value++;
     });
 
-    // Mensaje editado
     _socket.on('messageEdited', (data) {
       log('✏️ Message edited: $data');
       final index = _messages.indexWhere((m) => m['_id'] == data['_id']);
@@ -79,7 +73,6 @@ class SocketService extends GetxService {
       }
     });
 
-    // Mensaje eliminado
     _socket.on('messageDeleted', (data) {
       log('🗑️ Message deleted: ${data['messageId']}');
       final index = _messages.indexWhere((m) => m['_id'] == data['messageId']);
@@ -87,39 +80,34 @@ class SocketService extends GetxService {
         _messages[index] = {
           ..._messages[index],
           'isDeleted': true,
-          'text': 'Mensaje eliminado'
+          'text': 'Mensaje eliminado',
         };
       }
     });
 
-    // Reacción a mensaje
     _socket.on('messageReacted', (data) {
       log('👍 Message reacted: ${data['messageId']}');
       final index = _messages.indexWhere((m) => m['_id'] == data['messageId']);
       if (index != -1) {
         _messages[index] = {
           ..._messages[index],
-          'reactions': data['reactions']
+          'reactions': data['reactions'],
         };
       }
     });
 
-    // Nuevo grupo creado
     _socket.on('newGroup', (data) {
       log('👥 New group created: $data');
     });
 
-    // Usuario escribiendo
     _socket.on('userTyping', (data) {
       log('✍️ User typing: ${data['userId']}');
     });
 
-    // Usuario dejó de escribir
     _socket.on('userStoppedTyping', (data) {
       log('User stopped typing: ${data['userId']}');
     });
 
-    // Mensaje bloqueado por moderación
     _socket.on('messageBlocked', (data) {
       log('🚫 Message blocked: $data');
       Get.snackbar(
@@ -129,7 +117,6 @@ class SocketService extends GetxService {
       );
     });
 
-    // Edición bloqueada por moderación
     _socket.on('editBlocked', (data) {
       log('🚫 Edit blocked: $data');
       Get.snackbar(
@@ -141,8 +128,6 @@ class SocketService extends GetxService {
 
     _socket.connect();
   }
-
-  // ===== MÉTODOS PARA EMITIR EVENTOS =====
 
   void joinRoom(String conversationId) {
     if (!_isConnected.value) {
@@ -171,10 +156,7 @@ class SocketService extends GetxService {
   void editMessage(String messageId, String text) {
     if (!_isConnected.value) return;
     log('✏️ Editing message: $messageId');
-    _socket.emit('editMessage', {
-      'messageId': messageId,
-      'text': text,
-    });
+    _socket.emit('editMessage', {'messageId': messageId, 'text': text});
   }
 
   void deleteMessage(String messageId) {
@@ -186,10 +168,7 @@ class SocketService extends GetxService {
   void reactToMessage(String messageId, String emoji) {
     if (!_isConnected.value) return;
     log('👍 Reacting to message: $messageId with $emoji');
-    _socket.emit('reactToMessage', {
-      'messageId': messageId,
-      'emoji': emoji,
-    });
+    _socket.emit('reactToMessage', {'messageId': messageId, 'emoji': emoji});
   }
 
   void typing(String conversationId) {
@@ -205,10 +184,7 @@ class SocketService extends GetxService {
   void createGroup(String name, List<String> participants) {
     if (!_isConnected.value) return;
     log('👥 Creating group: $name');
-    _socket.emit('createGroup', {
-      'name': name,
-      'participants': participants,
-    });
+    _socket.emit('createGroup', {'name': name, 'participants': participants});
   }
 
   void joinConversation(String conversationId) {

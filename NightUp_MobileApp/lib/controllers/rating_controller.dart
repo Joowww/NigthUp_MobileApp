@@ -3,7 +3,7 @@ import '../services/api_service.dart';
 
 class RatingController extends GetxController {
   final ApiService _apiService = Get.find<ApiService>();
-  
+
   Future<bool> submitRating({
     required String eventId,
     required int score,
@@ -15,13 +15,16 @@ class RatingController extends GetxController {
         Get.snackbar('Error', 'Usuario no identificado');
         return false;
       }
-      
-      await _apiService.post('/rating', data: {
-        'eventId': eventId,
-        'username': userId, // Usar user ID
-        'score': score,
-        'comment': comment,
-      });
+
+      await _apiService.post(
+        '/rating',
+        data: {
+          'eventId': eventId,
+          'username': userId,
+          'score': score,
+          'comment': comment,
+        },
+      );
       return true;
     } catch (e) {
       print('❌ Error submitting rating: $e');
@@ -36,10 +39,10 @@ class RatingController extends GetxController {
     required String comment,
   }) async {
     try {
-      await _apiService.patch('/rating/$ratingId', data: {
-        'score': score,
-        'comment': comment,
-      });
+      await _apiService.patch(
+        '/rating/$ratingId',
+        data: {'score': score, 'comment': comment},
+      );
       return true;
     } catch (e) {
       print('❌ Error updating rating: $e');
@@ -88,8 +91,10 @@ class RatingController extends GetxController {
     try {
       final userId = _apiService.getUserId();
       if (userId == null) return null;
-      
-      final response = await _apiService.get('/rating/user/$userId/event/$eventId');
+
+      final response = await _apiService.get(
+        '/rating/user/$userId/event/$eventId',
+      );
       if (response.data is Map && response.data.isNotEmpty) {
         return Map<String, dynamic>.from(response.data);
       }

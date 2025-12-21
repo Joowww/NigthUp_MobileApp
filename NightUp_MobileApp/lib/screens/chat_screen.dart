@@ -1,4 +1,3 @@
-//chat_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -51,8 +50,6 @@ class _ChatScreenState extends State<ChatScreen> {
     return _buildConversationsList();
   }
 
-  // ==================== LISTA DE CONVERSACIONES ====================
-
   Widget _buildConversationsList() {
     return Scaffold(
       backgroundColor: Colors.black,
@@ -102,9 +99,6 @@ class _ChatScreenState extends State<ChatScreen> {
               return RefreshIndicator(
                 onRefresh: () => _chatController.fetchConversations(),
                 child: ListView.builder(
-                  // Sientete libre de ajustar esta lógica.
-                  // Index 0 siempre es el AI Chat.
-                  // Si no hay conversaciones, mostramos el empty state en Index 1.
                   itemCount: filteredConversations.isEmpty
                       ? 2
                       : (filteredConversations.length + 1),
@@ -113,10 +107,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       return _buildAiConversationItem();
                     }
 
-                    // Caso: Lista vacía (o sin resultados de búsqueda)
                     if (filteredConversations.isEmpty) {
                       if (_searchController.text.isNotEmpty) {
-                        // Sin resultados de búsqueda
                         return const Padding(
                           padding: EdgeInsets.only(top: 40),
                           child: Center(
@@ -127,7 +119,6 @@ class _ChatScreenState extends State<ChatScreen> {
                           ),
                         );
                       } else {
-                        // Sin conversaciones en absoluto
                         return SizedBox(
                           height: MediaQuery.of(context).size.height * 0.6,
                           child: _buildEmptyConversations(),
@@ -135,7 +126,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       }
                     }
 
-                    // Caso: Lista normal
                     final conv = filteredConversations[index - 1];
                     return _buildConversationItem(conv);
                   },
@@ -225,7 +215,6 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         child: Row(
           children: [
-            // Avatar con indicador de grupo
             Stack(
               children: [
                 Container(
@@ -269,7 +258,6 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(width: 12),
 
-            // Información del chat
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,8 +410,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ==================== CHAT INDIVIDUAL ====================
-
   Widget _buildIndividualChat() {
     return Scaffold(
       backgroundColor: Colors.black,
@@ -520,11 +506,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     ? CrossAxisAlignment.end
                     : CrossAxisAlignment.start,
                 children: [
-                  // Respuesta a otro mensaje
                   if (message.replyTo != null)
                     _buildReplyPreview(message.replyTo!),
 
-                  // Burbuja del mensaje
                   GlassCard(
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(isMe ? 16 : 4),
@@ -600,7 +584,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
 
-                  // Reacciones
                   if (message.reactions.isNotEmpty)
                     _buildReactions(message.reactions),
                 ],
@@ -768,7 +751,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 _messageController.clear();
                 _chatController.stopTyping();
 
-                // Scroll al final
                 Future.delayed(const Duration(milliseconds: 100), () {
                   if (_scrollController.hasClients) {
                     _scrollController.animateTo(
@@ -991,14 +973,11 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ==================== DIÁLOGOS ====================
-
   void _showCreateGroupDialog() {
     final TextEditingController groupNameController = TextEditingController();
     final RxList<String> selectedFriends = <String>[].obs;
     final RxBool isLoading = false.obs;
 
-    // ✅ Esperar a que las conversaciones se carguen
     if (_chatController.conversations.isEmpty) {
       Get.snackbar(
         'Cargando...',
@@ -1166,7 +1145,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
                       // Lista de conversaciones para seleccionar
                       Obx(() {
-                        // Filtrar solo conversaciones 1-a-1 (no grupos)
                         final privateConversations = _chatController
                             .conversations
                             .where((conv) => !conv.isGroup)
@@ -1409,7 +1387,6 @@ class _ChatScreenState extends State<ChatScreen> {
                                     );
                                     Get.back();
                                   } catch (e) {
-                                    // Error handled by controller
                                   } finally {
                                     isLoading.value = false;
                                   }
@@ -1471,7 +1448,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final RxList<dynamic> filteredFriends = <dynamic>[].obs;
     final RxBool isLoading = true.obs;
 
-    // 🔥 Cargar amigos usando el endpoint existente
     Future<void> loadFriends() async {
       isLoading.value = true;
       try {
@@ -1500,7 +1476,6 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     }
 
-    // Filtrar amigos localmente
     void filterFriends(String query) {
       if (query.trim().isEmpty) {
         filteredFriends.value = allFriends;
@@ -1511,7 +1486,6 @@ class _ChatScreenState extends State<ChatScreen> {
       final queryLower = query.toLowerCase();
 
       filteredFriends.value = allFriends.where((friendship) {
-        // Determinar quién es el amigo (el que NO es el usuario actual)
         final requesterData = friendship['requester'];
         final recipientData = friendship['recipient'];
 
@@ -1525,7 +1499,6 @@ class _ChatScreenState extends State<ChatScreen> {
       }).toList();
     }
 
-    // Cargar amigos al abrir el diálogo
     loadFriends();
 
     Get.dialog(
@@ -1654,7 +1627,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
 
-              // Results
               Expanded(
                 child: Obx(() {
                   if (isLoading.value) {
@@ -1736,7 +1708,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       final friendship = filteredFriends[index];
                       final currentUserId = Get.find<ApiService>().getUserId();
 
-                      // Determinar quién es el amigo
                       final requesterData = friendship['requester'];
                       final recipientData = friendship['recipient'];
 
@@ -1801,7 +1772,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 await _chatController.createPrivateChat(
                                   friendId,
                                 );
-                                Get.back(); // Cerrar diálogo de búsqueda
+                                Get.back();
                                 Get.snackbar(
                                   '✅ Chat abierto',
                                   'Conversación con $username',
@@ -1886,7 +1857,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 onTap: () {
                   Get.back();
-                  // TODO: Implementar respuesta
                 },
               ),
               ListTile(
@@ -2266,8 +2236,6 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
-
-  // ==================== UTILIDADES ====================
 
   String _formatTime(DateTime dateTime) {
     final now = DateTime.now();

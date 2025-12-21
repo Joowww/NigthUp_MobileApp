@@ -1,4 +1,3 @@
-//menu_modal_controller.dart
 import 'package:get/get.dart';
 import 'dart:developer';
 import '../models/business.dart';
@@ -34,8 +33,7 @@ class MenuModalController extends GetxController {
     isLoadingBusinesses.value = true;
     try {
       final response = await _apiService.get('/business');
-      
-      // ✅ CORREGIDO: Conversión segura con manejo de errores
+
       if (response.data is List) {
         businesses.value = (response.data as List)
             .map((json) => Business.fromJson(json))
@@ -47,7 +45,6 @@ class MenuModalController extends GetxController {
             .toList();
         print('✅ Loaded ${businesses.length} businesses');
       } else {
-        // ✅ FALLBACK: Datos de ejemplo
         businesses.value = [
           Business(
             id: 'business_1',
@@ -58,7 +55,7 @@ class MenuModalController extends GetxController {
             events: [],
             managers: [],
             active: true,
-          )
+          ),
         ];
         print('⚠️ Using fallback businesses data');
       }
@@ -74,8 +71,7 @@ class MenuModalController extends GetxController {
     isLoadingEvents.value = true;
     try {
       final response = await _apiService.get('/event');
-      
-      // ✅ CORREGIDO: Conversión segura con manejo de errores
+
       if (response.data is List) {
         events.value = (response.data as List)
             .map((json) => Event.fromJson(json))
@@ -87,7 +83,6 @@ class MenuModalController extends GetxController {
             .toList();
         print('✅ Loaded ${events.length} events');
       } else {
-        // ✅ FALLBACK: Datos de ejemplo
         events.value = [
           Event(
             id: 'event_1',
@@ -100,7 +95,7 @@ class MenuModalController extends GetxController {
             tags: ['Techno', 'Electrónica'],
             likes: 42,
             participantsCount: 120,
-          )
+          ),
         ];
         print('⚠️ Using fallback events data');
       }
@@ -112,16 +107,17 @@ class MenuModalController extends GetxController {
     }
   }
 
-  // Nuevo: Actualizar estado de amistad de cada amigo usando la ruta /friendship/status/{userId}
   Future<void> updateFriendsStatus() async {
     final ApiService apiService = _apiService;
     for (var friend in friends) {
       try {
-        final response = await apiService.get('/friendship/status/${friend.id}');
+        final response = await apiService.get(
+          '/friendship/status/${friend.id}',
+        );
         if (response.data is Map && response.data['status'] != null) {
-          // Puedes guardar el status en un nuevo campo si lo necesitas
-          // Ejemplo: friend.friendshipStatus = response.data['status'];
-          log('🔗 Estado amistad de ${friend.username}: ${response.data['status']}');
+          log(
+            '🔗 Estado amistad de ${friend.username}: ${response.data['status']}',
+          );
         }
       } catch (e) {
         log('❌ Error obteniendo estado de amistad de ${friend.username}: $e');
@@ -133,8 +129,7 @@ class MenuModalController extends GetxController {
     isLoadingFriends.value = true;
     try {
       final response = await _apiService.get('/friendship/friends');
-      // Log para depuración de datos recibidos
-      log('🔍 Friends API response: \n${response.data}');
+
       if (response.data is List) {
         friends.value = (response.data as List)
             .map((json) => Friend.fromJson(json))
@@ -143,7 +138,7 @@ class MenuModalController extends GetxController {
           log('👤 ${f.username} online: ${f.isOnline}');
         }
         log('✅ Loaded ${friends.length} friends from backend');
-        // Actualizar estado de amistad de cada amigo
+
         await updateFriendsStatus();
       } else if (response.data is Map && response.data['friends'] is List) {
         friends.value = (response.data['friends'] as List)
@@ -153,10 +148,9 @@ class MenuModalController extends GetxController {
           log('👤 ${f.username} online: ${f.isOnline}');
         }
         log('✅ Loaded ${friends.length} friends from backend');
-        // Actualizar estado de amistad de cada amigo
+
         await updateFriendsStatus();
       } else {
-        // ✅ FALLBACK: Datos de ejemplo
         friends.value = [
           Friend(
             id: 'friend_1',
@@ -164,7 +158,7 @@ class MenuModalController extends GetxController {
             profilePictureUrl: '',
             isOnline: true,
             distance: 2.5,
-          )
+          ),
         ];
         log('⚠️ Using fallback friends data');
       }

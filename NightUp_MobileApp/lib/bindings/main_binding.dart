@@ -1,4 +1,3 @@
-// lib/bindings/main_binding.dart
 import 'package:get/get.dart';
 import '../controllers/home_feed_controller.dart';
 import '../controllers/chat_controller.dart';

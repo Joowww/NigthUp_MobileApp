@@ -26,7 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    // Inicializar controllers con datos del usuario
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = _settingsController.user.value;
       if (user != null) {
@@ -73,7 +73,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Sección de Perfil
                       _buildSectionTitle('Profile'),
                       GlassCard(
                         child: Padding(
@@ -355,13 +354,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       GradientButton(
                         onPressed: () async {
                           await Get.find<AuthController>().logout();
-                          // Navega a login eliminando el historial
+
                           Get.offAll(
                             () => LoginScreen(
-                              onLogin: () {
-                                // Puedes personalizar esto si tu app usa otro flujo
-                                // Por ejemplo, Get.offAllNamed('/main') después de login
-                              },
+                              onLogin: () {},
                               onRegister: () {},
                               onForgotPassword: () {},
                             ),

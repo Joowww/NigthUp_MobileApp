@@ -1,4 +1,3 @@
-// lib/screens/event_detail_screen.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -18,7 +17,7 @@ class EventDetailScreen extends StatefulWidget {
   final VoidCallback onBack;
   final String eventId;
   final VoidCallback? onTinderOpen;
-  
+
   const EventDetailScreen({
     super.key,
     required this.onBack,
@@ -32,7 +31,7 @@ class EventDetailScreen extends StatefulWidget {
 
 class _EventDetailScreenState extends State<EventDetailScreen> {
   final ApiService _apiService = Get.find<ApiService>();
-  
+
   bool _isLiked = false;
   int _likeCount = 0;
   Event? _event;
@@ -58,12 +57,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       _event = Event.fromJson(response.data);
       final userId = _apiService.getUserId();
       try {
-        final likeResponse = await _apiService.get('/event/${widget.eventId}/like-status');
+        final likeResponse = await _apiService.get(
+          '/event/${widget.eventId}/like-status',
+        );
         final isLiked = likeResponse.data['liked'] ?? false;
-        final likesCount = likeResponse.data['likesCount'] ?? _event?.likes ?? 0;
+        final likesCount =
+            likeResponse.data['likesCount'] ?? _event?.likes ?? 0;
         bool isJoined = false;
         if (userId != null && _event != null) {
-          final joinResp = await _apiService.get('/event/is-participant/${widget.eventId}/$userId');
+          final joinResp = await _apiService.get(
+            '/event/is-participant/${widget.eventId}/$userId',
+          );
           isJoined = joinResp.data['isParticipant'] == true;
         }
         setState(() {
@@ -85,17 +89,33 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       if (e is dio.DioError && e.response != null) {
         if (e.response?.statusCode == 401) {
           log('🔐 Sesión expirada. Por favor inicia sesión de nuevo.');
-          Get.snackbar('Sesión expirada', 'Por favor inicia sesión de nuevo', snackPosition: SnackPosition.BOTTOM);
+          Get.snackbar(
+            'Sesión expirada',
+            'Por favor inicia sesión de nuevo',
+            snackPosition: SnackPosition.BOTTOM,
+          );
         } else if (e.response?.statusCode == 404) {
           log('❌ Recurso no encontrado (404)');
-          Get.snackbar('No encontrado', 'El evento no existe o fue eliminado', snackPosition: SnackPosition.BOTTOM);
+          Get.snackbar(
+            'No encontrado',
+            'El evento no existe o fue eliminado',
+            snackPosition: SnackPosition.BOTTOM,
+          );
         } else {
           log('❌ Error loading event details: $e');
-          Get.snackbar('Error', 'No se pudo cargar los detalles del evento', snackPosition: SnackPosition.BOTTOM);
+          Get.snackbar(
+            'Error',
+            'No se pudo cargar los detalles del evento',
+            snackPosition: SnackPosition.BOTTOM,
+          );
         }
       } else {
         log('❌ Error loading event details: $e');
-        Get.snackbar('Error', 'No se pudo cargar los detalles del evento', snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar(
+          'Error',
+          'No se pudo cargar los detalles del evento',
+          snackPosition: SnackPosition.BOTTOM,
+        );
       }
       setState(() {
         _isLoading = false;
@@ -104,39 +124,47 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 
   Future<void> _fetchRatings() async {
-    setState(() { _loadingRatings = true; });
+    setState(() {
+      _loadingRatings = true;
+    });
     try {
-      // Stats
-      final statsResp = await _apiService.get('/rating/event/${widget.eventId}/stats');
+      final statsResp = await _apiService.get(
+        '/rating/event/${widget.eventId}/stats',
+      );
       if (statsResp.data is Map) _ratingStats = statsResp.data;
-      
-      // Lista de valoraciones
-      final ratingsResp = await _apiService.get('/rating/event/${widget.eventId}');
+
+      final ratingsResp = await _apiService.get(
+        '/rating/event/${widget.eventId}',
+      );
       if (ratingsResp.data is List) {
         _eventRatings = List<Map<String, dynamic>>.from(ratingsResp.data);
-      } else if (ratingsResp.data is Map && ratingsResp.data['ratings'] is List) {
-        _eventRatings = List<Map<String, dynamic>>.from(ratingsResp.data['ratings']);
+      } else if (ratingsResp.data is Map &&
+          ratingsResp.data['ratings'] is List) {
+        _eventRatings = List<Map<String, dynamic>>.from(
+          ratingsResp.data['ratings'],
+        );
       } else {
         _eventRatings = [];
       }
-      
-      // ✅ CORREGIDO: Usar username del usuario actual para buscar su rating
+
       final userId = _apiService.getUserId();
       if (userId != null && _event != null) {
         try {
-          // Primero intenta obtener el rating por user ID si existe ese endpoint
-          final myRatingResp = await _apiService.get('/rating/user/$userId/event/${widget.eventId}');
+          final myRatingResp = await _apiService.get(
+            '/rating/user/$userId/event/${widget.eventId}',
+          );
           if (myRatingResp.data is Map && myRatingResp.data.isNotEmpty) {
             _myRating = Map<String, dynamic>.from(myRatingResp.data);
           } else {
             _myRating = null;
           }
         } catch (e) {
-          // Fallback: intentar por username
           try {
             final currentUser = Get.find<AuthController>().currentUser;
             if (currentUser != null && currentUser.username != null) {
-              final myRatingResp = await _apiService.get('/rating/user/${currentUser.username}/event/${widget.eventId}');
+              final myRatingResp = await _apiService.get(
+                '/rating/user/${currentUser.username}/event/${widget.eventId}',
+              );
               if (myRatingResp.data is Map && myRatingResp.data.isNotEmpty) {
                 _myRating = Map<String, dynamic>.from(myRatingResp.data);
               } else {
@@ -154,7 +182,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       _eventRatings = [];
       _myRating = null;
     } finally {
-      setState(() { _loadingRatings = false; });
+      setState(() {
+        _loadingRatings = false;
+      });
     }
   }
 
@@ -180,7 +210,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         _isLiked = !_isLiked;
         _likeCount = _isLiked ? _likeCount - 1 : _likeCount + 1;
       });
-      
+
       Get.snackbar(
         'Error',
         'No se pudo actualizar el like: $e',
@@ -192,11 +222,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   Future<void> _shareEvent() async {
     if (_event == null) return;
 
-    final shareText = '¡Mira este evento: ${_event!.title} en ${_event!.venue}! ${_event!.displayPrice} - ${_event!.formattedDate}';
+    final shareText =
+        '¡Mira este evento: ${_event!.title} en ${_event!.venue}! ${_event!.displayPrice} - ${_event!.formattedDate}';
     final eventUrl = 'https://nightup.com/events/${_event!.id}';
-    
+
     log('📤 Sharing event: ${_event!.id}');
-    
+
     try {
       await Get.dialog(
         Dialog(
@@ -235,17 +266,14 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     ],
                   ),
                 ),
-                
+
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
                       const Text(
                         'Copia el texto para compartir:',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(color: Colors.white, fontSize: 16),
                       ),
                       const SizedBox(height: 16),
                       Container(
@@ -275,7 +303,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     ],
                   ),
                 ),
-                
+
                 Container(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -310,7 +338,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         ),
         barrierDismissible: true,
       );
-      
     } catch (e) {
       log('❌ Error sharing event: $e');
       Get.snackbar(
@@ -341,7 +368,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         setState(() {
           _isJoined = true;
         });
-        final joinResp = await _apiService.get('/event/is-participant/${widget.eventId}/$userId');
+        final joinResp = await _apiService.get(
+          '/event/is-participant/${widget.eventId}/$userId',
+        );
         setState(() {
           _isJoined = joinResp.data['isParticipant'] == true;
         });
@@ -357,7 +386,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         setState(() {
           _isJoined = false;
         });
-        final joinResp = await _apiService.get('/event/is-participant/${widget.eventId}/$userId');
+        final joinResp = await _apiService.get(
+          '/event/is-participant/${widget.eventId}/$userId',
+        );
         setState(() {
           _isJoined = joinResp.data['isParticipant'] == true;
         });
@@ -386,7 +417,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       _loadingParticipants = true;
     });
     try {
-      final response = await _apiService.get('/event/${widget.eventId}/participants');
+      final response = await _apiService.get(
+        '/event/${widget.eventId}/participants',
+      );
       List<dynamic> data = [];
       if (response.data is Map && response.data['participants'] is List) {
         data = response.data['participants'];
@@ -411,13 +444,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         if (_loadingParticipants) {
           return const Padding(
             padding: EdgeInsets.all(32),
-            child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+            child: Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
           );
         }
         if (_participants.isEmpty) {
           return const Padding(
             padding: EdgeInsets.all(32),
-            child: Center(child: Text('No hay participantes', style: TextStyle(color: Colors.white70))),
+            child: Center(
+              child: Text(
+                'No hay participantes',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
           );
         }
         return ListView.separated(
@@ -426,9 +466,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           separatorBuilder: (_, __) => const Divider(color: Colors.white12),
           itemBuilder: (context, index) {
             final user = _participants[index];
-            
+
             return ListTile(
-              // ✅ CAMBIO: Usar ImageWithFallback en lugar de CircleAvatar
               leading: ClipOval(
                 child: SizedBox(
                   width: 40,
@@ -443,8 +482,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 ),
               ),
               title: Text(
-                user['username'] ?? 'Usuario', 
-                style: const TextStyle(color: Colors.white)
+                user['username'] ?? 'Usuario',
+                style: const TextStyle(color: Colors.white),
               ),
               onTap: () {
                 Navigator.of(context).pop();
@@ -458,7 +497,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 
   Future<void> _showRatingDialog({bool edit = false}) async {
-    final TextEditingController commentCtrl = TextEditingController(text: (edit && _myRating != null) ? (_myRating!['comment'] ?? '') : '');
+    final TextEditingController commentCtrl = TextEditingController(
+      text: (edit && _myRating != null) ? (_myRating!['comment'] ?? '') : '',
+    );
     int score = edit ? (_myRating?['score'] ?? 5) : 5;
     final currentUser = Get.find<AuthController>().currentUser;
     final username = currentUser?.username;
@@ -469,20 +510,29 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           builder: (context, setState) {
             return AlertDialog(
               backgroundColor: Colors.black,
-              title: Text(edit ? 'Editar valoración' : 'Valorar evento', style: const TextStyle(color: Colors.white)),
+              title: Text(
+                edit ? 'Editar valoración' : 'Valorar evento',
+                style: const TextStyle(color: Colors.white),
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(5, (i) => IconButton(
-                      icon: Icon(i < score ? Icons.star : Icons.star_border, color: Colors.amber),
-                      onPressed: () {
-                        setState(() {
-                          score = i + 1;
-                        });
-                      },
-                    )),
+                    children: List.generate(
+                      5,
+                      (i) => IconButton(
+                        icon: Icon(
+                          i < score ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            score = i + 1;
+                          });
+                        },
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -504,46 +554,77 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   TextButton(
                     onPressed: () async {
                       try {
-                        await _apiService.delete('/rating/${_myRating!['_id']}');
+                        await _apiService.delete(
+                          '/rating/${_myRating!['_id']}',
+                        );
                         Navigator.of(context).pop();
                         await _fetchRatings();
-                        Get.snackbar('Valoración eliminada', 'Tu valoración ha sido eliminada', snackPosition: SnackPosition.BOTTOM);
+                        Get.snackbar(
+                          'Valoración eliminada',
+                          'Tu valoración ha sido eliminada',
+                          snackPosition: SnackPosition.BOTTOM,
+                        );
                       } catch (e) {
-                        Get.snackbar('Error', 'No se pudo eliminar la valoración: $e', snackPosition: SnackPosition.BOTTOM);
+                        Get.snackbar(
+                          'Error',
+                          'No se pudo eliminar la valoración: $e',
+                          snackPosition: SnackPosition.BOTTOM,
+                        );
                       }
                     },
-                    child: const Text('Eliminar valoración', style: TextStyle(color: Colors.red)),
+                    child: const Text(
+                      'Eliminar valoración',
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: Colors.white70),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: () async {
                     try {
                       if (username == null || username.isEmpty) {
-                        Get.snackbar('Error', 'Usuario no identificado', snackPosition: SnackPosition.BOTTOM);
+                        Get.snackbar(
+                          'Error',
+                          'Usuario no identificado',
+                          snackPosition: SnackPosition.BOTTOM,
+                        );
                         return;
                       }
 
                       if (edit && _myRating != null) {
-                        await _apiService.patch('/rating/${_myRating!['_id']}', data: {
-                          'score': score,
-                          'comment': commentCtrl.text,
-                        });
+                        await _apiService.patch(
+                          '/rating/${_myRating!['_id']}',
+                          data: {'score': score, 'comment': commentCtrl.text},
+                        );
                       } else {
-                        await _apiService.post('/rating', data: {
-                          'event': widget.eventId,
-                          'username': username,
-                          'score': score,
-                          'comment': commentCtrl.text,
-                        });
+                        await _apiService.post(
+                          '/rating',
+                          data: {
+                            'event': widget.eventId,
+                            'username': username,
+                            'score': score,
+                            'comment': commentCtrl.text,
+                          },
+                        );
                       }
                       Navigator.of(context).pop();
                       await _fetchRatings();
-                      Get.snackbar('¡Gracias!', 'Tu valoración ha sido guardada', snackPosition: SnackPosition.BOTTOM);
+                      Get.snackbar(
+                        '¡Gracias!',
+                        'Tu valoración ha sido guardada',
+                        snackPosition: SnackPosition.BOTTOM,
+                      );
                     } catch (e) {
-                      Get.snackbar('Error', 'No se pudo guardar la valoración: $e', snackPosition: SnackPosition.BOTTOM);
+                      Get.snackbar(
+                        'Error',
+                        'No se pudo guardar la valoración: $e',
+                        snackPosition: SnackPosition.BOTTOM,
+                      );
                     }
                   },
                   child: Text(edit ? 'Actualizar' : 'Enviar'),
@@ -602,7 +683,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     }
 
     final event = _event!;
-    
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: CustomScrollView(
@@ -725,7 +806,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       ),
                       GlassCard(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           child: Row(
                             children: [
                               Icon(Icons.favorite, color: Colors.red, size: 16),
@@ -743,20 +827,25 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   if (event.tags.isNotEmpty)
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: event.tags.map((tag) {
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.primary.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                            border: Border.all(
+                              color: AppColors.primary.withOpacity(0.3),
+                            ),
                           ),
                           child: Text(
                             tag,
@@ -768,9 +857,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                         );
                       }).toList(),
                     ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   GridView.count(
                     crossAxisCount: 2,
                     shrinkWrap: true,
@@ -805,9 +894,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   if (event.description.isNotEmpty)
                     GlassCard(
                       child: Padding(
@@ -836,65 +925,71 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                         ),
                       ),
                     ),
-                  
+
                   const SizedBox(height: 24),
-                  
-                  _isJoined 
-                    ? Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Colors.red, Colors.orange],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+
+                  _isJoined
+                      ? Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Colors.red, Colors.orange],
                             ),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: _joinEvent,
                             borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              height: 48,
-                              alignment: Alignment.center,
-                              child: const Text(
-                                'Leave Event',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.red.withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _joinEvent,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                height: 48,
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  'Leave Event',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
+                        )
+                      : GradientButton(
+                          onPressed: _joinEvent,
+                          text: 'Join Event',
                         ),
-                      )
-                    : GradientButton(
-                        onPressed: _joinEvent,
-                        text: 'Join Event',
-                      ),
-                  
-                  if (_isJoined || (!_isJoined && _event != null && _event!.participantsCount > 0))
+
+                  if (_isJoined ||
+                      (!_isJoined &&
+                          _event != null &&
+                          _event!.participantsCount > 0))
                     Padding(
                       padding: const EdgeInsets.only(top: 16.0),
                       child: OutlinedButton.icon(
                         onPressed: _showParticipantsDialog,
                         icon: const Icon(Icons.people, color: Colors.white),
-                        label: const Text('Ver participantes', style: TextStyle(color: Colors.white)),
+                        label: const Text(
+                          'Ver participantes',
+                          style: TextStyle(color: Colors.white),
+                        ),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: AppColors.primary),
                           foregroundColor: Colors.white,
                         ),
                       ),
                     ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   GlassCard(
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -903,82 +998,148 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.star, color: Colors.amber, size: 20),
+                              const Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                                size: 20,
+                              ),
                               const SizedBox(width: 8),
                               Text(
-                                _ratingStats != null && _ratingStats!['average'] != null
-                                  ? (_ratingStats!['average'] as num).toStringAsFixed(1)
-                                  : '--',
-                                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                                _ratingStats != null &&
+                                        _ratingStats!['average'] != null
+                                    ? (_ratingStats!['average'] as num)
+                                          .toStringAsFixed(1)
+                                    : '--',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 '(${_ratingStats != null && _ratingStats!['count'] != null ? _ratingStats!['count'] : 0} valoraciones)',
-                                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
                               ),
                               const Spacer(),
                               if (!_loadingRatings && _myRating == null)
                                 OutlinedButton(
                                   onPressed: () => _showRatingDialog(),
-                                  child: const Text('Valorar', style: TextStyle(color: Colors.amber)),
-                                  style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.amber)),
+                                  child: const Text(
+                                    'Valorar',
+                                    style: TextStyle(color: Colors.amber),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Colors.amber),
+                                  ),
                                 ),
                               if (!_loadingRatings && _myRating != null)
                                 OutlinedButton(
-                                  onPressed: () => _showRatingDialog(edit: true),
-                                  child: const Text('Editar', style: TextStyle(color: Colors.amber)),
-                                  style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.amber)),
+                                  onPressed: () =>
+                                      _showRatingDialog(edit: true),
+                                  child: const Text(
+                                    'Editar',
+                                    style: TextStyle(color: Colors.amber),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Colors.amber),
+                                  ),
                                 ),
                             ],
                           ),
                           const SizedBox(height: 12),
                           if (_loadingRatings)
-                            const Center(child: CircularProgressIndicator(color: Colors.amber)),
+                            const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.amber,
+                              ),
+                            ),
                           if (!_loadingRatings && _eventRatings.isEmpty)
-                            const Text('Sé el primero en valorar este evento', style: TextStyle(color: Colors.white54)),
+                            const Text(
+                              'Sé el primero en valorar este evento',
+                              style: TextStyle(color: Colors.white54),
+                            ),
                           if (!_loadingRatings && _eventRatings.isNotEmpty)
-                            ..._eventRatings.take(5).map((r) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // ✅ CAMBIO: Usar ImageWithFallback en lugar de CircleAvatar
-                                  ClipOval(
-                                    child: SizedBox(
-                                      width: 32,
-                                      height: 32,
-                                      child: ImageWithFallback(
-                                        imageUrl: r['avatar']?.toString(),
-                                        fallbackAsset: 'assets/images/default-avatar.png',
-                                        fit: BoxFit.cover,
-                                        width: 32,
-                                        height: 32,
-                                      ),
+                            ..._eventRatings
+                                .take(5)
+                                .map(
+                                  (r) => Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 6,
                                     ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Row(
-                                          children: [
-                                            Text(r['username'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                            const SizedBox(width: 8),
-                                            ...List.generate(5, (i) => Icon(i < (r['score'] ?? 0) ? Icons.star : Icons.star_border, color: Colors.amber, size: 16)),
-                                          ],
-                                        ),
-                                        if ((r['comment'] ?? '').toString().isNotEmpty)
-                                          Padding(
-                                            padding: const EdgeInsets.only(top: 2.0),
-                                            child: Text(r['comment'], style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                                        ClipOval(
+                                          child: SizedBox(
+                                            width: 32,
+                                            height: 32,
+                                            child: ImageWithFallback(
+                                              imageUrl: r['avatar']?.toString(),
+                                              fallbackAsset:
+                                                  'assets/images/default-avatar.png',
+                                              fit: BoxFit.cover,
+                                              width: 32,
+                                              height: 32,
+                                            ),
                                           ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    r['username'] ?? '',
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  ...List.generate(
+                                                    5,
+                                                    (i) => Icon(
+                                                      i < (r['score'] ?? 0)
+                                                          ? Icons.star
+                                                          : Icons.star_border,
+                                                      color: Colors.amber,
+                                                      size: 16,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              if ((r['comment'] ?? '')
+                                                  .toString()
+                                                  .isNotEmpty)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        top: 2.0,
+                                                      ),
+                                                  child: Text(
+                                                    r['comment'],
+                                                    style: const TextStyle(
+                                                      color: Colors.white70,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
-                                ],
-                              ),
-                            )),
+                                ),
                           if (!_loadingRatings && _eventRatings.length > 5)
                             TextButton(
                               onPressed: () async {
@@ -987,72 +1148,136 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                   builder: (context) {
                                     return AlertDialog(
                                       backgroundColor: Colors.black,
-                                      title: const Text('Todas las valoraciones', style: TextStyle(color: Colors.white)),
+                                      title: const Text(
+                                        'Todas las valoraciones',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
                                       content: SizedBox(
                                         width: double.maxFinite,
                                         child: ListView(
                                           shrinkWrap: true,
-                                          children: _eventRatings.map((r) => Padding(
-                                            padding: const EdgeInsets.symmetric(vertical: 6),
-                                            child: Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                // ✅ CAMBIO: Usar ImageWithFallback en lugar de CircleAvatar
-                                                ClipOval(
-                                                  child: SizedBox(
-                                                    width: 32,
-                                                    height: 32,
-                                                    child: ImageWithFallback(
-                                                      imageUrl: r['avatar']?.toString(),
-                                                      fallbackAsset: 'assets/images/default-avatar.png',
-                                                      fit: BoxFit.cover,
-                                                      width: 32,
-                                                      height: 32,
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 10),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Row(
-                                                        children: [
-                                                          Text(r['username'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                                          const SizedBox(width: 8),
-                                                          ...List.generate(5, (i) => Icon(i < (r['score'] ?? 0) ? Icons.star : Icons.star_border, color: Colors.amber, size: 16)),
-                                                        ],
+                                          children: _eventRatings
+                                              .map(
+                                                (r) => Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        vertical: 6,
                                                       ),
-                                                      if ((r['comment'] ?? '').toString().isNotEmpty)
-                                                        Padding(
-                                                          padding: const EdgeInsets.only(top: 2.0),
-                                                          child: Text(r['comment'], style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                                                  child: Row(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      ClipOval(
+                                                        child: SizedBox(
+                                                          width: 32,
+                                                          height: 32,
+                                                          child: ImageWithFallback(
+                                                            imageUrl: r['avatar']
+                                                                ?.toString(),
+                                                            fallbackAsset:
+                                                                'assets/images/default-avatar.png',
+                                                            fit: BoxFit.cover,
+                                                            width: 32,
+                                                            height: 32,
+                                                          ),
                                                         ),
+                                                      ),
+                                                      const SizedBox(width: 10),
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Row(
+                                                              children: [
+                                                                Text(
+                                                                  r['username'] ??
+                                                                      '',
+                                                                  style: const TextStyle(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                  width: 8,
+                                                                ),
+                                                                ...List.generate(
+                                                                  5,
+                                                                  (i) => Icon(
+                                                                    i <
+                                                                            (r['score'] ??
+                                                                                0)
+                                                                        ? Icons
+                                                                              .star
+                                                                        : Icons
+                                                                              .star_border,
+                                                                    color: Colors
+                                                                        .amber,
+                                                                    size: 16,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            if ((r['comment'] ??
+                                                                    '')
+                                                                .toString()
+                                                                .isNotEmpty)
+                                                              Padding(
+                                                                padding:
+                                                                    const EdgeInsets.only(
+                                                                      top: 2.0,
+                                                                    ),
+                                                                child: Text(
+                                                                  r['comment'],
+                                                                  style: const TextStyle(
+                                                                    color: Colors
+                                                                        .white70,
+                                                                    fontSize:
+                                                                        13,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                          ],
+                                                        ),
+                                                      ),
                                                     ],
                                                   ),
                                                 ),
-                                              ],
-                                            ),
-                                          )).toList(),
+                                              )
+                                              .toList(),
                                         ),
                                       ),
                                       actions: [
                                         TextButton(
-                                          onPressed: () => Navigator.of(context).pop(),
-                                          child: const Text('Cerrar', style: TextStyle(color: Colors.white70)),
+                                          onPressed: () =>
+                                              Navigator.of(context).pop(),
+                                          child: const Text(
+                                            'Cerrar',
+                                            style: TextStyle(
+                                              color: Colors.white70,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     );
                                   },
                                 );
                               },
-                              child: const Text('Ver todas las valoraciones', style: TextStyle(color: Colors.amber)),
+                              child: const Text(
+                                'Ver todas las valoraciones',
+                                style: TextStyle(color: Colors.amber),
+                              ),
                             ),
                         ],
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 32),
                 ],
               ),
@@ -1063,7 +1288,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
   }
 
-  Widget _buildInfoCard(IconData icon, String title, String value, Color color) {
+  Widget _buildInfoCard(
+    IconData icon,
+    String title,
+    String value,
+    Color color,
+  ) {
     return GlassCard(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -1074,10 +1304,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             const SizedBox(height: 8),
             Text(
               title,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-              ),
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
             const SizedBox(height: 4),
             Text(

@@ -4,11 +4,10 @@ import '../utils/logger.dart';
 class GoogleSignInService {
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    // Configuración específica para evitar problemas en web
+
     signInOption: SignInOption.standard,
   );
 
-  // ================== SIGN IN ==================
   static Future<GoogleSignInAccount?> signIn() async {
     try {
       return await _googleSignIn.signIn();
@@ -18,7 +17,6 @@ class GoogleSignInService {
     }
   }
 
-  // ================== GET GOOGLE TOKEN ==================
   static Future<String?> getGoogleToken() async {
     try {
       final GoogleSignInAccount? account = await _googleSignIn.signInSilently();
@@ -33,7 +31,6 @@ class GoogleSignInService {
     }
   }
 
-  // ================== SIGN OUT ==================
   static Future<void> signOut() async {
     try {
       await _googleSignIn.signOut();
@@ -42,7 +39,6 @@ class GoogleSignInService {
     }
   }
 
-  // ================== IS SIGNED IN ==================
   static Future<bool> isSignedIn() async {
     try {
       return await _googleSignIn.isSignedIn();
@@ -52,7 +48,6 @@ class GoogleSignInService {
     }
   }
 
-  // ================== GET CURRENT USER ==================
   static Future<GoogleSignInAccount?> getCurrentUser() async {
     try {
       return _googleSignIn.currentUser;

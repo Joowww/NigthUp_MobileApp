@@ -1,4 +1,3 @@
-// lib/services/notification_service.dart
 import 'dart:developer';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
@@ -8,23 +7,25 @@ class NotificationService extends GetxService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notifications = 
+  final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
-  
+
   final RxBool isInitialized = false.obs;
 
   Future<NotificationService> init() async {
     if (isInitialized.value) return this;
-    
+
     log('🔔 Initializing NotificationService...');
-    
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-    
+
     const initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
@@ -35,29 +36,34 @@ class NotificationService extends GetxService {
         initSettings,
         onDidReceiveNotificationResponse: _onNotificationTapped,
       );
-      
-      // Solicitar permisos en Android 13+
+
       await _requestPermissions();
-      
+
       isInitialized.value = true;
       log('✅ NotificationService initialized');
     } catch (e) {
       log('❌ Error initializing notifications: $e');
     }
-    
+
     return this;
   }
 
   Future<void> _requestPermissions() async {
     try {
-      final androidPlugin = _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-      
+      final androidPlugin = _notifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+
       if (androidPlugin != null) {
         await androidPlugin.requestNotificationsPermission();
       }
 
-      final iosPlugin = _notifications.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-      
+      final iosPlugin = _notifications
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
+
       if (iosPlugin != null) {
         await iosPlugin.requestPermissions(
           alert: true,
@@ -72,14 +78,11 @@ class NotificationService extends GetxService {
 
   void _onNotificationTapped(NotificationResponse response) {
     log('🔔 Notification tapped: ${response.payload}');
-    
-    // Navegar a la conversación cuando se toque la notificación
+
     if (response.payload != null && response.payload!.isNotEmpty) {
       try {
-        // El payload contiene el conversationId
         final conversationId = response.payload!;
-        
-        // Navegar a la pantalla de chat
+
         Get.toNamed('/chat', arguments: {'conversationId': conversationId});
       } catch (e) {
         log('❌ Error navigating from notification: $e');
@@ -87,7 +90,6 @@ class NotificationService extends GetxService {
     }
   }
 
-  /// Método compatible con FCM (title + body)
   Future<void> showMessageNotification({
     String? title,
     String? body,
@@ -102,12 +104,12 @@ class NotificationService extends GetxService {
     }
 
     try {
-      // Usar los parámetros que vengan (FCM o directo)
-      final notificationTitle = title ?? 
+      final notificationTitle =
+          title ??
           (isGroup == true ? '📱 $senderName en grupo' : '💬 $senderName');
-      
+
       final notificationBody = body ?? message ?? '';
-      
+
       const androidDetails = AndroidNotificationDetails(
         'messages_channel',
         'Mensajes',
@@ -131,20 +133,19 @@ class NotificationService extends GetxService {
         iOS: iosDetails,
       );
 
-      final displayBody = notificationBody.length > 100 
-          ? '${notificationBody.substring(0, 100)}...' 
+      final displayBody = notificationBody.length > 100
+          ? '${notificationBody.substring(0, 100)}...'
           : notificationBody;
 
-      // Generar ID único
-      final notificationId = conversationId?.hashCode ?? 
-          DateTime.now().millisecondsSinceEpoch;
+      final notificationId =
+          conversationId?.hashCode ?? DateTime.now().millisecondsSinceEpoch;
 
       await _notifications.show(
         notificationId,
         notificationTitle,
         displayBody,
         notificationDetails,
-        payload: conversationId, // Para abrir la conversación al tocar
+        payload: conversationId,
       );
 
       log('✅ Notification shown: $notificationTitle - $displayBody');

@@ -3,14 +3,15 @@ import '../theme/colors.dart';
 
 class SplashScreen extends StatefulWidget {
   final VoidCallback onComplete;
-  
+
   const SplashScreen({super.key, required this.onComplete});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _rotationAnimation;
@@ -22,17 +23,19 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       duration: const Duration(seconds: 3),
       vsync: this,
     );
-    
-    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
-    
-    _rotationAnimation = Tween<double>(begin: 0.0, end: 2.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
+
+    _rotationAnimation = Tween<double>(
+      begin: 0.0,
+      end: 2.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
     _controller.forward();
-    
+
     Future.delayed(const Duration(seconds: 3), widget.onComplete);
   }
 
@@ -69,11 +72,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       height: 192,
       decoration: BoxDecoration(
         gradient: const RadialGradient(
-          colors: [
-            Color(0xFFEC4899),
-            Color(0xFFDB2777),
-            Color(0xFFC026D3),
-          ],
+          colors: [Color(0xFFEC4899), Color(0xFFDB2777), Color(0xFFC026D3)],
           stops: [0.0, 0.5, 1.0],
         ),
         shape: BoxShape.circle,
@@ -87,9 +86,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       ),
       child: Stack(
         children: [
-          // Facetas del disco ball
           ...List.generate(8, (index) => _buildFacet(index)),
-          // Rayos de luz
+
           ...List.generate(12, (index) => _buildLightRay(index)),
         ],
       ),
@@ -101,10 +99,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       top: index * 24.0,
       left: 0,
       right: 0,
-      child: Container(
-        height: 1,
-        color: Colors.white.withOpacity(0.3),
-      ),
+      child: Container(height: 1, color: Colors.white.withOpacity(0.3)),
     );
   }
 

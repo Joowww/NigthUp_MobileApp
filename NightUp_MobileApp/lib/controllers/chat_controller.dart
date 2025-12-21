@@ -1,4 +1,3 @@
-// lib/controllers/chat_controller.dart
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
@@ -95,9 +94,7 @@ class ChatController extends GetxController {
       } else {
         fetchConversations();
       }
-    } catch (e) {
-      // Error handling logically kept silent or could be rethrown if critical, but keeping clean as requested.
-    }
+    } catch (e) {}
   }
 
   void _showNotificationForMessage(Map<String, dynamic> messageData) {
@@ -120,9 +117,7 @@ class ChatController extends GetxController {
         message: text,
         isGroup: isGroup,
       );
-    } catch (e) {
-      // Silent catch
-    }
+    } catch (e) {}
   }
 
   Future<void> fetchConversations() async {
@@ -270,9 +265,7 @@ class ChatController extends GetxController {
         '/chat/message/$messageId/react',
         data: {'emoji': emoji},
       );
-    } catch (e) {
-      // Silent catch
-    }
+    } catch (e) {}
   }
 
   void startTyping() {

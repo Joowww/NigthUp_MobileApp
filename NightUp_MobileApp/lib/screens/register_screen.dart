@@ -22,7 +22,6 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  // ================== CONTROLLERS ==================
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _dateOfBirthController = TextEditingController();
@@ -34,27 +33,71 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   final AuthController _authController = Get.find<AuthController>();
 
-  // ================== STATE ==================
   String? _selectedSecurityQuestion;
   double _passwordStrength = 0;
   bool _passwordsMatch = true;
 
   final List<Map<String, String>> _securityQuestions = [
-    {"key": "security.question.pet_name", "text": translate('security_questions.pet_name')},
-    {"key": "security.question.birth_city", "text": translate('security_questions.birth_city')},
-    {"key": "security.question.mother_maiden_name", "text": translate('security_questions.mother_maiden_name')},
-    {"key": "security.question.first_school", "text": translate('security_questions.first_school')},
-    {"key": "security.question.favorite_food", "text": translate('security_questions.favorite_food')},
-    {"key": "security.question.childhood_street", "text": translate('security_questions.childhood_street')},
-    {"key": "security.question.best_friend", "text": translate('security_questions.best_friend')},
-    {"key": "security.question.first_job", "text": translate('security_questions.first_job')},
-    {"key": "security.question.favorite_book", "text": translate('security_questions.favorite_book')},
-    {"key": "security.question.birth_hospital", "text": translate('security_questions.birth_hospital')},
-    {"key": "security.question.father_middle_name", "text": translate('security_questions.father_middle_name')},
-    {"key": "security.question.first_car", "text": translate('security_questions.first_car')},
-    {"key": "security.question.favorite_teacher", "text": translate('security_questions.favorite_teacher')},
-    {"key": "security.question.graduation_year", "text": translate('security_questions.graduation_year')},
-    {"key": "security.question.favorite_movie", "text": translate('security_questions.favorite_movie')},
+    {
+      "key": "security.question.pet_name",
+      "text": translate('security_questions.pet_name'),
+    },
+    {
+      "key": "security.question.birth_city",
+      "text": translate('security_questions.birth_city'),
+    },
+    {
+      "key": "security.question.mother_maiden_name",
+      "text": translate('security_questions.mother_maiden_name'),
+    },
+    {
+      "key": "security.question.first_school",
+      "text": translate('security_questions.first_school'),
+    },
+    {
+      "key": "security.question.favorite_food",
+      "text": translate('security_questions.favorite_food'),
+    },
+    {
+      "key": "security.question.childhood_street",
+      "text": translate('security_questions.childhood_street'),
+    },
+    {
+      "key": "security.question.best_friend",
+      "text": translate('security_questions.best_friend'),
+    },
+    {
+      "key": "security.question.first_job",
+      "text": translate('security_questions.first_job'),
+    },
+    {
+      "key": "security.question.favorite_book",
+      "text": translate('security_questions.favorite_book'),
+    },
+    {
+      "key": "security.question.birth_hospital",
+      "text": translate('security_questions.birth_hospital'),
+    },
+    {
+      "key": "security.question.father_middle_name",
+      "text": translate('security_questions.father_middle_name'),
+    },
+    {
+      "key": "security.question.first_car",
+      "text": translate('security_questions.first_car'),
+    },
+    {
+      "key": "security.question.favorite_teacher",
+      "text": translate('security_questions.favorite_teacher'),
+    },
+    {
+      "key": "security.question.graduation_year",
+      "text": translate('security_questions.graduation_year'),
+    },
+    {
+      "key": "security.question.favorite_movie",
+      "text": translate('security_questions.favorite_movie'),
+    },
   ];
 
   @override
@@ -64,7 +107,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _confirmPasswordController.addListener(_validatePasswordMatch);
   }
 
-  // ================== PASSWORD STRENGTH ==================
   void _updatePasswordStrength() {
     final password = _passwordController.text;
     double strength = 0;
@@ -81,16 +123,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _validatePasswordMatch() {
     setState(() {
-      _passwordsMatch = _passwordController.text == _confirmPasswordController.text ||
+      _passwordsMatch =
+          _passwordController.text == _confirmPasswordController.text ||
           _confirmPasswordController.text.isEmpty;
     });
   }
 
   void _generatePassword() {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#\$%^&*';
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#\$%^&*';
     final random = Random();
     final password = String.fromCharCodes(
-      Iterable.generate(12, (_) => chars.codeUnitAt(random.nextInt(chars.length))),
+      Iterable.generate(
+        12,
+        (_) => chars.codeUnitAt(random.nextInt(chars.length)),
+      ),
     );
 
     setState(() {
@@ -108,12 +155,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   String _getPasswordStrengthText() {
-    if (_passwordStrength < 0.4) return translate('register.password_strength.weak');
-    if (_passwordStrength < 0.7) return translate('register.password_strength.medium');
+    if (_passwordStrength < 0.4)
+      return translate('register.password_strength.weak');
+    if (_passwordStrength < 0.7)
+      return translate('register.password_strength.medium');
     return translate('register.password_strength.strong');
   }
 
-  // ================== BUILD ==================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -123,7 +171,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           _buildBackgroundGradients(),
           SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 40,
+              ),
               child: Column(
                 children: [
                   _buildBackButton(),
@@ -140,7 +191,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ================== BACKGROUND ==================
   Widget _buildBackgroundGradients() {
     return Stack(
       children: [
@@ -202,19 +252,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: color,
-              blurRadius: 8,
-              spreadRadius: 2,
-            ),
-          ],
+          boxShadow: [BoxShadow(color: color, blurRadius: 8, spreadRadius: 2)],
         ),
       ),
     );
   }
 
-  // ================== UI COMPONENTS ==================
   Widget _buildBackButton() {
     return Align(
       alignment: Alignment.topLeft,
@@ -261,14 +304,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ================== FORM ==================
   Widget _buildRegisterForm() {
     return GlassCard(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // ----------------- FULL NAME -----------------
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
@@ -291,7 +332,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ----------------- USERNAME -----------------
             TextField(
               controller: _usernameController,
               decoration: InputDecoration(
@@ -313,7 +353,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               style: const TextStyle(color: Colors.white),
             ),
 
-            // ----------------- DATE OF BIRTH -----------------
             const SizedBox(height: 12),
             TextField(
               controller: _dateOfBirthController,
@@ -333,12 +372,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: AppColors.neonPink),
                 ),
-                prefixIcon: const Icon(Icons.calendar_today, color: Color(0xB3FFFFFF)),
+                prefixIcon: const Icon(
+                  Icons.calendar_today,
+                  color: Color(0xB3FFFFFF),
+                ),
               ),
               style: const TextStyle(color: Colors.white),
             ),
 
-            // ----------------- PHONE -----------------
             const SizedBox(height: 12),
             TextField(
               controller: _phoneController,
@@ -362,7 +403,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               style: const TextStyle(color: Colors.white),
             ),
 
-            // ----------------- EMAIL -----------------
             const SizedBox(height: 12),
             TextField(
               controller: _emailController,
@@ -386,7 +426,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               style: const TextStyle(color: Colors.white),
             ),
 
-            // ----------------- PASSWORD -----------------
             const SizedBox(height: 12),
             Row(
               children: [
@@ -402,13 +441,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.glassBorder),
+                        borderSide: const BorderSide(
+                          color: AppColors.glassBorder,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(color: AppColors.neonPink),
                       ),
-                      prefixIcon: const Icon(Icons.lock, color: Color(0xB3FFFFFF)),
+                      prefixIcon: const Icon(
+                        Icons.lock,
+                        color: Color(0xB3FFFFFF),
+                      ),
                     ),
                     style: const TextStyle(color: Colors.white),
                   ),
@@ -440,7 +484,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
 
-            // ----------------- CONFIRM PASSWORD -----------------
             const SizedBox(height: 12),
             TextField(
               controller: _confirmPasswordController,
@@ -463,13 +506,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: _passwordsMatch ? AppColors.neonPink : Colors.red,
                   ),
                 ),
-                errorText: _passwordsMatch ? null : translate('register.password_match_error'),
-                prefixIcon: const Icon(Icons.lock_outline, color: Color(0xB3FFFFFF)),
+                errorText: _passwordsMatch
+                    ? null
+                    : translate('register.password_match_error'),
+                prefixIcon: const Icon(
+                  Icons.lock_outline,
+                  color: Color(0xB3FFFFFF),
+                ),
               ),
               style: const TextStyle(color: Colors.white),
             ),
 
-            // ----------------- SECURITY QUESTION -----------------
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
@@ -493,7 +540,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   icon: const Padding(
                     padding: EdgeInsets.only(right: 12),
-                    child: Icon(Icons.arrow_drop_down, color: Color(0xB3FFFFFF)),
+                    child: Icon(
+                      Icons.arrow_drop_down,
+                      color: Color(0xB3FFFFFF),
+                    ),
                   ),
                   items: _securityQuestions.map((question) {
                     return DropdownMenuItem<String>(
@@ -517,7 +567,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
 
-            // ----------------- SECURITY ANSWER -----------------
             const SizedBox(height: 12),
             TextField(
               controller: _securityAnswerController,
@@ -535,14 +584,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: AppColors.neonPink),
                 ),
-                prefixIcon: const Icon(Icons.security, color: Color(0xB3FFFFFF)),
+                prefixIcon: const Icon(
+                  Icons.security,
+                  color: Color(0xB3FFFFFF),
+                ),
               ),
               style: const TextStyle(color: Colors.white),
             ),
 
             const SizedBox(height: 20),
 
-            // ----------------- REGISTER BUTTON -----------------
             GradientButton(
               onPressed: widget.onRegister,
               text: translate('register.register_button'),
@@ -550,7 +601,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
             const SizedBox(height: 16),
 
-            // ----------------- GOOGLE REGISTER -----------------
             OutlinedButton(
               onPressed: _googleRegister,
               style: OutlinedButton.styleFrom(
@@ -565,7 +615,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset('assets/images/google.png', width: 20, height: 20),
+                  Image.asset(
+                    'assets/images/google.png',
+                    width: 20,
+                    height: 20,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     translate('register.google_register'),
@@ -584,7 +638,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ================== GOOGLE REGISTER ==================
   Future<void> _googleRegister() async {
     final success = await _authController.googleLogin();
     if (success) {
@@ -594,7 +647,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // ================== ERROR DIALOG ==================
   void _showErrorDialog(String error) {
     showDialog(
       context: context,
@@ -604,10 +656,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           translate('error.title'),
           style: const TextStyle(color: Colors.white),
         ),
-        content: Text(
-          error,
-          style: const TextStyle(color: Colors.white70),
-        ),
+        content: Text(error, style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -621,7 +670,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ================== DATE PICKER ==================
   Future<void> _selectDateOfBirth(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -632,7 +680,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (picked != null) {
       setState(() {
-        _dateOfBirthController.text = "${picked.day}/${picked.month}/${picked.year}";
+        _dateOfBirthController.text =
+            "${picked.day}/${picked.month}/${picked.year}";
       });
     }
   }

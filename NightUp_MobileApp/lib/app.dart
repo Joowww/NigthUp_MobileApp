@@ -51,14 +51,12 @@ class _AppState extends State<App> {
     print('🔐 Auth status: $status');
 
     if (status['isLoggedIn'] == true) {
-      // BYPASS: Siempre ir al main, ignorar onboarding por ahora
       changeScreen(AppScreen.main);
     } else {
       changeScreen(AppScreen.login);
     }
   }
 
-  // ✅ CAMBIADO: Quitar guion bajo para hacerlo público
   void changeScreen(AppScreen screen) {
     if (screen == AppScreen.main) {
       _initPrivateControllers();

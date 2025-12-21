@@ -23,7 +23,6 @@ class _SearchScreenState extends State<SearchScreen> {
   final ApiService _apiService = Get.find<ApiService>();
   final TextEditingController _searchController = TextEditingController();
 
-  // ✅ NUEVO: Resultados agrupados por tipo
   final RxMap<String, List<dynamic>> _searchResults = <String, List<dynamic>>{
     'users': [],
     'events': [],
@@ -31,20 +30,18 @@ class _SearchScreenState extends State<SearchScreen> {
   }.obs;
 
   final _isSearching = false.obs;
-  final _showResults = false.obs; // ✅ Mostrar/ocultar dropdown de resultados
+  final _showResults = false.obs;
 
   final RxString _activeFilter = 'friends'.obs;
   final MapController _flutterMapController = MapController();
 
-  // ✅ NUEVO: Elemento seleccionado para resaltar
   final RxString _selectedId = ''.obs;
-  final RxString _selectedType = ''.obs; // 'friend', 'event', 'business'
+  final RxString _selectedType = ''.obs;
 
   @override
   void initState() {
     super.initState();
 
-    // ✅ FIX: Executing after build to avoid 'setState() called during build' error
     Future.microtask(() {
       _mapController.refreshData();
     });
@@ -201,7 +198,6 @@ class _SearchScreenState extends State<SearchScreen> {
                 right: 16,
                 child: Column(
                   children: [
-                    // ✅ BUSCADOR CON RESULTADOS
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.grey[800]!.withOpacity(0.6),
@@ -256,7 +252,6 @@ class _SearchScreenState extends State<SearchScreen> {
                       ),
                     ),
 
-                    // ✅ RESULTADOS DE BÚSQUEDA
                     if (_showResults.value) _buildSearchResults(),
 
                     const SizedBox(height: 10),
@@ -372,7 +367,6 @@ class _SearchScreenState extends State<SearchScreen> {
             ],
           );
         } else {
-          // Modo mapa completo (igual que minimap pero con zoom diferente)
           return Stack(
             children: [
               FlutterMap(
@@ -576,7 +570,6 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  // ✅ NUEVO: Widget para mostrar resultados de búsqueda
   Widget _buildSearchResults() {
     final users = _searchResults['users'] ?? [];
     final events = _searchResults['events'] ?? [];
@@ -686,7 +679,6 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  // ✅ NUEVO: Verificar si el elemento está en el mapa
   bool _isItemInMap(String? id, String type) {
     if (id == null) return false;
 
@@ -706,15 +698,12 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  // ✅ NUEVO: Al seleccionar un resultado
   void _onResultSelected(dynamic item, String type) {
     final String? id = item['_id']?.toString();
 
     if (id == null) return;
 
-    // Verificar si está en el mapa
     if (_isItemInMap(id, type)) {
-      // Cambiar al filtro correcto
       switch (type) {
         case 'user':
           _activeFilter.value = 'friends';
@@ -727,16 +716,14 @@ class _SearchScreenState extends State<SearchScreen> {
           break;
       }
 
-      // Marcar como seleccionado
       _selectedId.value = id;
       _selectedType.value = type;
 
-      // Obtener coordenadas y hacer zoom
       LatLng? coords = _getCoordinates(item, type);
 
       if (coords != null) {
-        _isMinimap.value = false; // Salir de modo minimap
-        _flutterMapController.move(coords, 15.0); // Zoom cercano
+        _isMinimap.value = false;
+        _flutterMapController.move(coords, 15.0);
 
         Get.snackbar(
           '✅ Found on map',
@@ -758,11 +745,9 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
 
-    // Cerrar resultados
     _showResults.value = false;
   }
 
-  // ✅ NUEVO: Obtener coordenadas de un elemento
   LatLng? _getCoordinates(dynamic item, String type) {
     try {
       switch (type) {
@@ -791,7 +776,6 @@ class _SearchScreenState extends State<SearchScreen> {
     return null;
   }
 
-  // ✅ MODIFICADO: Marcadores con color diferente si están seleccionados
   Marker? _createFriendMarker(dynamic friend) {
     try {
       if (friend.lat == null || friend.lng == null) {
@@ -894,7 +878,6 @@ class _SearchScreenState extends State<SearchScreen> {
       final name = event['name'] ?? event['title'] ?? 'Event';
       final id = event['_id']?.toString() ?? '';
 
-      // ✅ Verificar si está seleccionado
       final isSelected =
           _selectedId.value == id && _selectedType.value == 'event';
       final borderColor = isSelected ? Colors.greenAccent : Colors.pink;
@@ -976,7 +959,6 @@ class _SearchScreenState extends State<SearchScreen> {
       final name = business['name'] ?? 'Business';
       final id = business['_id']?.toString() ?? '';
 
-      // ✅ Verificar si está seleccionado
       final isSelected =
           _selectedId.value == id && _selectedType.value == 'business';
       final borderColor = isSelected ? Colors.greenAccent : Colors.orange;
@@ -1053,7 +1035,7 @@ class _SearchScreenState extends State<SearchScreen> {
         selected: isActive,
         onSelected: (v) {
           _activeFilter.value = filterValue;
-          // Limpiar selección al cambiar de filtro
+
           _selectedId.value = '';
           _selectedType.value = '';
         },
@@ -1072,7 +1054,6 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  // ✅ NUEVO: Buscar en múltiples endpoints
   void _performSearch(String query) async {
     if (query.isEmpty) {
       _searchResults.value = {'users': [], 'events': [], 'businesses': []};
@@ -1084,14 +1065,12 @@ class _SearchScreenState extends State<SearchScreen> {
     _showResults.value = true;
 
     try {
-      // Búsqueda paralela en los 3 endpoints
       final results = await Future.wait([
         _apiService.get('/user?search=$query&limit=10'),
         _apiService.get('/event?search=$query&limit=10'),
         _apiService.get('/business?search=$query&limit=10'),
       ]);
 
-      // Procesar usuarios
       List<dynamic> users = [];
       if (results[0].data is Map && results[0].data['users'] is List) {
         users = results[0].data['users'];
@@ -1099,7 +1078,6 @@ class _SearchScreenState extends State<SearchScreen> {
         users = results[0].data;
       }
 
-      // Procesar eventos
       List<dynamic> events = [];
       if (results[1].data is Map && results[1].data['events'] is List) {
         events = results[1].data['events'];
@@ -1107,7 +1085,6 @@ class _SearchScreenState extends State<SearchScreen> {
         events = results[1].data;
       }
 
-      // Procesar negocios
       List<dynamic> businesses = [];
       if (results[2].data is Map && results[2].data['businesses'] is List) {
         businesses = results[2].data['businesses'];

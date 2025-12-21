@@ -24,7 +24,6 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
   late DateTime _focusedDay;
   late DateTime _selectedDay;
 
-  // Map of events by date
   final RxMap<DateTime, List<Event>> _events = <DateTime, List<Event>>{}.obs;
   final RxBool _isLoading = true.obs;
 
@@ -63,10 +62,8 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
             .toList();
       }
 
-      // Group events by day
       final groupedEvents = <DateTime, List<Event>>{};
       for (var event in eventList) {
-        // Normalize date to remove time component for calendar grouping
         final date = DateTime(
           event.date.year,
           event.date.month,
@@ -88,13 +85,11 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
   }
 
   List<Event> _getEventsForDay(DateTime day) {
-    // Normalize user selection to key format
     final dateKey = DateTime(day.year, day.month, day.day);
     return _events[dateKey] ?? [];
   }
 
   void _openMapWithLocation(double lat, double lng, String eventName) {
-    // Navigate to FullMapScreen with the event location (uses OpenStreetMap)
     final eventForMap = Event(
       id: 'temp-map-event',
       title: eventName,
@@ -147,7 +142,6 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
 
                 return Column(
                   children: [
-                    // Calendar
                     GlassCard(
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
@@ -291,7 +285,6 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                // Event image
                 Container(
                   width: 80,
                   height: 80,
@@ -308,7 +301,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                // Event details
+
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,7 +319,6 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
                       const SizedBox(height: 4),
                       GestureDetector(
                         onTap: () {
-                          // If venue is "📍 View on Map" and we have coordinates, open map
                           if (event.venue.contains('📍') &&
                               event.lat != null &&
                               event.lng != null) {
@@ -387,8 +379,6 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
   }
 
   String _formatDate(DateTime date) {
-    // Simple format locally without extra package if needed, or stick to basic
-    // "January 1, 2025" style
     const months = [
       'January',
       'February',

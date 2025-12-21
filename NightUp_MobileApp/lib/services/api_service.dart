@@ -47,9 +47,7 @@ class ApiService extends GetxService {
         await _storageService.remove(StorageKeys.token);
         await _storageService.remove(StorageKeys.refreshToken);
         await _storageService.remove(StorageKeys.user);
-      } catch (e) {
-        // Silent catch
-      }
+      } catch (e) {}
     }
 
     _dio.interceptors.add(
@@ -114,7 +112,6 @@ class ApiService extends GetxService {
     );
   }
 
-  // ========== AUTH METHODS ==========
   Future<AuthResponse> login(LoginRequest request) async {
     final response = await _dio.post(
       '/user/auth/login',
@@ -186,14 +183,13 @@ class ApiService extends GetxService {
     return AuthResponse.fromJson(response.data as Map<String, dynamic>);
   }
 
-  // ========== CLOUDINARY UPLOAD METHOD ==========
   Future<String?> uploadToCloudinary(XFile file, String folder) async {
     try {
       final response = await uploadFile(
         '/files/upload',
         file: file,
-        fieldName: 'image', // Requerido por backend
-        data: {'folder': folder}, // Opcional pero recomendado
+        fieldName: 'image',
+        data: {'folder': folder},
       );
 
       if (response.statusCode == 201) {
@@ -217,7 +213,6 @@ class ApiService extends GetxService {
     }
   }
 
-  // ========== INTEREST & TAGS METHODS ==========
   Future<List<dynamic>> getTagsByType(String type) async {
     final response = await _dio.get('/tag/type/$type');
     return response.data;
@@ -227,7 +222,6 @@ class ApiService extends GetxService {
     await _dio.post('/initial-interest/initial-selection', data: interests);
   }
 
-  // ========== FILE UPLOAD METHODS ==========
   Future<dio.Response> uploadFile(
     String path, {
     required XFile file,
@@ -240,7 +234,6 @@ class ApiService extends GetxService {
     String? contentType;
     String finalFileName = file.name;
 
-    // Detectar extensión y content type
     if (finalFileName.toLowerCase().endsWith('.jpg') ||
         finalFileName.toLowerCase().endsWith('.jpeg')) {
       contentType = 'image/jpeg';
@@ -250,14 +243,13 @@ class ApiService extends GetxService {
       contentType = 'image/webp';
     }
 
-    // Mejora para capturas Web que a veces vienen sin extensión o nombre "blob"
     if (kIsWeb) {
       if (finalFileName.isEmpty ||
           finalFileName == 'blob' ||
           !finalFileName.contains('.')) {
         finalFileName = 'upload_${DateTime.now().millisecondsSinceEpoch}.jpg';
       }
-      contentType ??= 'image/jpeg'; // Default para capturas de cámara
+      contentType ??= 'image/jpeg';
     }
 
     if (kIsWeb) {
@@ -275,8 +267,6 @@ class ApiService extends GetxService {
       );
     }
 
-    // NOTA: Algunas versiones del backend pueden esperar 'file' en lugar de 'image'
-    // pero mantenemos 'image' si es lo que pide uploadToCloudinary.
     final formData = dio.FormData.fromMap({fieldName: multipartFile, ...?data});
 
     return await _dio.post(
@@ -320,7 +310,6 @@ class ApiService extends GetxService {
     );
   }
 
-  // ========== GENERIC METHODS ==========
   Future<dio.Response> get(
     String path, {
     Map<String, dynamic>? queryParameters,

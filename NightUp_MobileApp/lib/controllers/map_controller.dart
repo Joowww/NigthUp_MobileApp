@@ -13,7 +13,6 @@ class MapController extends GetxController {
   var isVisibleOnMap = true.obs;
   var isLoading = true.obs;
 
-  // Posición por defecto (Madrid)
   var currentPosition = Position(
     longitude: -3.6929536,
     latitude: 40.4258816,
@@ -106,7 +105,6 @@ class MapController extends GetxController {
       isLoading.value = true;
       final response = await _apiService.get('/friendship/friends');
       if (response.statusCode == 200 && response.data is List) {
-        // Mapeo correcto: extraer el amigo de cada relación
         final List<dynamic> friendships = response.data;
         final List<Friend> friends = friendships.map<Friend>((item) {
           final requester = item['requester'];
@@ -119,7 +117,6 @@ class MapController extends GetxController {
         nearbyFriends.value = friends;
         print('✅ Loaded ${nearbyFriends.length} friends (parsed)');
       } else if (response.data is Map && response.data['friends'] is List) {
-        // Caso alternativo si la API cambia
         final List<dynamic> friendships = response.data['friends'];
         final List<Friend> friends = friendships.map<Friend>((item) {
           final requester = item['requester'];
@@ -131,7 +128,6 @@ class MapController extends GetxController {
         nearbyFriends.value = friends;
         print('✅ Loaded ${nearbyFriends.length} friends (parsed)');
       } else {
-        // FALLBACK: Datos de ejemplo
         nearbyFriends.value = [
           Friend.fromJson({
             '_id': 'friend_1',
@@ -167,7 +163,6 @@ class MapController extends GetxController {
       return;
     }
     try {
-      // ✅ CORREGIDO: Usar endpoint de eventos que SÍ existe
       final response = await _apiService.get('/event?limit=50');
 
       if (response.statusCode == 200) {
@@ -182,7 +177,6 @@ class MapController extends GetxController {
         nearbyEvents.value = eventsList;
         print('✅ Loaded ${nearbyEvents.length} events');
       } else {
-        // ✅ FALLBACK: Datos de ejemplo
         nearbyEvents.value = [
           {
             '_id': 'event_1',
@@ -218,7 +212,6 @@ class MapController extends GetxController {
       return;
     }
     try {
-      // ✅ CORREGIDO: Usar endpoint de negocios que SÍ existe
       final response = await _apiService.get('/business?limit=50');
 
       if (response.statusCode == 200) {
@@ -233,7 +226,6 @@ class MapController extends GetxController {
         nearbyBusinesses.value = businessesList;
         print('✅ Loaded ${nearbyBusinesses.length} businesses');
       } else {
-        // ✅ FALLBACK: Datos de ejemplo
         nearbyBusinesses.value = [
           {
             '_id': 'business_1',
@@ -264,7 +256,6 @@ class MapController extends GetxController {
 
   Future<void> updateUserLocation(double lat, double lng) async {
     try {
-      // ✅ CORREGIDO: Si el endpoint no existe, solo log
       final response = await _apiService.post(
         '/map/location',
         data: [lng, lat],

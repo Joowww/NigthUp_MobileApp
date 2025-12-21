@@ -7,8 +7,6 @@ import '../widgets/web_camera_dialog.dart';
 class ImagePickerService {
   static final ImagePicker _picker = ImagePicker();
 
-  /// Shows a bottom sheet to choose between camera and gallery
-  /// Returns the selected ImageSource or null if cancelled
   static Future<ImageSource?> showImageSourceDialog() async {
     return await Get.bottomSheet<ImageSource>(
       Container(
@@ -88,7 +86,6 @@ class ImagePickerService {
     );
   }
 
-  /// Pick a single image from the selected source
   static Future<XFile?> pickImage({ImageSource? source}) async {
     final ImageSource? selectedSource = source ?? await showImageSourceDialog();
     if (selectedSource == null) return null;
@@ -113,7 +110,6 @@ class ImagePickerService {
     }
   }
 
-  /// Pick multiple images from gallery only
   static Future<List<XFile>> pickMultipleImages() async {
     try {
       final List<XFile> images = await _picker.pickMultiImage(

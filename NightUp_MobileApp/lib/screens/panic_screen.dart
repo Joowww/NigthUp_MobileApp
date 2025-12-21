@@ -5,38 +5,41 @@ import '../widgets/gradient_button.dart';
 
 class PanicScreen extends StatefulWidget {
   final VoidCallback onBack;
-  
+
   const PanicScreen({super.key, required this.onBack});
 
   @override
   State<PanicScreen> createState() => _PanicScreenState();
 }
 
-class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStateMixin {
+class _PanicScreenState extends State<PanicScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _pulseAnimation;
   late Animation<double> _glowAnimation;
-  
+
   int? _countdown;
   bool _isCalling = false;
 
   @override
   void initState() {
     super.initState();
-    
+
     _controller = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
     );
-    
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    
-    _glowAnimation = Tween<double>(begin: 0.2, end: 0.6).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    
+
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+    _glowAnimation = Tween<double>(
+      begin: 0.2,
+      end: 0.6,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
     _controller.repeat(reverse: true);
   }
 
@@ -66,8 +69,6 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
   }
 
   void _makeEmergencyCall() {
-    // In a real app, this would actually call emergency services
-    // For demo purposes, we'll just show a dialog
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -103,25 +104,23 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Warning pattern background
           _buildWarningBackground(),
-          // Pulsing red glow
+
           _buildPulsingGlow(),
-          // Content
+
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
-                  // Header
                   _buildHeader(),
                   const Spacer(),
-                  // Main content
+
                   _buildMainContent(),
                   const Spacer(),
-                  // Emergency actions
+
                   _buildEmergencyActions(),
-                  // Footer
+
                   _buildFooter(),
                 ],
               ),
@@ -150,7 +149,7 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
         child: Container(
           decoration: const BoxDecoration(
             image: DecorationImage(
-              image: AssetImage('assets/warning_pattern.png'), // You'd need to create this
+              image: AssetImage('assets/warning_pattern.png'),
               repeat: ImageRepeat.repeat,
             ),
           ),
@@ -225,7 +224,6 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
   Widget _buildMainContent() {
     return Column(
       children: [
-        // Alert icon with pulse animation
         AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
@@ -234,7 +232,6 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Outer glow
                   Container(
                     width: 160,
                     height: 160,
@@ -251,7 +248,7 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
                       ],
                     ),
                   ),
-                  // Inner circle
+
                   Container(
                     width: 120,
                     height: 120,
@@ -272,7 +269,7 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
           },
         ),
         const SizedBox(height: 32),
-        // Title
+
         const Text(
           'EMERGENCY',
           style: TextStyle(
@@ -285,13 +282,10 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
         const SizedBox(height: 8),
         const Text(
           'Help is one tap away',
-          style: TextStyle(
-            fontSize: 18,
-            color: Colors.red,
-          ),
+          style: TextStyle(fontSize: 18, color: Colors.red),
         ),
         const SizedBox(height: 32),
-        // Countdown
+
         if (_countdown != null)
           Text(
             '$_countdown',
@@ -309,7 +303,6 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
   Widget _buildEmergencyActions() {
     return Column(
       children: [
-        // Emergency call button
         Container(
           width: double.infinity,
           height: 80,
@@ -351,16 +344,14 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
           ),
         ),
         const SizedBox(height: 16),
-        // Secondary actions
+
         Row(
           children: [
             Expanded(
               child: _buildSecondaryAction(
                 icon: Icons.location_on,
                 text: 'Share Location',
-                onTap: () {
-                  // Share location logic
-                },
+                onTap: () {},
               ),
             ),
             const SizedBox(width: 12),
@@ -368,15 +359,13 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
               child: _buildSecondaryAction(
                 icon: Icons.people,
                 text: 'Alert Friends',
-                onTap: () {
-                  // Alert friends logic
-                },
+                onTap: () {},
               ),
             ),
           ],
         ),
         const SizedBox(height: 24),
-        // Warning message
+
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -387,10 +376,7 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
           child: const Text(
             'Press the button above to immediately call emergency services. Your location will be shared automatically with first responders.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.red,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: Colors.red, fontSize: 12),
           ),
         ),
       ],
@@ -438,9 +424,7 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Colors.red.withOpacity(0.2)),
-        ),
+        border: Border(top: BorderSide(color: Colors.red.withOpacity(0.2))),
       ),
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -449,10 +433,7 @@ class _PanicScreenState extends State<PanicScreen> with SingleTickerProviderStat
           SizedBox(width: 8),
           Text(
             'Your safety is our priority',
-            style: TextStyle(
-              color: Colors.red,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.red, fontSize: 14),
           ),
         ],
       ),

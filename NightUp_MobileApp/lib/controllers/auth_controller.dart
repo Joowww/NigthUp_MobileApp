@@ -9,31 +9,26 @@ import 'dart:js' as js;
 import 'dart:convert';
 
 class AuthController extends GetxController {
-  // ================== SERVICIOS ==================
   final ApiService _apiService = Get.find<ApiService>();
 
-  // ================== ESTADO ==================
   final Rx<User?> _currentUser = Rx<User?>(null);
   final RxString _token = ''.obs;
   final RxString _refreshToken = ''.obs;
   final RxBool _isLoading = false.obs;
   final RxString _error = ''.obs;
 
-  // ================== GETTERS ==================
   User? get currentUser => _currentUser.value;
   String get token => _token.value;
   bool get isLoading => _isLoading.value;
   String get error => _error.value;
   bool get isLoggedIn => _token.isNotEmpty;
 
-  // ================== SETTERS ==================
   void setToken(String token) => _token.value = token;
   void setRefreshToken(String refreshToken) =>
       _refreshToken.value = refreshToken;
   void setUser(User user) => _currentUser.value = user;
   void clearError() => _error.value = '';
 
-  // ================== LOGIN EMAIL/PASSWORD ==================
   Future<bool> login(String email, String password) async {
     try {
       _isLoading.value = true;
@@ -50,13 +45,11 @@ class AuthController extends GetxController {
 
       await _saveAuthData();
 
-      // Si el usuario es 'JoelMoreno' o 'MINIM2ok', marca el onboarding como completo automáticamente
       final storage = Get.find<StorageService>();
       if (response.user.username == 'JoelMoreno' ||
           response.user.username == 'MINIM2ok') {
         await storage.write('onboarding_complete', true);
       } else {
-        // Si el usuario ya completó el onboarding antes, márcalo en el storage local
         final onboardingComplete = storage.read('onboarding_complete');
         if (onboardingComplete == true) {
           await storage.write('onboarding_complete', true);
@@ -66,7 +59,6 @@ class AuthController extends GetxController {
 
       print('✅ Login successful for user: ${response.user.username}');
 
-      // ✅ NAVEGACIÓN AUTOMÁTICA
       await _navigateAfterLogin();
 
       return true;
@@ -79,8 +71,6 @@ class AuthController extends GetxController {
     }
   }
 
-  // ================== GOOGLE LOGIN ==================
-  // ================== GOOGLE LOGIN WEB ==================
   Future<Map<String, dynamic>> googleLoginWeb(String idToken) async {
     try {
       _isLoading.value = true;
@@ -102,7 +92,6 @@ class AuthController extends GetxController {
       print('✅ Google Login Web - Success for user: ${response.user.username}');
       print('👤 User is new: ${response.isNewUser}');
 
-      // ✅ NAVEGACIÓN AUTOMÁTICA
       await _navigateAfterLogin();
 
       return {'success': true, 'isNewUser': response.isNewUser};
@@ -115,7 +104,6 @@ class AuthController extends GetxController {
     }
   }
 
-  // Móvil
   Future<bool> googleLogin() async {
     try {
       _isLoading.value = true;
@@ -129,7 +117,6 @@ class AuthController extends GetxController {
         _currentUser.value = response.user;
         await _saveAuthData();
 
-        // ✅ NAVEGACIÓN AUTOMÁTICA
         await _navigateAfterLogin();
 
         return true;
@@ -154,7 +141,6 @@ class AuthController extends GetxController {
       _currentUser.value = response.user;
       await _saveAuthData();
 
-      // ✅ NAVEGACIÓN AUTOMÁTICA
       await _navigateAfterLogin();
 
       return true;
@@ -167,7 +153,6 @@ class AuthController extends GetxController {
     }
   }
 
-  // ================== REGISTRO ==================
   Future<bool> register({
     required String username,
     required String email,
@@ -201,8 +186,6 @@ class AuthController extends GetxController {
 
       print('✅ Registration successful, user should go to interest selection');
 
-      // ✅ NAVEGACIÓN AUTOMÁTICA después de registro
-      // Por ahora saltamos la selección de intereses
       Get.offAll(() => const App());
 
       return true;
@@ -214,21 +197,17 @@ class AuthController extends GetxController {
     }
   }
 
-  // ================== NAVEGACIÓN DESPUÉS DE LOGIN ==================
   Future<void> _navigateAfterLogin() async {
     try {
-      // BYPASS: Siempre ir al home directamente por petición del usuario
-      // Saltamos la comprobación de onboarding/intereses
       print('Navigating to main screen (Interests disabled)');
       Get.offAll(() => const App());
     } catch (e) {
       print('Error navigating after login: $e');
-      // Fallback: navegar al main de todas formas
+
       Get.offAll(() => const App());
     }
   }
 
-  // ================== ONBOARDING ==================
   Future<bool> hasCompletedOnboarding() async {
     try {
       final storage = Get.find<StorageService>();
@@ -292,7 +271,6 @@ class AuthController extends GetxController {
     }
   }
 
-  // ================== RECUPERACIÓN DE CONTRASEÑA ==================
   Future<Map<String, dynamic>> forgotPasswordFlow({
     required String email,
     String? securityAnswer,
@@ -330,7 +308,6 @@ class AuthController extends GetxController {
     }
   }
 
-  // ================== TOKEN ==================
   Future<bool> verifyToken() async {
     try {
       if (_token.isEmpty) return false;
@@ -362,7 +339,6 @@ class AuthController extends GetxController {
     }
   }
 
-  // ================== CHECK AUTH STATUS ==================
   Future<Map<String, dynamic>> checkAuthStatus() async {
     try {
       await loadAuthData();
@@ -381,7 +357,6 @@ class AuthController extends GetxController {
     }
   }
 
-  // ================== LOGOUT ==================
   Future<void> logout() async {
     try {
       if (kIsWeb) {
@@ -430,7 +405,6 @@ class AuthController extends GetxController {
     }
   }
 
-  // ================== STORAGE ==================
   Future<void> _saveAuthData() async {
     try {
       final storage = Get.find<StorageService>();
@@ -457,7 +431,6 @@ class AuthController extends GetxController {
         _refreshToken.value = refreshToken ?? '';
         if (userData != null) {
           try {
-            // Si userData es String, decodificarlo
             if (userData is String) {
               final decoded = jsonDecode(userData);
               _currentUser.value = User.fromJson(decoded);

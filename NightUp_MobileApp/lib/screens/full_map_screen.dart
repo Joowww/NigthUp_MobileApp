@@ -41,12 +41,12 @@ class _FullMapScreenState extends State<FullMapScreen> {
     _selectedEvent = widget.selectedEvent;
   }
 
-void _showBusinessInfo(Business business) {
-  setState(() {
-    _selectedBusiness = business;
-    _selectedEvent = null;
-  });
-}
+  void _showBusinessInfo(Business business) {
+    setState(() {
+      _selectedBusiness = business;
+      _selectedEvent = null;
+    });
+  }
 
   void _showEventInfo(Event event) {
     setState(() {
@@ -73,10 +73,15 @@ void _showBusinessInfo(Business business) {
       if (_isMinimap) {
         _flutterMapController.move(LatLng(40.4637, -3.7492), 5.5);
       } else {
-        // Centrar en el marcador seleccionado
-        if (_selectedBusiness != null && _selectedBusiness!.lat != null && _selectedBusiness!.lng != null) {
-          _flutterMapController.move(LatLng(_selectedBusiness!.lat!, _selectedBusiness!.lng!), 15.0);
-        } else if (_selectedEvent != null && _selectedEvent!.toJson()['location']?['coordinates'] != null) {
+        if (_selectedBusiness != null &&
+            _selectedBusiness!.lat != null &&
+            _selectedBusiness!.lng != null) {
+          _flutterMapController.move(
+            LatLng(_selectedBusiness!.lat!, _selectedBusiness!.lng!),
+            15.0,
+          );
+        } else if (_selectedEvent != null &&
+            _selectedEvent!.toJson()['location']?['coordinates'] != null) {
           final coords = _selectedEvent!.toJson()['location']['coordinates'];
           _flutterMapController.move(LatLng(coords[1], coords[0]), 15.0);
         }
@@ -107,13 +112,29 @@ void _showBusinessInfo(Business business) {
   @override
   Widget build(BuildContext context) {
     final myapp.MapController _mapController = Get.find<myapp.MapController>();
-    final List<Business> allBusinesses = widget.businesses ?? _mapController.nearbyBusinesses.map((e) => Business.fromJson(e)).toList();
-    final List<Event> allEvents = widget.events ?? _mapController.nearbyEvents.map((e) => Event.fromJson(e)).toList();
-    final LatLng initialCenter = _selectedBusiness != null && _selectedBusiness!.lat != null && _selectedBusiness!.lng != null
+    final List<Business> allBusinesses =
+        widget.businesses ??
+        _mapController.nearbyBusinesses
+            .map((e) => Business.fromJson(e))
+            .toList();
+    final List<Event> allEvents =
+        widget.events ??
+        _mapController.nearbyEvents.map((e) => Event.fromJson(e)).toList();
+    final LatLng initialCenter =
+        _selectedBusiness != null &&
+            _selectedBusiness!.lat != null &&
+            _selectedBusiness!.lng != null
         ? LatLng(_selectedBusiness!.lat!, _selectedBusiness!.lng!)
-        : _selectedEvent != null && _selectedEvent!.toJson()['location']?['coordinates'] != null
-            ? LatLng(_selectedEvent!.toJson()['location']['coordinates'][1], _selectedEvent!.toJson()['location']['coordinates'][0])
-            : LatLng(_mapController.currentPosition.value.latitude, _mapController.currentPosition.value.longitude);
+        : _selectedEvent != null &&
+              _selectedEvent!.toJson()['location']?['coordinates'] != null
+        ? LatLng(
+            _selectedEvent!.toJson()['location']['coordinates'][1],
+            _selectedEvent!.toJson()['location']['coordinates'][0],
+          )
+        : LatLng(
+            _mapController.currentPosition.value.latitude,
+            _mapController.currentPosition.value.longitude,
+          );
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -122,7 +143,9 @@ void _showBusinessInfo(Business business) {
           FlutterMap(
             mapController: _flutterMapController,
             options: MapOptions(
-              initialCenter: _isMinimap ? LatLng(40.4637, -3.7492) : initialCenter,
+              initialCenter: _isMinimap
+                  ? LatLng(40.4637, -3.7492)
+                  : initialCenter,
               initialZoom: _isMinimap ? 5.5 : 15.0,
             ),
             children: [
@@ -132,52 +155,69 @@ void _showBusinessInfo(Business business) {
               ),
               if (_selectedBusiness != null)
                 MarkerLayer(
-                  markers: allBusinesses.where((b) => b.lat != null && b.lng != null).map((business) {
-                    final isSelected = _selectedBusiness != null && business.id == _selectedBusiness!.id;
-                    return Marker(
-                      width: isSelected ? 70.0 : 40.0,
-                      height: isSelected ? 70.0 : 40.0,
-                      point: LatLng(business.lat!, business.lng!),
-                      child: GestureDetector(
-                        onTap: () => _showBusinessInfo(business),
-                        child: Icon(
-                          Icons.store,
-                          color: isSelected ? Colors.redAccent : Colors.blue,
-                          size: isSelected ? 50 : 30,
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                  markers: allBusinesses
+                      .where((b) => b.lat != null && b.lng != null)
+                      .map((business) {
+                        final isSelected =
+                            _selectedBusiness != null &&
+                            business.id == _selectedBusiness!.id;
+                        return Marker(
+                          width: isSelected ? 70.0 : 40.0,
+                          height: isSelected ? 70.0 : 40.0,
+                          point: LatLng(business.lat!, business.lng!),
+                          child: GestureDetector(
+                            onTap: () => _showBusinessInfo(business),
+                            child: Icon(
+                              Icons.store,
+                              color: isSelected
+                                  ? Colors.redAccent
+                                  : Colors.blue,
+                              size: isSelected ? 50 : 30,
+                            ),
+                          ),
+                        );
+                      })
+                      .toList(),
                 ),
               if (_selectedEvent != null)
                 MarkerLayer(
-                  markers: allEvents.where((e) {
-                    final loc = (e as dynamic).toJson()['location'];
-                    if (loc is Map && loc['coordinates'] is List && loc['coordinates'].length >= 2) {
-                      return loc['coordinates'][1] != null && loc['coordinates'][0] != null;
-                    }
-                    return false;
-                  }).map((event) {
-                    final isSelected = _selectedEvent != null && event.id == _selectedEvent!.id;
-                    final loc = (event as dynamic).toJson()['location'];
-                    final lat = loc['coordinates'][1];
-                    final lng = loc['coordinates'][0];
-                    return Marker(
-                      width: isSelected ? 70.0 : 40.0,
-                      height: isSelected ? 70.0 : 40.0,
-                      point: LatLng(lat, lng),
-                      child: GestureDetector(
-                        onTap: () => _showEventInfo(event),
-                        child: Icon(
-                          Icons.event,
-                          color: isSelected ? Colors.redAccent : Colors.orange,
-                          size: isSelected ? 50 : 30,
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                  markers: allEvents
+                      .where((e) {
+                        final loc = (e as dynamic).toJson()['location'];
+                        if (loc is Map &&
+                            loc['coordinates'] is List &&
+                            loc['coordinates'].length >= 2) {
+                          return loc['coordinates'][1] != null &&
+                              loc['coordinates'][0] != null;
+                        }
+                        return false;
+                      })
+                      .map((event) {
+                        final isSelected =
+                            _selectedEvent != null &&
+                            event.id == _selectedEvent!.id;
+                        final loc = (event as dynamic).toJson()['location'];
+                        final lat = loc['coordinates'][1];
+                        final lng = loc['coordinates'][0];
+                        return Marker(
+                          width: isSelected ? 70.0 : 40.0,
+                          height: isSelected ? 70.0 : 40.0,
+                          point: LatLng(lat, lng),
+                          child: GestureDetector(
+                            onTap: () => _showEventInfo(event),
+                            child: Icon(
+                              Icons.event,
+                              color: isSelected
+                                  ? Colors.redAccent
+                                  : Colors.orange,
+                              size: isSelected ? 50 : 30,
+                            ),
+                          ),
+                        );
+                      })
+                      .toList(),
                 ),
-              // Marcador de posición actual
+
               MarkerLayer(
                 markers: [
                   Marker(
@@ -191,10 +231,7 @@ void _showBusinessInfo(Business business) {
                       decoration: BoxDecoration(
                         color: AppColors.primary.withOpacity(0.2),
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.primary,
-                          width: 3,
-                        ),
+                        border: Border.all(color: AppColors.primary, width: 3),
                       ),
                       child: const Center(
                         child: Icon(
@@ -210,7 +247,6 @@ void _showBusinessInfo(Business business) {
             ],
           ),
 
-          // Botón de minimapa
           Positioned(
             bottom: 16,
             right: 16,
@@ -226,7 +262,7 @@ void _showBusinessInfo(Business business) {
               tooltip: _isMinimap ? 'Expandir mapa' : 'Vista península',
             ),
           ),
-          // Controles de zoom
+
           Positioned(
             bottom: 86,
             right: 16,
@@ -250,7 +286,6 @@ void _showBusinessInfo(Business business) {
             ),
           ),
 
-          // Panel superior con info del negocio/evento seleccionado
           if (_selectedBusiness != null)
             Positioned(
               top: 60,
@@ -263,12 +298,25 @@ void _showBusinessInfo(Business business) {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(_selectedBusiness!.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text(
+                        _selectedBusiness!.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                       if (_selectedBusiness!.address != null)
-                        Text(_selectedBusiness!.address!, style: const TextStyle(color: Colors.grey)),
+                        Text(
+                          _selectedBusiness!.address!,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0),
-                        child: Text(_selectedBusiness!.displayContact, style: const TextStyle(color: Colors.grey)),
+                        child: Text(
+                          _selectedBusiness!.displayContact,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
                       ),
                     ],
                   ),
@@ -287,20 +335,31 @@ void _showBusinessInfo(Business business) {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(_selectedEvent!.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                      Text(_selectedEvent!.venue, style: const TextStyle(color: Colors.white70)),
+                      Text(
+                        _selectedEvent!.title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        _selectedEvent!.venue,
+                        style: const TextStyle(color: Colors.white70),
+                      ),
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0),
-                        child: Text(_selectedEvent!.description, style: const TextStyle(color: Colors.white)),
+                        child: Text(
+                          _selectedEvent!.description,
+                          style: const TextStyle(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
             ),
-          // ...botón de regreso, refresh, panel inferior...
 
-          // Botón de retroceso cuadrado, gris, estilo igual a + y -
           Positioned(
             top: 12,
             left: 12,
@@ -318,7 +377,11 @@ void _showBusinessInfo(Business business) {
                 ],
               ),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Colors.white,
+                  size: 24,
+                ),
                 onPressed: () {
                   Get.back();
                 },

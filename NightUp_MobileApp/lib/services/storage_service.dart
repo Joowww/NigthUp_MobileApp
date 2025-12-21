@@ -60,7 +60,6 @@ class StorageService extends GetxService {
     }
   }
 
-  // Nuevo método para leer JSON
   Map<String, dynamic>? readJson(String key) {
     try {
       final value = _prefs.getString(key);

@@ -11,18 +11,15 @@ class HomeFeedController extends GetxController
     with GetSingleTickerProviderStateMixin {
   final ApiService _apiService = Get.find<ApiService>();
 
-  // Estado del TabBar y PageView
   late TabController tabController;
   final PageController pageController = PageController();
 
-  // Datos reactivos (observables)
   var discoverEvents = <Event>[].obs;
   var friendsPosts = <Post>[].obs;
   var isLoadingDiscover = true.obs;
   var isLoadingFriends = true.obs;
   var currentPage = 0.obs;
 
-  // Variable para recordar la página actual cuando volvemos de detalles
   var lastViewedPage = 0.obs;
 
   @override
@@ -48,7 +45,7 @@ class HomeFeedController extends GetxController
 
   void fetchDiscoverEvents() async {
     final userId = _apiService.getUserId();
-    log('👤 User ID from token: $userId'); // Log añadido
+    log('👤 User ID from token: $userId');
 
     if (userId == null) {
       log('⚠️ No token or User ID invalid, no se cargan eventos');
@@ -59,25 +56,20 @@ class HomeFeedController extends GetxController
     try {
       log('🔄 Fetching events from /event endpoint...');
 
-      // He quitado el límite para probar si es eso, o puedes dejarlo
       final response = await _apiService.get('/event');
 
-      log('📦 Raw API Response: ${response.data}'); // Ver qué llega EXACTAMENTE
+      log('📦 Raw API Response: ${response.data}');
 
       if (response.data is Map && response.data['events'] is List) {
         final eventsList = response.data['events'] as List;
-        log(
-          '📋 Found ${eventsList.length} events in list',
-        ); // Cuántos hay en la lista
+        log('📋 Found ${eventsList.length} events in list');
 
         discoverEvents.value = eventsList.map((i) {
           return Event.fromJson(i);
         }).toList();
 
-        // CARGAR ESTADOS DE LIKE DESPUÉS DE OBTENER LOS EVENTOS
         await loadLikeStatusForEvents();
       } else if (response.data is List) {
-        // Soporte por si el backend devuelve lista directa
         log('📋 Response is a direct List, converting...');
         final eventsList = response.data as List;
         discoverEvents.value = eventsList
@@ -97,7 +89,6 @@ class HomeFeedController extends GetxController
     }
   }
 
-  // Obtener posts de amigos
   void fetchFriendsPosts() async {
     final userId = _apiService.getUserId();
     if (userId == null) {
@@ -177,7 +168,6 @@ class HomeFeedController extends GetxController
       log('🎯 Toggling like for event: ${event.id}');
       log('📊 Current state - Liked: ${event.isLiked}, Likes: ${event.likes}');
 
-      // Actualizar UI inmediatamente para mejor experiencia de usuario
       final index = discoverEvents.indexWhere((e) => e.id == event.id);
       if (index != -1) {
         if (event.isLiked) {
@@ -194,7 +184,6 @@ class HomeFeedController extends GetxController
         update(['discover_feed', 'bottom_actions']);
       }
 
-      // Hacer la llamada API
       if (event.isLiked) {
         await apiService.post('/event/${event.id}/unlike', data: {});
         log('✅ Like removed from event: ${event.id}');
@@ -204,10 +193,10 @@ class HomeFeedController extends GetxController
       }
     } catch (e) {
       log('❌ Error toggling like: $e');
-      // Revertir cambios en caso de error
+
       final index = discoverEvents.indexWhere((e) => e.id == event.id);
       if (index != -1) {
-        discoverEvents[index] = event; // Volver al estado original
+        discoverEvents[index] = event;
         update(['discover_feed', 'bottom_actions']);
       }
 
@@ -227,7 +216,6 @@ class HomeFeedController extends GetxController
 
       log('📤 Sharing event: ${event.id}');
 
-      // Diálogo simple y funcional que SIEMPRE funciona
       await Get.dialog(
         Dialog(
           backgroundColor: Colors.transparent,
@@ -267,7 +255,6 @@ class HomeFeedController extends GetxController
                   ),
                 ),
 
-                // Content
                 Padding(
                   padding: EdgeInsets.all(20),
                   child: Column(
@@ -302,7 +289,6 @@ class HomeFeedController extends GetxController
                   ),
                 ),
 
-                // Actions
                 Container(
                   padding: EdgeInsets.all(16),
                   child: Row(
@@ -369,7 +355,6 @@ class HomeFeedController extends GetxController
           final isLiked = response.data['liked'] ?? false;
           final likesCount = response.data['likesCount'] ?? event.likes;
 
-          // Verificar si el usuario está unido al evento
           final isJoined = await _checkUserParticipation(event.id, userId);
 
           discoverEvents[i] = event.copyWith(
@@ -393,7 +378,6 @@ class HomeFeedController extends GetxController
     }
   }
 
-  // Método para verificar participación del usuario
   Future<bool> _checkUserParticipation(String eventId, String userId) async {
     try {
       final response = await _apiService.get('/event/$eventId');
@@ -411,7 +395,6 @@ class HomeFeedController extends GetxController
     }
   }
 
-  // Refresh ambos feeds
   void refreshAllFeeds() {
     fetchDiscoverEvents();
     fetchFriendsPosts();
@@ -427,20 +410,17 @@ class HomeFeedController extends GetxController
     ]);
   }
 
-  // Método para refrescar estados cuando se vuelve de EventDetail
   void refreshEventStates() {
     if (discoverEvents.isNotEmpty) {
       loadLikeStatusForEvents();
     }
   }
 
-  // Guardar la página actual antes de ir a detalles
   void saveCurrentPage() {
     lastViewedPage.value = currentPage.value;
     log('💾 Saved current page: ${lastViewedPage.value}');
   }
 
-  // Restaurar la página guardada
   void restoreLastPage() {
     if (discoverEvents.isNotEmpty &&
         lastViewedPage.value < discoverEvents.length) {
