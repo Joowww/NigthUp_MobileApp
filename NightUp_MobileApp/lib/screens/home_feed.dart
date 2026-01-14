@@ -11,8 +11,9 @@ import '../widgets/friend_post_item.dart';
 
 class HomeFeed extends StatefulWidget {
   final void Function(String eventId)? onEventClick;
+  final VoidCallback? onCreatePost;
 
-  const HomeFeed({super.key, this.onEventClick});
+  const HomeFeed({super.key, this.onEventClick, this.onCreatePost});
 
   @override
   State<HomeFeed> createState() => _HomeFeedState();
@@ -38,10 +39,6 @@ class _HomeFeedState extends State<HomeFeed> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          _buildContent(),
-          _buildTopNavigation(),
-          _buildBottomActions(),
-
           _buildContent(),
           _buildTopNavigation(),
           _buildBottomActions(),
@@ -365,6 +362,26 @@ class _HomeFeedState extends State<HomeFeed> {
                     icon: const Icon(Icons.refresh, color: Colors.white),
                     label: const Text(
                       'Recargar',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white10,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        side: const BorderSide(color: Colors.white24),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: widget.onCreatePost,
+                    icon: const Icon(Icons.add_a_photo, color: Colors.white),
+                    label: const Text(
+                      'Sé el primero en compartir',
                       style: TextStyle(color: Colors.white),
                     ),
                     style: ElevatedButton.styleFrom(

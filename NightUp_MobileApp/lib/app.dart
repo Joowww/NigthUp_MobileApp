@@ -16,6 +16,7 @@ import 'screens/create_post/camera_screen.dart';
 import 'widgets/menu_modal.dart';
 import 'widgets/bottom_navigation.dart';
 import 'controllers/auth_controller.dart';
+import 'controllers/chat_controller.dart'; // ✅ AÑADIR
 import 'package:get/get.dart';
 import 'dart:developer';
 import 'services/socket_service.dart';
@@ -48,7 +49,7 @@ class _AppState extends State<App> {
     final AuthController authController = Get.find<AuthController>();
     final status = await authController.checkAuthStatus();
 
-    print('🔐 Auth status: $status');
+    log('🔐 Auth status: $status', name: 'App');
 
     if (status['isLoggedIn'] == true) {
       changeScreen(AppScreen.main);
@@ -61,22 +62,35 @@ class _AppState extends State<App> {
     if (screen == AppScreen.main) {
       _initPrivateControllers();
     }
-    setState(() {
-      _currentScreen = screen;
-    });
+    if (mounted) {
+      setState(() {
+        _currentScreen = screen;
+      });
+    }
   }
 
+  // ✅ ACTUALIZAR ESTE MÉTODO
   void _initPrivateControllers() {
+    // Inicializar SocketService si no está registrado
     if (!Get.isRegistered<SocketService>()) {
       Get.put(SocketService());
+      log('✅ SocketService initialized');
+    }
+
+    // Inicializar ChatController si no está registrado
+    if (!Get.isRegistered<ChatController>()) {
+      Get.put(ChatController());
+      log('✅ ChatController initialized');
     }
   }
 
   void _changeTab(int index) {
-    setState(() {
-      _currentTab = index;
-      _currentScreen = AppScreen.main;
-    });
+    if (mounted) {
+      setState(() {
+        _currentTab = index;
+        _currentScreen = AppScreen.main;
+      });
+    }
   }
 
   Widget _buildCurrentScreen() {
@@ -135,10 +149,11 @@ class _AppState extends State<App> {
                 _currentScreen = AppScreen.eventDetail;
               });
             },
+            onCreatePost: () => _changeTab(2),
           ),
           SearchScreen(),
           const CameraScreen(),
-          ChatScreen(),
+          ChatScreen(), // ✅ ChatController ya está inicializado aquí
           UserProfile(
             onSettingsOpen: () => changeScreen(AppScreen.settings),
             onCalendarOpen: () => changeScreen(AppScreen.calendar),

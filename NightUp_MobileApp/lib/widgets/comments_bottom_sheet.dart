@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart' as dio;
 import 'package:get/get.dart';
 import '../models/post.dart';
 import '../services/api_service.dart';
@@ -44,18 +45,31 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   Future<void> _postComment() async {
     if (_commentController.text.trim().isEmpty) return;
 
+    final content = _commentController.text;
     try {
-      final content = _commentController.text;
       _commentController.clear();
 
       await _apiService.post(
         '/post/${widget.post.id}/comment',
-        data: {'content': content},
+        data: {'text': content}, // Cambiado de 'content' a 'text'
       );
 
       _fetchComments(); // Refresh list
     } catch (e) {
-      Get.snackbar('Error', 'Failed to post comment');
+      String errorMsg = 'No se pudo publicar el comentario';
+      if (e is dio.DioException && e.response?.data != null) {
+        final data = e.response?.data;
+        if (data is Map) {
+          errorMsg = data['message'] ?? data['error'] ?? errorMsg;
+        }
+      }
+      Get.snackbar(
+        'Error',
+        errorMsg,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      _commentController.text = content; // Devolver el texto si falla
     }
   }
 
@@ -134,7 +148,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    comment['content'] ?? '',
+                                    comment['text'] ?? comment['content'] ?? '',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 14,

@@ -15,7 +15,8 @@ class Post {
   final int comments;
   final bool isVideo;
   final bool isLiked;
-  final Map<String, String>? music;
+  final Map<String, dynamic>? music;
+  final String? filterColor; // HEX string like #AARRGGBB
 
   // Específico de Discover (Eventos)
   final String? title;
@@ -34,6 +35,7 @@ class Post {
     this.isVideo = false,
     this.isLiked = false,
     this.music,
+    this.filterColor,
     this.title,
     this.venue,
     this.price,
@@ -52,6 +54,7 @@ class Post {
       isVideo: isVideo,
       isLiked: isLiked ?? this.isLiked,
       music: music,
+      filterColor: filterColor,
       title: title,
       venue: venue,
       price: price,
@@ -94,11 +97,12 @@ class Post {
       isVideo: json['isVideo'] as bool? ?? false,
       isLiked: json['isLiked'] as bool? ?? false,
       music: json['music'] != null
-          ? Map<String, String>.from(json['music'])
+          ? Map<String, dynamic>.from(json['music'])
           : null,
       user: json['user'] != null ? User.fromJson(json['user']) : null,
       likes: json['likesCount'] as int? ?? 0,
       comments: json['commentCount'] as int? ?? 0,
+      filterColor: json['filterColor'] as String?,
     );
   }
 }

@@ -3,9 +3,11 @@ import '../services/api_service.dart';
 import '../models/friend.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/storage_service.dart';
+import 'settings_controller.dart';
 
 class MapController extends GetxController {
   final ApiService _apiService = Get.find<ApiService>();
+  final SettingsController _settingsController = Get.find<SettingsController>();
   var nearbyFriends = [].obs;
   var nearbyUsers = [].obs;
   var nearbyEvents = [].obs;
@@ -51,6 +53,12 @@ class MapController extends GetxController {
       if (!serviceEnabled) {
         print('📍 Location services are disabled - using default location');
         return;
+      }
+
+      // CHECK USER PREFERENCE
+      if (!_settingsController.locationEnabled.value) {
+        print('📍 Location sharing disabled by user in Settings');
+        return; // No obtenemos ubicación si está desactivado por el usuario
       }
 
       permission = await Geolocator.checkPermission();
@@ -258,7 +266,7 @@ class MapController extends GetxController {
     try {
       final response = await _apiService.post(
         '/map/location',
-        data: [lng, lat],
+        data: {'longitude': lng, 'latitude': lat},
       );
       if (response.statusCode == 200 || response.statusCode == 201) {
         print('✅ Location updated to: $lat, $lng');

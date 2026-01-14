@@ -1,8 +1,11 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 import '../services/image_picker_service.dart';
 import '../models/user.dart';
 import 'auth_controller.dart';
+import 'map_controller.dart';
 import '../utils/logger.dart';
 
 class SettingsController extends GetxController {
@@ -178,15 +181,41 @@ class SettingsController extends GetxController {
 
   Future<void> updateLocationVisibility(bool visible) async {
     try {
-      await _apiService.post(
-        '/map/location',
-        data: {'isVisibleOnMap': visible},
-      );
+      // Usar MapController para la lógica de visibilidad real
+      if (Get.isRegistered<MapController>()) {
+        await Get.find<MapController>().setVisibilityOnMap(visible);
+      } else {
+        // Fallback si el controlador no está listo (aunque debería)
+        await _apiService.patch(
+          '/map/visibility',
+          data: {"isVisible": visible},
+        );
+      }
+
       isVisibleOnMap.value = visible;
+
+      // Actualizar privacy settings también
+      await _apiService.put(
+        '/user/privacy-settings',
+        data: {
+          'isVisibleOnMap': visible,
+          'notificationsEnabled': notificationsEnabled.value,
+        },
+      );
+
       Get.snackbar('Éxito', 'Visibilidad en el mapa actualizada');
     } catch (e) {
       Get.snackbar('Error', 'No se pudo actualizar la visibilidad: $e');
     }
+  }
+
+  void updateLocationEnabled(bool enabled) {
+    locationEnabled.value = enabled;
+    // Si se desactiva, podríamos querer limpiar la ubicación o parar updates
+    if (!enabled && Get.isRegistered<MapController>()) {
+      // Opcional: Notificar al mapa que deje de trackear
+    }
+    saveSettings();
   }
 
   void loadSettings() async {
@@ -200,5 +229,11 @@ class SettingsController extends GetxController {
 
   void saveSettings() {
     updatePrivacySettings();
+  }
+
+  void changeLanguage(BuildContext context, String languageCode) {
+    changeLocale(context, languageCode);
+    Get.updateLocale(Locale(languageCode));
+    saveSettings(); // To persist if needed
   }
 }

@@ -54,6 +54,11 @@ class _CameraScreenState extends State<CameraScreen>
       }
     } catch (e) {
       print('Error initializing camera: $e');
+      if (mounted) {
+        setState(() {
+          _isCameraInitialized = false;
+        });
+      }
     }
   }
 
@@ -135,7 +140,13 @@ class _CameraScreenState extends State<CameraScreen>
       setState(() {
         _isRecording = false;
       });
-      Get.to(() => EditPostScreen(file: videoFile, isVideo: true));
+      Get.to(
+        () => EditPostScreen(
+          file: videoFile,
+          isVideo: true,
+          filterColor: _filters[_selectedFilterIndex]['color'],
+        ),
+      );
     } catch (e) {
       print('Error stopping video recording: $e');
     }
@@ -147,7 +158,13 @@ class _CameraScreenState extends State<CameraScreen>
 
     try {
       final XFile image = await _controller!.takePicture();
-      Get.to(() => EditPostScreen(file: image, isVideo: false));
+      Get.to(
+        () => EditPostScreen(
+          file: image,
+          isVideo: false,
+          filterColor: _filters[_selectedFilterIndex]['color'],
+        ),
+      );
     } catch (e) {
       print('Error taking picture: $e');
     }
@@ -158,17 +175,38 @@ class _CameraScreenState extends State<CameraScreen>
       source: ImageSource.gallery,
     );
     if (image != null) {
-      Get.to(() => EditPostScreen(file: image, isVideo: false));
+      Get.to(
+        () => EditPostScreen(
+          file: image,
+          isVideo: false,
+          filterColor: _filters[_selectedFilterIndex]['color'],
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_isCameraInitialized || _controller == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: AppColors.primary),
+              const SizedBox(height: 20),
+              const Text(
+                'Intentando acceder a la cámara...',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: _pickFromGallery,
+                child: const Text('O usar galería'),
+              ),
+            ],
+          ),
         ),
       );
     }

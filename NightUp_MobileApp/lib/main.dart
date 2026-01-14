@@ -1,5 +1,4 @@
 import 'bindings/auth_binding.dart';
-// main.dart - ACTUALIZADO FINAL
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -11,20 +10,29 @@ import 'theme/app_theme.dart';
 import 'app.dart';
 import 'services/storage_service.dart';
 import 'services/api_service.dart';
+import 'services/poll_service.dart';
+import 'services/cloudinary_service.dart'; // ✅ NUEVO
+import 'services/notification_service.dart'; // ✅ NUEVO
+import 'services/jitsi_service.dart'; // ✅ NUEVO
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inicializar Firebase con opciones multiplataforma (obligatorio en web)
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Solo inicializar servicios globales aquí si es necesario, el resto se hace vía Bindings
+  // Inicializar servicios globales
   await Get.putAsync<StorageService>(() => StorageService().init());
   Get.put<http.Client>(http.Client());
   Get.put<ApiService>(ApiService());
-  // Controladores se inicializan vía Bindings
+  Get.put<PollService>(PollService());
+  Get.put<CloudinaryService>(CloudinaryService()); // ✅ NUEVO
+  Get.put<JitsiService>(JitsiService()); // ✅ NUEVO
+  await Get.putAsync<NotificationService>(
+    () => NotificationService().init(),
+  ); // ✅ NUEVO
+
+  // Controladores se inicializan vía Bindings o en _initPrivateControllers
 
   var delegate = await LocalizationDelegate.create(
     fallbackLocale: 'es',
@@ -41,8 +49,8 @@ class NightUpApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var localizationDelegate = LocalizedApp.of(context).delegate;
-    
-    return GetMaterialApp( 
+
+    return GetMaterialApp(
       title: 'NightUp',
       theme: AppTheme.darkTheme,
       debugShowCheckedModeBanner: false,

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import '../models/post.dart';
 import '../widgets/image_with_fallback.dart';
 import '../widgets/comments_bottom_sheet.dart';
 import '../theme/colors.dart';
+import 'package:get/get.dart';
+import '../controllers/home_feed_controller.dart';
 
 class FriendPostItem extends StatefulWidget {
   final Post post;
@@ -25,7 +29,11 @@ class FriendPostItem extends StatefulWidget {
 class _FriendPostItemState extends State<FriendPostItem>
     with SingleTickerProviderStateMixin {
   VideoPlayerController? _videoController;
+  final AudioPlayer _musicPlayer = AudioPlayer();
+  final FocusNode _focusNode = FocusNode();
   bool _isInitialized = false;
+  bool _isMuted = false;
+  bool _isPlaying = true;
   late AnimationController _musicDiscController;
 
   @override
@@ -39,24 +47,119 @@ class _FriendPostItemState extends State<FriendPostItem>
     if (widget.post.isVideo && widget.post.mediaUrl != null) {
       _initVideo();
     }
+
+    // Inicializar música SIEMPRE que haya música seleccionada (ya sea foto o vídeo)
+    if (widget.post.music != null) {
+      _initMusic();
+    }
+  }
+
+  void _initMusic() async {
+    final previewUrl = widget.post.music?['preview'];
+    if (previewUrl != null && previewUrl.isNotEmpty) {
+      print('🎵 [DEBUG] Post ${widget.post.id} music preview URL: $previewUrl');
+      try {
+        await _musicPlayer.setUrl(previewUrl);
+        await _musicPlayer.setLoopMode(LoopMode.one);
+
+        // Buscar el punto de inicio si existe
+        final startTime = widget.post.music?['startTime'];
+        if (startTime != null) {
+          final startMs = (double.tryParse(startTime.toString()) ?? 0.0) * 1000;
+          await _musicPlayer.seek(Duration(milliseconds: startMs.toInt()));
+        }
+
+        print(
+          '🎵 [DEBUG] Post ${widget.post.id} music initialized at $startTime',
+        );
+      } catch (e) {
+        if (mounted) print('🎵 [DEBUG] Post ${widget.post.id} music error: $e');
+      }
+    } else {
+      if (mounted) {
+        print(
+          '🎵 [DEBUG] Post ${widget.post.id} music preview URL is NULL or empty',
+        );
+      }
+    }
   }
 
   void _initVideo() {
+    print(
+      '📹 [DEBUG] Post ${widget.post.id} initializing video: ${widget.post.safeMediaUrl}',
+    );
     _videoController =
         VideoPlayerController.networkUrl(Uri.parse(widget.post.safeMediaUrl))
-          ..initialize().then((_) {
-            setState(() {
-              _isInitialized = true;
-            });
-            _videoController?.setLooping(true);
-          });
+          ..initialize()
+              .then((_) {
+                if (!mounted) return;
+                print('📹 [DEBUG] Post ${widget.post.id} video initialized');
+                setState(() {
+                  _isInitialized = true;
+                });
+                _videoController?.setLooping(true);
+
+                // Si hay música de fondo, silenciamos el vídeo para que no se mezclen los audios
+                if (widget.post.music != null) {
+                  _videoController?.setVolume(0);
+                }
+
+                if (_isPlaying && (_isPlayingPage)) {
+                  _videoController?.play();
+                }
+              })
+              .catchError((error) {
+                if (mounted) {
+                  print(
+                    '📹 [DEBUG] Post ${widget.post.id} video error: $error',
+                  );
+                  // Fallback: stop trying to play video if it fails
+                  setState(() {
+                    _isInitialized = false;
+                  });
+                }
+              });
   }
+
+  bool _isPlayingPage = false;
 
   @override
   void dispose() {
     _videoController?.dispose();
+    _musicPlayer.dispose();
     _musicDiscController.dispose();
+    _focusNode.dispose();
     super.dispose();
+  }
+
+  void _togglePlayPause() {
+    setState(() {
+      _isPlaying = !_isPlaying;
+
+      if (_isPlaying) {
+        _videoController?.play();
+        if (widget.post.music != null) {
+          _musicPlayer.play();
+        }
+        _musicDiscController.repeat();
+      } else {
+        _videoController?.pause();
+        _musicPlayer.pause();
+        _musicDiscController.stop();
+      }
+    });
+  }
+
+  void _toggleMute() {
+    setState(() {
+      _isMuted = !_isMuted;
+      final volume = _isMuted ? 0.0 : 1.0;
+
+      _videoController?.setVolume(volume);
+      if (widget.post.music != null) {
+        _musicPlayer.setVolume(volume);
+      }
+    });
   }
 
   @override
@@ -64,38 +167,105 @@ class _FriendPostItemState extends State<FriendPostItem>
     return VisibilityDetector(
       key: Key('post-${widget.post.id}'),
       onVisibilityChanged: (info) {
+        if (!mounted) return;
         if (info.visibleFraction > 0.8) {
-          _videoController?.play();
-          _musicDiscController.repeat();
+          _isPlayingPage = true;
+          if (_isPlaying) {
+            _videoController?.play();
+            if (widget.post.music != null) {
+              _musicPlayer.play();
+            }
+            _musicDiscController.repeat();
+          }
+          // Request focus for keyboard events
+          FocusScope.of(context).requestFocus(_focusNode);
         } else {
+          _isPlayingPage = false;
           _videoController?.pause();
+          _musicPlayer.pause();
           _musicDiscController.stop();
         }
       },
-      child: Container(
-        height: MediaQuery.of(context).size.height - 150, // Ajustat per barres
-        width: double.infinity,
-        color: Colors.black,
-        child: Stack(
-          children: [
-            // 1. Multimedia (Vídeo o Foto)
-            _buildMedia(),
+      child: Focus(
+        focusNode: _focusNode,
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (event.logicalKey == LogicalKeyboardKey.space &&
+              event is KeyDownEvent) {
+            _togglePlayPause();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Container(
+          height: MediaQuery.of(context).size.height - 150,
+          width: double.infinity,
+          color: Colors.black,
+          child: Stack(
+            children: [
+              // 1. Multimedia (Vídeo o Foto)
+              _buildMedia(),
 
-            // 2. Gradient inferior per llegibilitat
-            _buildGradient(),
+              // 2. Filtro overlay
+              if (widget.post.filterColor != null)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(
+                      color: _hexToColor(widget.post.filterColor!),
+                    ),
+                  ),
+                ),
 
-            // 3. Informació l'usuari i la música (Esquerra inferior)
-            _buildLeftOverlay(),
+              // 3. Gradient inferior per llegibilitat
+              _buildGradient(),
 
-            // 4. Botons d'acció (Dreta inferior)
-            _buildRightOverlay(),
-          ],
+              // 4. Informació l'usuari i la música (Esquerra inferior)
+              _buildLeftOverlay(),
+
+              // 5. Botons d'acció (Dreta inferior)
+              _buildRightOverlay(),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  Color _hexToColor(String hex) {
+    try {
+      return Color(int.parse(hex.replaceFirst('#', ''), radix: 16));
+    } catch (e) {
+      return Colors.transparent;
+    }
+  }
+
   Widget _buildMedia() {
+    return GestureDetector(
+      onTap: _togglePlayPause,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          _buildPrimaryMedia(),
+          if (!_isPlaying)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.black45,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white24, width: 2),
+              ),
+              child: const Icon(
+                Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 80,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrimaryMedia() {
     if (widget.post.isVideo) {
       return Center(
         child: _isInitialized
@@ -195,7 +365,7 @@ class _FriendPostItemState extends State<FriendPostItem>
                   child: SizedBox(
                     height: 20,
                     child: Text(
-                      '${widget.post.music!['title']} - ${widget.post.music!['artist']}',
+                      '${widget.post.music?['title'] ?? 'Unknown'} - ${widget.post.music?['artist'] ?? 'Unknown'}',
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -234,8 +404,23 @@ class _FriendPostItemState extends State<FriendPostItem>
             },
           ),
           const SizedBox(height: 20),
-          _ActionButton(icon: Icons.share, label: 'Share', onTap: () {}),
-          const SizedBox(height: 30),
+          _ActionButton(
+            icon: Icons.share,
+            label: 'Share',
+            onTap: () {
+              Get.find<HomeFeedController>().sharePost(widget.post);
+            },
+          ),
+          // Botó Mute
+          IconButton(
+            onPressed: _toggleMute,
+            icon: Icon(
+              _isMuted ? Icons.volume_off : Icons.volume_up,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 20),
           // El Disc de Música que gira
           RotationTransition(
             turns: _musicDiscController,

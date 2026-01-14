@@ -13,6 +13,9 @@ class ApiService extends GetxService {
   late dio.Dio _dio;
   final StorageService _storageService = Get.find<StorageService>();
 
+  // ✅ EXPONER BASEURL PARA SOCKET
+  String get baseUrl => ApiConstants.baseUrl;
+
   @override
   void onInit() {
     super.onInit();
@@ -183,19 +186,26 @@ class ApiService extends GetxService {
     return AuthResponse.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<String?> uploadToCloudinary(XFile file, String folder) async {
+  Future<String?> uploadToCloudinary(
+    XFile file,
+    String folder, {
+    String resourceType = 'image',
+  }) async {
     try {
       final response = await uploadFile(
         '/files/upload',
         file: file,
         fieldName: 'image',
-        data: {'folder': folder},
+        data: {'folder': folder, 'resourceType': resourceType},
       );
 
       if (response.statusCode == 201) {
         final data = response.data;
         if (data['status'] == 'success') {
-          return data['image_url'];
+          return data['file_url'] ??
+              data['image_url'] ??
+              data['url'] ??
+              data['secure_url'];
         }
       }
       throw Exception(
@@ -234,22 +244,43 @@ class ApiService extends GetxService {
     String? contentType;
     String finalFileName = file.name;
 
-    if (finalFileName.toLowerCase().endsWith('.jpg') ||
-        finalFileName.toLowerCase().endsWith('.jpeg')) {
+    final lowerName = finalFileName.toLowerCase();
+    if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) {
       contentType = 'image/jpeg';
-    } else if (finalFileName.toLowerCase().endsWith('.png')) {
+    } else if (lowerName.endsWith('.png')) {
       contentType = 'image/png';
-    } else if (finalFileName.toLowerCase().endsWith('.webp')) {
+    } else if (lowerName.endsWith('.webp')) {
       contentType = 'image/webp';
+    } else if (lowerName.endsWith('.mp3')) {
+      contentType = 'audio/mpeg';
+    } else if (lowerName.endsWith('.m4a')) {
+      contentType = 'audio/mp4';
+    } else if (lowerName.endsWith('.wav')) {
+      contentType = 'audio/wav';
+    } else if (lowerName.endsWith('.aac')) {
+      contentType = 'audio/aac';
+    } else if (lowerName.endsWith('.webm')) {
+      contentType =
+          'audio/webm'; // O video/webm dependiento del contenido, pero audio rec suele ser esto
+    } else if (lowerName.endsWith('.ogg')) {
+      contentType = 'audio/ogg'; // O video/ogg
     }
 
     if (kIsWeb) {
       if (finalFileName.isEmpty ||
           finalFileName == 'blob' ||
           !finalFileName.contains('.')) {
-        finalFileName = 'upload_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        // En web a veces el nombre se pierde. Ajustamos según resourceType
+        final String resourceType = data?['resourceType'] ?? 'image';
+        if (resourceType == 'video' || resourceType == 'audio') {
+          // En Web, casi siempre grabamos en webm. Usar .webm ayuda a Cloudinary a entender el codec.
+          finalFileName =
+              'upload_${DateTime.now().millisecondsSinceEpoch}.webm';
+        } else {
+          finalFileName = 'upload_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        }
       }
-      contentType ??= 'image/jpeg';
+      contentType ??= 'application/octet-stream';
     }
 
     if (kIsWeb) {
@@ -453,6 +484,8 @@ class ApiService extends GetxService {
         e.type == dio.DioExceptionType.unknown;
   }
 
+  // ==================== JWT HELPERS ====================
+
   String? getUserId() {
     final token = _storageService.read(StorageKeys.token);
     if (token != null) {
@@ -473,6 +506,66 @@ class ApiService extends GetxService {
         final decoded = utf8.decode(base64Url.decode(payload));
         final payloadMap = json.decode(decoded);
         return payloadMap['id']?.toString();
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  // ✅ AÑADIR MÉTODO PARA OBTENER USERNAME DEL TOKEN JWT
+  String? getUsername() {
+    final token = _storageService.read(StorageKeys.token);
+    if (token != null) {
+      try {
+        final parts = token.split('.');
+        if (parts.length != 3) return null;
+
+        String payload = parts[1];
+        switch (payload.length % 4) {
+          case 2:
+            payload += '==';
+            break;
+          case 3:
+            payload += '=';
+            break;
+        }
+
+        final decoded = utf8.decode(base64Url.decode(payload));
+        final payloadMap = json.decode(decoded);
+
+        // Intentar obtener username de diferentes campos posibles
+        return payloadMap['username']?.toString() ??
+            payloadMap['name']?.toString() ??
+            payloadMap['email']?.toString()?.split('@')[0] ??
+            'Usuario';
+      } catch (e) {
+        return 'Usuario';
+      }
+    }
+    return 'Usuario';
+  }
+
+  // ✅ MÉTODO ADICIONAL: Obtener información completa del usuario del token
+  Map<String, dynamic>? getUserFromToken() {
+    final token = _storageService.read(StorageKeys.token);
+    if (token != null) {
+      try {
+        final parts = token.split('.');
+        if (parts.length != 3) return null;
+
+        String payload = parts[1];
+        switch (payload.length % 4) {
+          case 2:
+            payload += '==';
+            break;
+          case 3:
+            payload += '=';
+            break;
+        }
+
+        final decoded = utf8.decode(base64Url.decode(payload));
+        return json.decode(decoded) as Map<String, dynamic>;
       } catch (e) {
         return null;
       }

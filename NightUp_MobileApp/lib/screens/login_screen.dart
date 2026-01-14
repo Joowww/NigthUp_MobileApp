@@ -8,6 +8,7 @@ import '../controllers/auth_controller.dart';
 import '../theme/colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/gradient_button.dart';
+import '../services/storage_service.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLogin;
@@ -31,16 +32,31 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthController _authController = Get.find<AuthController>();
 
   bool _rememberMe = false;
+  bool _obscurePassword = true;
   bool _isGoogleInitialized = false;
 
   @override
   @override
   void initState() {
     super.initState();
+    _loadSavedCredentials();
     if (kIsWeb) {
       _initializeGoogleGIS();
       _registerGlobalHandler();
       _handleOAuthResponse();
+    }
+  }
+
+  void _loadSavedCredentials() {
+    final storage = Get.find<StorageService>();
+    final savedUsername = storage.read('remembered_username');
+    final rememberMe = storage.read('remember_me') ?? false;
+
+    if (rememberMe && savedUsername != null) {
+      setState(() {
+        _emailController.text = savedUsername;
+        _rememberMe = true;
+      });
     }
   }
 
@@ -72,6 +88,19 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (success) {
+      // Save or clear credentials
+      final storage = Get.find<StorageService>();
+      if (_rememberMe) {
+        await storage.write(
+          'remembered_username',
+          _emailController.text.trim(),
+        );
+        await storage.write('remember_me', true);
+      } else {
+        await storage.remove('remembered_username');
+        await storage.write('remember_me', false);
+      }
+
       // Siempre ir al home, intereses deshabilitados
       Get.offAll(() => const App());
     } else {
@@ -153,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
           cancel_on_tap_outside: true,
           context: 'use',
           ux_mode: 'popup',
-          use_fedcm_for_prompt: true,
+          use_fedcm_for_prompt: false,
           itp_support: true
         });
         
@@ -168,26 +197,12 @@ class _LoginScreenState extends State<LoginScreen> {
         });
         
       } else {
-        console.error('❌ Google Identity Services not available');
-
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-          console.log('✅ GIS script loaded dynamically');
-          _initializeGIS("$clientId");
-        };
-        document.head.appendChild(script);
+        console.error('❌ Google script not ready yet');
       }
       ''',
       ]);
     } catch (e) {
       print('❌ Error initializing GIS: $e');
-      // Reintentar después de un delay
-      Future.delayed(const Duration(seconds: 2), () {
-        _initializeGIS(clientId);
-      });
     }
   }
 
@@ -418,7 +433,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildPasswordField() {
     return TextField(
       controller: _passwordController,
-      obscureText: true,
+      obscureText: _obscurePassword,
       decoration: InputDecoration(
         labelText: translate('login.password_label'),
         labelStyle: const TextStyle(color: Color(0xB3FFFFFF)),
@@ -432,6 +447,13 @@ class _LoginScreenState extends State<LoginScreen> {
           borderSide: const BorderSide(color: AppColors.neonPink),
         ),
         prefixIcon: const Icon(Icons.lock, color: Color(0xB3FFFFFF)),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            color: const Color(0xB3FFFFFF),
+          ),
+          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+        ),
       ),
       style: const TextStyle(color: Colors.white),
     );

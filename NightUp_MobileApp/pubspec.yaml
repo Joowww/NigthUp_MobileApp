@@ -64,8 +64,8 @@ dependencies:
   
   # Others
   flutter_svg: ^2.0.9
-  url_launcher: ^6.2.4
-  permission_handler: ^11.2.0
+  url_launcher: ^6.3.2
+  permission_handler: ^12.0.1
   flutter_dotenv: ^5.1.0
 
   # NUEVAS PARA POSTS Y FEEDS
@@ -80,6 +80,11 @@ dependencies:
   path_provider: ^2.1.5
   just_audio: ^0.10.5
   logger: ^2.6.2
+  record: ^6.1.2
+  audio_waveforms: ^2.0.1
+  audioplayers: ^6.5.1
+  universal_io: ^2.3.1
+  jitsi_meet_wrapper: ^0.2.0+1
 
 dev_dependencies:
   flutter_test:

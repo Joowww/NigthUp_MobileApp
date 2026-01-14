@@ -54,9 +54,9 @@ class HomeFeedController extends GetxController
     }
     isLoadingDiscover.value = true;
     try {
-      log('🔄 Fetching events from /event endpoint...');
+      log('🔄 Fetching ALL events from /event endpoint...');
 
-      final response = await _apiService.get('/event');
+      final response = await _apiService.get('/event?limit=1000&page=1');
 
       log('📦 Raw API Response: ${response.data}');
 
@@ -114,6 +114,7 @@ class HomeFeedController extends GetxController
       }
 
       friendsPosts.value = postsData
+          .where((i) => i != null)
           .map((i) => Post.fromFriendPostJson(i))
           .toList();
 
@@ -266,7 +267,7 @@ class HomeFeedController extends GetxController
                       SizedBox(height: 16),
                       Container(
                         width: double.infinity,
-                        padding: EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: AppColors.glassWhite,
                           borderRadius: BorderRadius.circular(12),
@@ -274,12 +275,15 @@ class HomeFeedController extends GetxController
                         ),
                         child: SelectableText(
                           '$shareText\n$eventUrl',
-                          style: TextStyle(color: Colors.white, fontSize: 14),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
-                      SizedBox(height: 16),
-                      Text(
-                        'Selecciona y copia el texto',
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Selecciona y copia el texto arriba',
                         style: TextStyle(
                           color: AppColors.primary,
                           fontSize: 12,
@@ -290,27 +294,23 @@ class HomeFeedController extends GetxController
                 ),
 
                 Container(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
                       Expanded(
-                        child: TextButton(
-                          onPressed: () {
-                            Get.back();
-                          },
-                          style: TextButton.styleFrom(
+                        child: ElevatedButton(
+                          onPressed: () => Get.back(),
+                          style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            padding: EdgeInsets.symmetric(vertical: 12),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Text(
+                          child: const Text(
                             'Cerrar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
                       ),
@@ -334,6 +334,118 @@ class HomeFeedController extends GetxController
     }
   }
 
+  Future<void> sharePost(Post post) async {
+    try {
+      final shareText =
+          '¡Mira el nuevo post de @${post.user?.username ?? "user"} en NightUp!\n"${post.caption ?? ""}"';
+      final postUrl = 'https://nightup.com/posts/${post.id}';
+
+      log('📤 Sharing post: ${post.id}');
+
+      await Get.dialog(
+        Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.neonGradient,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.share, color: Colors.white, size: 24),
+                      SizedBox(width: 12),
+                      Text(
+                        'Compartir Publicación',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Copia el texto para compartir:',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.glassWhite,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.glassBorder),
+                        ),
+                        child: SelectableText(
+                          '$shareText\n$postUrl',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Podrás compartirlo en tus chats o redes',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Get.back(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Cerrar'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      log('❌ Error sharing post: $e');
+    }
+  }
+
   Future<void> loadLikeStatusForEvents() async {
     try {
       final apiService = Get.find<ApiService>();
@@ -344,9 +456,14 @@ class HomeFeedController extends GetxController
         return;
       }
 
-      log('🔄 Loading like status for ${discoverEvents.length} events...');
+      final eventsToLoad = discoverEvents.length > 20
+          ? 20
+          : discoverEvents.length;
+      log(
+        'Loading like status for first $eventsToLoad events (out of ${discoverEvents.length})...',
+      );
 
-      for (int i = 0; i < discoverEvents.length; i++) {
+      for (int i = 0; i < eventsToLoad; i++) {
         final event = discoverEvents[i];
         try {
           final response = await apiService.get(
@@ -372,7 +489,7 @@ class HomeFeedController extends GetxController
       }
 
       update(['discover_feed', 'bottom_actions']);
-      log('✅ Like status loaded for all events');
+      log('✅ Like status loaded for first $eventsToLoad events');
     } catch (e) {
       debugPrint('❌ Error loading like status: $e');
     }

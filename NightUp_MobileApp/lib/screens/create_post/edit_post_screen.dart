@@ -11,13 +11,20 @@ import 'package:nightup_mobile_app/services/api_service.dart';
 import 'package:nightup_mobile_app/theme/colors.dart';
 import 'package:video_player/video_player.dart';
 import 'package:just_audio/just_audio.dart';
-import '../../app.dart';
+import 'package:nightup_mobile_app/controllers/home_feed_controller.dart';
+import 'package:dio/dio.dart' as dio;
 
 class EditPostScreen extends StatefulWidget {
   final XFile file;
   final bool isVideo;
+  final Color? filterColor;
 
-  const EditPostScreen({super.key, required this.file, required this.isVideo});
+  const EditPostScreen({
+    super.key,
+    required this.file,
+    required this.isVideo,
+    this.filterColor,
+  });
 
   @override
   State<EditPostScreen> createState() => _EditPostScreenState();
@@ -413,20 +420,27 @@ class _EditPostScreenState extends State<EditPostScreen>
   }
 
   Widget _buildMediaPreview() {
-    return Container(
-      width: double.infinity,
-      height: MediaQuery.of(context).size.width,
-      color: Colors.grey[900],
-      child: widget.isVideo
-          ? (_videoController != null && _videoController!.value.isInitialized
-                ? AspectRatio(
-                    aspectRatio: _videoController!.value.aspectRatio,
-                    child: VideoPlayer(_videoController!),
-                  )
-                : const Center(child: CircularProgressIndicator()))
-          : (kIsWeb
-                ? Image.network(widget.file.path, fit: BoxFit.cover)
-                : Image.file(File(widget.file.path), fit: BoxFit.cover)),
+    return Stack(
+      children: [
+        Container(
+          width: double.infinity,
+          height: MediaQuery.of(context).size.width,
+          color: Colors.grey[900],
+          child: widget.isVideo
+              ? (_videoController != null &&
+                        _videoController!.value.isInitialized
+                    ? AspectRatio(
+                        aspectRatio: _videoController!.value.aspectRatio,
+                        child: VideoPlayer(_videoController!),
+                      )
+                    : const Center(child: CircularProgressIndicator()))
+              : (kIsWeb
+                    ? Image.network(widget.file.path, fit: BoxFit.cover)
+                    : Image.file(File(widget.file.path), fit: BoxFit.cover)),
+        ),
+        if (widget.filterColor != null)
+          Positioned.fill(child: Container(color: widget.filterColor)),
+      ],
     );
   }
 
@@ -481,6 +495,7 @@ class _EditPostScreenState extends State<EditPostScreen>
       final String? mediaUrl = await apiService.uploadToCloudinary(
         widget.file,
         'posts',
+        resourceType: widget.isVideo ? 'video' : 'image',
       );
 
       if (mediaUrl == null) {
@@ -492,37 +507,78 @@ class _EditPostScreenState extends State<EditPostScreen>
         'caption': _captionController.text,
         'location': _locationController.text,
         'isVideo': widget.isVideo,
-        'mediaUrl': mediaUrl, // Enviamos el string obtenido
+        'mediaUrl': mediaUrl,
       };
 
-      if (_selectedMusic != null) {
-        postData['musicTitle'] = _selectedMusic!['title'];
-        postData['musicArtist'] = _selectedMusic!['artist'];
-        postData['musicCover'] = _selectedMusic!['cover'];
+      if (widget.filterColor != null) {
+        postData['filterColor'] =
+            '#${widget.filterColor!.value.toRadixString(16).padLeft(8, '0')}';
       }
 
-      // 3. Crear el post en el backend con un POST normal (JSON)
-      await apiService.post('/posts/create', data: postData);
+      if (_selectedMusic != null) {
+        postData['music'] = {
+          'title': _selectedMusic!['title'],
+          'artist': _selectedMusic!['artist'],
+          'cover': _selectedMusic!['cover'],
+          'preview': _selectedMusic!['preview'],
+          'startTime': _musicStartTime, // Guardar el punto de inicio escogido
+        };
+      }
+
+      print(
+        '📤 [DEBUG] Enviando post al backend (JSON): ${jsonEncode(postData)}',
+      );
+
+      // 3. Crear el post en el backend (JSON puro)
+      final response = await apiService.post('/post/create', data: postData);
+      print('✅ [DEBUG] Post creado con éxito: ${response.statusCode}');
+
+      // 4. Refrescar el feed de amigos
+      try {
+        if (Get.isRegistered<HomeFeedController>()) {
+          Get.find<HomeFeedController>().fetchFriendsPosts();
+        }
+      } catch (e) {
+        print('⚠️ [DEBUG] Error refreshing feed: $e');
+      }
 
       setState(() => _isUploading = false);
-      Get.offAll(() => const App());
+
+      // Volver a la pantalla principal sin reiniciar la App (evita pantallazo blanco)
+      Get.until((route) => route.isFirst);
+
       Get.snackbar(
         '¡Genial!',
         'Tu post se ha compartido correctamente',
-        backgroundColor: Colors.green,
+        backgroundColor: Colors.green.withOpacity(0.8),
         colorText: Colors.white,
         snackPosition: SnackPosition.BOTTOM,
-      ).show();
+        duration: const Duration(seconds: 3),
+      );
     } catch (e) {
-      print('Error uploading post: $e');
+      print('❌ [DEBUG] Error uploading post: $e');
+      if (e is dio.DioException) {
+        print('❌ [DEBUG] Response data: ${e.response?.data}');
+      }
+
       setState(() => _isUploading = false);
+
+      String errorMsg = e.toString();
+      if (e is dio.DioException && e.response?.data != null) {
+        final data = e.response?.data;
+        errorMsg = data is Map
+            ? (data['message'] ?? data['error'] ?? errorMsg)
+            : data.toString();
+      }
+
       Get.snackbar(
         'Error',
-        'No pudimos subir tu post: $e',
-        backgroundColor: Colors.red,
+        'No pudimos subir tu post: $errorMsg',
+        backgroundColor: Colors.red.withOpacity(0.8),
         colorText: Colors.white,
         snackPosition: SnackPosition.BOTTOM,
-      ).show();
+        duration: const Duration(seconds: 5),
+      );
     }
   }
 }

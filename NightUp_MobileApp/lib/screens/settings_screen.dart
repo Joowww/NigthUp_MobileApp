@@ -8,6 +8,8 @@ import '../widgets/glass_card.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/image_with_fallback.dart';
 import 'login_screen.dart';
+import 'package:flutter_translate/flutter_translate.dart';
+import 'support_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -248,59 +250,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
 
                       const SizedBox(height: 24),
-                      _buildSectionTitle('Preferences'),
-                      Obx(
-                        () => _buildSwitchSetting(
-                          icon: Icons.notifications,
-                          title: 'Push Notifications',
-                          subtitle: 'Receive event updates and messages',
-                          value: _settingsController.notificationsEnabled.value,
-                          onChanged: (value) {
-                            _settingsController.notificationsEnabled.value =
-                                value;
-                            _settingsController.saveSettings();
-                          },
-                          color: Colors.orange,
-                        ),
-                      ),
-                      Obx(
-                        () => _buildSwitchSetting(
-                          icon: Icons.location_on,
-                          title: 'Location Services',
-                          subtitle:
-                              'Share your location for better recommendations',
-                          value: _settingsController.locationEnabled.value,
-                          onChanged: (value) {
-                            _settingsController.locationEnabled.value = value;
-                            _settingsController.saveSettings();
-                          },
-                          color: Colors.blue,
-                        ),
-                      ),
-                      Obx(
-                        () => _buildSwitchSetting(
-                          icon: Icons.visibility,
-                          title: 'Visible on Map',
-                          subtitle:
-                              'Allow friends to see your location on the map',
-                          value: _settingsController.isVisibleOnMap.value,
-                          onChanged: (value) {
-                            _settingsController.updateLocationVisibility(value);
-                          },
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      Obx(
-                        () => _buildSwitchSetting(
-                          icon: Icons.dark_mode,
-                          title: 'Dark Mode',
-                          subtitle: 'Use dark theme across the app',
-                          value: _settingsController.darkModeEnabled.value,
-                          onChanged: (value) {
-                            _settingsController.darkModeEnabled.value = value;
-                            _settingsController.saveSettings();
-                          },
-                          color: Colors.indigo,
+                      _buildSectionTitle('General'),
+                      GlassCard(
+                        child: ListTile(
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.purple.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.language,
+                              color: Colors.purple,
+                              size: 20,
+                            ),
+                          ),
+                          title: const Text(
+                            'Language',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          subtitle: Text(
+                            LocalizedApp.of(
+                              context,
+                            ).delegate.currentLocale.languageCode.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.white70,
+                            size: 16,
+                          ),
+                          onTap: () => _showLanguageDialog(context),
                         ),
                       ),
 
@@ -311,28 +299,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: 'Help & Support',
                         subtitle: 'Get help with the app',
                         color: Colors.blue,
-                        onTap: () {},
+                        onTap: () {
+                          Get.to(
+                            () => const SupportScreen(
+                              title: 'Help & Support',
+                              content:
+                                  'If you need assistance, please contact our support team at support@nightup.com. We are available 24/7 to help you with any issues you may encounter while using the app.',
+                            ),
+                          );
+                        },
                       ),
                       _buildSettingItem(
                         icon: Icons.description,
                         title: 'Terms of Service',
                         subtitle: 'Read our terms and conditions',
                         color: Colors.grey,
-                        onTap: () {},
+                        onTap: () {
+                          Get.to(
+                            () => const SupportScreen(
+                              title: 'Terms of Service',
+                              content:
+                                  'By using NightUp, you agree to our Terms of Service. These terms govern your use of the app and provide information about your rights and responsibilities. Please read them carefully.',
+                            ),
+                          );
+                        },
                       ),
                       _buildSettingItem(
                         icon: Icons.security,
                         title: 'Privacy Policy',
                         subtitle: 'Learn about our privacy practices',
                         color: Colors.green,
-                        onTap: () {},
+                        onTap: () {
+                          Get.to(
+                            () => const SupportScreen(
+                              title: 'Privacy Policy',
+                              content:
+                                  'Your privacy is important to us. This Privacy Policy explains how we collect, use, and protect your personal information. We are committed to ensuring your data is secure.',
+                            ),
+                          );
+                        },
                       ),
                       _buildSettingItem(
                         icon: Icons.bug_report,
                         title: 'Report a Problem',
                         subtitle: 'Found a bug? Let us know',
                         color: Colors.red,
-                        onTap: () {},
+                        onTap: () {
+                          Get.to(
+                            () => const SupportScreen(
+                              title: 'Report a Problem',
+                              content:
+                                  'If you encounter a bug or have feedback, please email us at bugs@nightup.com. Your feedback helps us improve the app for everyone.',
+                            ),
+                          );
+                        },
                       ),
 
                       const SizedBox(height: 24),
@@ -500,75 +520,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showPrivacySettingsDialog() {
     Get.dialog(
-      Obx(
-        () => GlassCard(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Privacy Settings',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+      Material(
+        type: MaterialType.transparency,
+        child: Center(
+          child: SingleChildScrollView(
+            child: Obx(
+              () => GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Privacy Settings',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPrivacySwitch(
+                        'Visible on Map',
+                        'Allow friends to see your location on the map',
+                        _settingsController.isVisibleOnMap.value,
+                        (value) {
+                          _settingsController.updateLocationVisibility(value);
+                        },
+                      ),
+                      _buildPrivacySwitch(
+                        'Push Notifications',
+                        'Receive event updates and messages',
+                        _settingsController.notificationsEnabled.value,
+                        (value) {
+                          _settingsController.notificationsEnabled.value =
+                              value;
+                          _settingsController.saveSettings();
+                        },
+                      ),
+                      _buildPrivacySwitch(
+                        'Location Services',
+                        'Share your location for better recommendations',
+                        _settingsController.locationEnabled.value,
+                        (value) {
+                          _settingsController.locationEnabled.value = value;
+                          _settingsController.saveSettings();
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Get.back(),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: const BorderSide(color: Colors.white70),
+                              ),
+                              child: const Text('Cancel'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: GradientButton(
+                              onPressed: () {
+                                _settingsController.saveSettings();
+                                Get.back();
+                              },
+                              text: 'Save',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                _buildPrivacySwitch(
-                  'Visible on Map',
-                  'Allow friends to see your location on the map',
-                  _settingsController.isVisibleOnMap.value,
-                  (value) {
-                    _settingsController.updateLocationVisibility(value);
-                  },
-                ),
-                _buildPrivacySwitch(
-                  'Push Notifications',
-                  'Receive event updates and messages',
-                  _settingsController.notificationsEnabled.value,
-                  (value) {
-                    _settingsController.notificationsEnabled.value = value;
-                    _settingsController.saveSettings();
-                  },
-                ),
-                _buildPrivacySwitch(
-                  'Location Services',
-                  'Share your location for better recommendations',
-                  _settingsController.locationEnabled.value,
-                  (value) {
-                    _settingsController.locationEnabled.value = value;
-                    _settingsController.saveSettings();
-                  },
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Get.back(),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white70),
-                        ),
-                        child: const Text('Cancel'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: GradientButton(
-                        onPressed: () {
-                          _settingsController.saveSettings();
-                          Get.back();
-                        },
-                        text: 'Save',
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -607,6 +635,77 @@ class _SettingsScreenState extends State<SettingsScreen> {
             activeColor: AppColors.primary,
           ),
         ],
+      ),
+    );
+  }
+
+  void _showLanguageDialog(BuildContext context) {
+    Get.dialog(
+      Material(
+        type: MaterialType.transparency,
+        child: Center(
+          child: GlassCard(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Select Language',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildLanguageOption(context, 'English', 'en'),
+                  _buildLanguageOption(context, 'Español', 'es'),
+                  _buildLanguageOption(context, 'Français', 'fr'),
+                  _buildLanguageOption(context, 'Deutsch', 'de'),
+                  _buildLanguageOption(context, 'Italiano', 'it'),
+                  const SizedBox(height: 24),
+                  GradientButton(onPressed: () => Get.back(), text: 'Cancel'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageOption(BuildContext context, String name, String code) {
+    final isSelected =
+        LocalizedApp.of(context).delegate.currentLocale.languageCode == code;
+    return InkWell(
+      onTap: () {
+        _settingsController.changeLanguage(context, code);
+        Get.back();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              name,
+              style: TextStyle(
+                color: isSelected ? AppColors.primary : Colors.white,
+                fontSize: 16,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check, color: AppColors.primary, size: 20),
+          ],
+        ),
       ),
     );
   }
@@ -663,49 +762,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             size: 16,
           ),
           onTap: onTap,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSwitchSetting({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    required Color color,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: GlassCard(
-        child: ListTile(
-          leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          title: Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          subtitle: Text(
-            subtitle,
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-          trailing: Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.primary,
-          ),
         ),
       ),
     );

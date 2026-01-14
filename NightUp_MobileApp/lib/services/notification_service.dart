@@ -1,6 +1,15 @@
 import 'dart:developer';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
+import '../screens/chat_screen.dart';
+
+class AppColors {
+  static const Color primary = Color(0xFF8B5CF6);
+  static const Color secondary = Color(0xFFEC4899);
+  static const Color error = Color(0xFFEF4444);
+  static const Color success = Color(0xFF10B981);
+}
 
 class NotificationService extends GetxService {
   static final NotificationService _instance = NotificationService._internal();
@@ -50,6 +59,7 @@ class NotificationService extends GetxService {
 
   Future<void> _requestPermissions() async {
     try {
+      // ✅ CORRECCIÓN: Añadir < > correctamente
       final androidPlugin = _notifications
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
@@ -59,6 +69,7 @@ class NotificationService extends GetxService {
         await androidPlugin.requestNotificationsPermission();
       }
 
+      // ✅ CORRECCIÓN: Añadir < > correctamente
       final iosPlugin = _notifications
           .resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin
@@ -82,13 +93,56 @@ class NotificationService extends GetxService {
     if (response.payload != null && response.payload!.isNotEmpty) {
       try {
         final conversationId = response.payload!;
-
-        Get.toNamed('/chat', arguments: {'conversationId': conversationId});
+        Get.to(
+          () => const ChatScreen(),
+          arguments: {'conversationId': conversationId},
+        );
       } catch (e) {
         log('❌ Error navigating from notification: $e');
       }
     }
   }
+
+  // ==================== NOTIFICACIÓN IN-APP (BANNER) ====================
+
+  void showInAppNotification({
+    required String title,
+    required String message,
+    String? imageUrl,
+    VoidCallback? onTap,
+  }) {
+    Get.snackbar(
+      title,
+      message,
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.grey[900]!.withOpacity(0.95),
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+      duration: const Duration(seconds: 4),
+      isDismissible: true,
+      dismissDirection: DismissDirection.horizontal,
+      forwardAnimationCurve: Curves.easeOutBack,
+      reverseAnimationCurve: Curves.easeInBack,
+      animationDuration: const Duration(milliseconds: 500),
+      icon: imageUrl != null
+          ? CircleAvatar(backgroundImage: NetworkImage(imageUrl), radius: 20)
+          : const Icon(Icons.message, color: AppColors.primary, size: 28),
+      shouldIconPulse: true,
+      onTap: (_) {
+        if (onTap != null) onTap();
+      },
+      boxShadows: [
+        BoxShadow(
+          color: AppColors.primary.withOpacity(0.3),
+          blurRadius: 15,
+          spreadRadius: 2,
+        ),
+      ],
+    );
+  }
+
+  // ==================== NOTIFICACIÓN DEL SISTEMA ====================
 
   Future<void> showMessageNotification({
     String? title,
