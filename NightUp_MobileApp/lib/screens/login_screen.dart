@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:js' as js;
+// import 'package:flutter/foundation.dart' show kIsWeb;
+// import 'dart:js' as js;
 import '../app.dart';
 import '../controllers/auth_controller.dart';
 import '../theme/colors.dart';
@@ -33,18 +33,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _rememberMe = false;
   bool _obscurePassword = true;
-  bool _isGoogleInitialized = false;
+  // bool _isGoogleInitialized = false;
 
+  @override
   @override
   @override
   void initState() {
     super.initState();
     _loadSavedCredentials();
-    if (kIsWeb) {
-      _initializeGoogleGIS();
-      _registerGlobalHandler();
-      _handleOAuthResponse();
-    }
+    // Removed legacy manual web initialization
   }
 
   void _loadSavedCredentials() {
@@ -60,19 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _registerGlobalHandler() {
-    try {
-      js.context['handleFlutterGoogleSignIn'] = js.allowInterop((credential) {
-        print(
-          '🎯 Global handler received credential: [36m${credential.length} chars[0m',
-        );
-        _handleGISCredential(credential);
-      });
-      print('✅ Global handler registered successfully');
-    } catch (e) {
-      print('❌ Error registering global handler: $e');
-    }
-  }
+  // Removed _registerGlobalHandler as it used dart:js
 
   void _login() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -108,103 +93,13 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _handleGISCredential(String credential) async {
-    print('✅ Received Google credential: ${credential.length} characters');
+  // Removed _handleGISCredential as it relies on _authController.googleLoginWeb which is deprecated for mobile
 
-    final result = await _authController.googleLoginWeb(credential);
+  // Removed _initializeGoogleGIS
 
-    if (result['success'] == true) {
-      // Siempre ir al home, intereses deshabilitados
-      Get.offAll(() => const App());
-    } else {
-      _showErrorDialog(_authController.error);
-    }
-  }
+  // Removed _loadAndInitializeGIS
 
-  void _initializeGoogleGIS() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_isGoogleInitialized) {
-        _isGoogleInitialized = true;
-        _loadAndInitializeGIS();
-      }
-    });
-  }
-
-  void _loadAndInitializeGIS() {
-    try {
-      const clientId =
-          '750097459792-9cbl6emgs6j9vbpip10q8ddo1ru3i2s3.apps.googleusercontent.com';
-
-      if (js.context['google'] == null) {
-        final script = js.JsObject.fromBrowserObject(
-          js.context['document'].callMethod('createElement', ['script']),
-        );
-        script['src'] = 'https://accounts.google.com/gsi/client';
-        script['async'] = true;
-        script['defer'] = true;
-        script['onload'] = js.allowInterop(() => _initializeGIS(clientId));
-        js.context['document']['head'].callMethod('appendChild', [script]);
-      } else {
-        _initializeGIS(clientId);
-      }
-    } catch (e) {
-      print('❌ Error loading GIS: $e');
-    }
-  }
-
-  void _initializeGIS(String clientId) {
-    try {
-      js.context.callMethod('eval', [
-        '''
-      console.log('🔧 Initializing Google Identity Services with client: $clientId');
-      
-      if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-
-        google.accounts.id.cancel();
-        
-        google.accounts.id.initialize({
-          client_id: "$clientId",
-          callback: (response) => {
-            console.log('🔐 Google auth response received');
-            if (response.credential) {
-              console.log('✅ Google token received, length:', response.credential.length);
-              if (window.handleFlutterGoogleSignIn) {
-                window.handleFlutterGoogleSignIn(response.credential);
-                console.log('✅ Token sent to Flutter handler');
-              } else {
-                console.error('❌ Flutter callback not registered');
-              }
-            } else {
-              console.error('❌ No credential in response');
-            }
-          },
-          auto_select: false,
-          cancel_on_tap_outside: true,
-          context: 'use',
-          ux_mode: 'popup',
-          use_fedcm_for_prompt: false,
-          itp_support: true
-        });
-        
-        console.log('✅ GIS initialized successfully');
-        
-
-        google.accounts.id.prompt((notification) => {
-          console.log('Prompt notification:', notification);
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            console.log('🔧 One Tap not displayed, user can use button');
-          }
-        });
-        
-      } else {
-        console.error('❌ Google script not ready yet');
-      }
-      ''',
-      ]);
-    } catch (e) {
-      print('❌ Error initializing GIS: $e');
-    }
-  }
+  // Removed _initializeGIS
 
   void _showErrorDialog(String error) {
     showDialog(
@@ -402,7 +297,7 @@ class _LoginScreenState extends State<LoginScreen> {
               text: translate('login.login_button'),
             ),
             const SizedBox(height: 16),
-            kIsWeb ? _buildGoogleWebButton() : _buildGoogleMobileButton(),
+            _buildGoogleMobileButton(),
           ],
         ),
       ),
@@ -535,89 +430,9 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildGoogleWebButton() {
-    return Container(
-      width: double.infinity,
-      height: 50,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.glassBorder),
-        color: AppColors.glassWhite,
-      ),
-      child: InkWell(
-        onTap: _showGoogleSignInModal,
-        borderRadius: BorderRadius.circular(12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset('assets/images/google.png', width: 20, height: 20),
-            const SizedBox(width: 8),
-            Text(
-              translate('login.google_login'),
-              style: const TextStyle(
-                color: Colors.white,
-                shadows: [Shadow(blurRadius: 5, color: Color(0x4DFF00FF))],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Removed _buildGoogleWebButton as we are using the Flutter button for all platforms
 
-  void _showGoogleSignInModal() {
-    print('🔄 Showing Google Sign-In modal...');
-    try {
-      js.context.callMethod('eval', [
-        '''
-      if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-        console.log('🎯 Opening Google Sign-In prompt...');
-        
-
-        google.accounts.id.prompt((notification) => {
-          console.log('One Tap notification:', notification);
-          
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            console.log('🔧 One Tap not shown, showing fallback button');
-            
-
-            let container = document.getElementById('googleButtonContainer');
-            if (!container) {
-              container = document.createElement('div');
-              container.id = 'googleButtonContainer';
-              container.style.position = 'fixed';
-              container.style.top = '50%';
-              container.style.left = '50%';
-              container.style.transform = 'translate(-50%, -50%)';
-              container.style.zIndex = '10000';
-              document.body.appendChild(container);
-            }
-            
-
-            google.accounts.id.renderButton(
-              container,
-              {
-                type: 'standard',
-                theme: 'outline',
-                size: 'large',
-                text: 'signin_with',
-                shape: 'rectangular',
-                logo_alignment: 'left',
-                width: '300'
-              }
-            );
-          }
-        });
-        
-      } else {
-        console.error('❌ GIS not available');
-      }
-      ''',
-      ]);
-    } catch (e) {
-      print('❌ Error showing Google modal: $e');
-    }
-  }
+  // Removed _showGoogleSignInModal
 
   Widget _buildRegisterPrompt() {
     return Row(
@@ -648,39 +463,5 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _handleOAuthResponse() {
-    try {
-      js.context.callMethod('eval', [
-        '''
-        const urlParams = new URLSearchParams(window.location.search);
-      const authCode = urlParams.get('code');
-      const error = urlParams.get('error');
-      
-      if (authCode) {
-        console.log('✅ OAuth code received:', authCode);
-
-        if (window.handleFlutterOAuthCode) {
-          window.handleFlutterOAuthCode(authCode);
-        }
-      } else if (error) {
-        console.error('❌ OAuth error:', error);
-        if (window.handleFlutterOAuthError) {
-          window.handleFlutterOAuthError(error);
-        }
-      }
-      
-      window.handleFlutterOAuthCode = function(code) {
-        console.log('🔄 OAuth code handler called');
-      };
-
-      
-      window.handleFlutterOAuthError = function(error) {
-        console.error('❌ OAuth error handler called:', error);
-      };
-      ''',
-      ]);
-    } catch (e) {
-      print('❌ Error handling OAuth response: $e');
-    }
-  }
+  // Removed _handleOAuthResponse
 }

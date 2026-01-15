@@ -154,17 +154,21 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Seleccionar Participantes',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                const Flexible(
+                  child: Text(
+                    'Seleccionar Participantes',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Obx(
                   () => Text(
-                    '${selectedParticipants.length} seleccionados',
+                    '${selectedParticipants.length} sel.',
                     style: TextStyle(
                       color: AppColors.primary,
                       fontSize: 14,

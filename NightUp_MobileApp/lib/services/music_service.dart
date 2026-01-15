@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:nightup_mobile_app/utils/constants.dart';
 
 class MusicService {
-  static const String _baseUrl = '${ApiConstants.baseUrl}/music/search';
+  static String get _baseUrl => '${ApiConstants.baseUrl}/music/search';
 
   static Future<List<Map<String, String>>> searchMusic(String query) async {
     try {

@@ -221,115 +221,123 @@ class _EditPostScreenState extends State<EditPostScreen>
     Map<String, String> song,
     StateSetter setModalState,
   ) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // 1. Portada amb Animació de Pols
-          ScaleTransition(
-            scale: Tween(begin: 1.0, end: 1.05).animate(
-              CurvedAnimation(
-                parent: _pulseController,
-                curve: Curves.easeInOut,
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 1. Portada amb Animació de Pols
+            ScaleTransition(
+              scale: Tween(begin: 1.0, end: 1.05).animate(
+                CurvedAnimation(
+                  parent: _pulseController,
+                  curve: Curves.easeInOut,
+                ),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(song['cover']!, width: 150, height: 150),
+                ),
               ),
             ),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(song['cover']!, width: 180, height: 180),
-              ),
-            ),
-          ),
-          const SizedBox(height: 30),
-          Text(
-            song['title']!,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          Text(
-            song['artist']!,
-            style: const TextStyle(color: Colors.white70, fontSize: 16),
-          ),
-
-          const SizedBox(height: 40),
-
-          // 2. Visualitzador de barres animades
-          const _MusicVisualizer(),
-
-          const SizedBox(height: 10),
-          const Text(
-            'Select 15s clip',
-            style: TextStyle(
-              color: AppColors.primary,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: AppColors.primary,
-              inactiveTrackColor: Colors.white10,
-              thumbColor: Colors.white,
-              overlayColor: AppColors.primary.withOpacity(0.2),
-              trackHeight: 4,
-            ),
-            child: Slider(
-              value: _musicStartTime,
-              min: 0.0,
-              max: 15.0,
-              onChanged: (val) {
-                setModalState(() => _musicStartTime = val);
-                setState(() => _musicStartTime = val);
-              },
-              onChangeEnd: (val) {
-                _playMusicPreview(song['preview'], val);
-              },
-            ),
-          ),
-          Text(
-            '${_musicStartTime.toStringAsFixed(1)}s ——— ${(0.0 + 15).toStringAsFixed(1)}s clip',
-            style: const TextStyle(color: Colors.white38, fontSize: 11),
-          ),
-          const Spacer(),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              minimumSize: const Size(double.infinity, 54),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-              elevation: 0,
-            ),
-            onPressed: () {
-              setState(() => _selectedMusic = song);
-              Get.back();
-            },
-            child: const Text(
-              'Confirm music',
-              style: TextStyle(
+            const SizedBox(height: 20),
+            Text(
+              song['title']!,
+              style: const TextStyle(
                 color: Colors.white,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              song['artist']!,
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+            const SizedBox(height: 30),
+
+            // 2. Visualitzador de barres animades
+            const _MusicVisualizer(),
+
+            const SizedBox(height: 10),
+            const Text(
+              'Select 15s clip',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
               ),
             ),
-          ),
-        ],
+
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: AppColors.primary,
+                inactiveTrackColor: Colors.white10,
+                thumbColor: Colors.white,
+                overlayColor: AppColors.primary.withOpacity(0.2),
+                trackHeight: 4,
+              ),
+              child: Slider(
+                value: _musicStartTime,
+                min: 0.0,
+                max: 15.0,
+                onChanged: (val) {
+                  setModalState(() => _musicStartTime = val);
+                  setState(() => _musicStartTime = val);
+                },
+                onChangeEnd: (val) {
+                  _playMusicPreview(song['preview'], val);
+                },
+              ),
+            ),
+            Text(
+              '${_musicStartTime.toStringAsFixed(1)}s ——— ${(0.0 + 15).toStringAsFixed(1)}s clip',
+              style: const TextStyle(color: Colors.white38, fontSize: 11),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                minimumSize: const Size(double.infinity, 54),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                elevation: 0,
+              ),
+              onPressed: () {
+                setState(() => _selectedMusic = song);
+                Get.back();
+              },
+              child: const Text(
+                'Confirm music',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

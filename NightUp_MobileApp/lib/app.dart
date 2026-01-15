@@ -126,7 +126,7 @@ class _AppState extends State<App> {
       case AppScreen.calendar:
         return EventCalendarScreen(onBack: () => changeScreen(AppScreen.main));
       case AppScreen.fullMap:
-        return const FullMapScreen();
+        return FullMapScreen(onBack: () => changeScreen(AppScreen.main));
       case AppScreen.menuModal:
         return const MenuModal();
     }

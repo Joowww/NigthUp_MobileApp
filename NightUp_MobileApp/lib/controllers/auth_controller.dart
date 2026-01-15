@@ -4,8 +4,8 @@ import '../app.dart';
 import '../models/user.dart';
 import '../services/storage_service.dart';
 import '../services/google_service.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:js' as js;
+// import 'package:flutter/foundation.dart' show kIsWeb;
+// import 'dart:js' as js;
 import 'dart:convert';
 
 class AuthController extends GetxController {
@@ -72,36 +72,11 @@ class AuthController extends GetxController {
   }
 
   Future<Map<String, dynamic>> googleLoginWeb(String idToken) async {
-    try {
-      _isLoading.value = true;
-      _error.value = '';
-      print('🔐 Google Login Web - Token length: ${idToken.length}');
-
-      if (idToken.isEmpty) {
-        _error.value = 'Invalid Google token';
-        return {'success': false, 'isNewUser': false};
-      }
-
-      final response = await _apiService.googleAuth(idToken);
-      _token.value = response.token;
-      _refreshToken.value = response.refreshToken;
-      _currentUser.value = response.user;
-
-      await _saveAuthData();
-
-      print('✅ Google Login Web - Success for user: ${response.user.username}');
-      print('👤 User is new: ${response.isNewUser}');
-
-      await _navigateAfterLogin();
-
-      return {'success': true, 'isNewUser': response.isNewUser};
-    } catch (e) {
-      _error.value = e.toString();
-      print('❌ Google login web error: $e');
-      return {'success': false, 'isNewUser': false};
-    } finally {
-      _isLoading.value = false;
-    }
+    // This was utilizing dart:js for web which is not supported on mobile.
+    // Forwarding to standard google login if needed or deprecating.
+    // For now, implementing a fallback or just returning failure as this method
+    // was specifically for the manual JS flow.
+    return {'success': false, 'isNewUser': false};
   }
 
   Future<bool> googleLogin() async {
@@ -359,18 +334,7 @@ class AuthController extends GetxController {
 
   Future<void> logout() async {
     try {
-      if (kIsWeb) {
-        js.context.callMethod('eval', [
-          '''
-          if (window.google && window.google.accounts && google.accounts.id) {
-            google.accounts.id.disableAutoSelect();
-            google.accounts.id.revoke();
-          }
-          ''',
-        ]);
-      } else {
-        await GoogleSignInService.signOut();
-      }
+      await GoogleSignInService.signOut();
     } catch (e) {
       print('Error during Google signout: $e');
     } finally {

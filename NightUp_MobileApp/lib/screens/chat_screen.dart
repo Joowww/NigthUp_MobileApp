@@ -1358,7 +1358,10 @@ class _ChatScreenState extends State<ChatScreen> {
       Dialog(
         backgroundColor: Colors.transparent,
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 500),
+          constraints: BoxConstraints(
+            maxWidth: 500,
+            maxHeight: MediaQuery.of(Get.context!).size.height * 0.85,
+          ),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -1483,20 +1486,16 @@ class _ChatScreenState extends State<ChatScreen> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          Obx(
-                            () => TextButton.icon(
-                              onPressed: () {
-                                if (optionControllers.length < 10) {
-                                  optionControllers.add(
-                                    TextEditingController(),
-                                  );
-                                }
-                              },
-                              icon: const Icon(Icons.add, size: 16),
-                              label: const Text('Añadir opción'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.primary,
-                              ),
+                          TextButton.icon(
+                            onPressed: () {
+                              if (optionControllers.length < 10) {
+                                optionControllers.add(TextEditingController());
+                              }
+                            },
+                            icon: const Icon(Icons.add, size: 16),
+                            label: const Text('Añadir opción'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.primary,
                             ),
                           ),
                         ],

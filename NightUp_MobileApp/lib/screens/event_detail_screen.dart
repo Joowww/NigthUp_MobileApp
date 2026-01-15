@@ -514,40 +514,47 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 edit ? 'Editar valoración' : 'Valorar evento',
                 style: const TextStyle(color: Colors.white),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      5,
-                      (i) => IconButton(
-                        icon: Icon(
-                          i < score ? Icons.star : Icons.star_border,
-                          color: Colors.amber,
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        5,
+                        (i) => Flexible(
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            icon: Icon(
+                              i < score ? Icons.star : Icons.star_border,
+                              color: Colors.amber,
+                              size: 32,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                score = i + 1;
+                              });
+                            },
+                          ),
                         ),
-                        onPressed: () {
-                          setState(() {
-                            score = i + 1;
-                          });
-                        },
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: commentCtrl,
-                    maxLines: 3,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: 'Comentario (opcional)',
-                      hintStyle: TextStyle(color: Colors.white54),
-                      border: OutlineInputBorder(),
-                      filled: true,
-                      fillColor: Colors.white10,
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: commentCtrl,
+                      maxLines: 3,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        hintText: 'Comentario (opcional)',
+                        hintStyle: TextStyle(color: Colors.white54),
+                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: Colors.white10,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               actions: [
                 if (edit && _myRating != null)
@@ -1296,23 +1303,30 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   ) {
     return GlassCard(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 6),
             Text(
               title,
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+            const SizedBox(height: 2),
+            Flexible(
+              child: Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

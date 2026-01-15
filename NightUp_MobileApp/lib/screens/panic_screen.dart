@@ -330,12 +330,16 @@ class _PanicScreenState extends State<PanicScreen>
                 children: [
                   const Icon(Icons.phone, color: Colors.white, size: 28),
                   const SizedBox(width: 12),
-                  Text(
-                    _isCalling ? 'CALLING...' : 'CALL 112 EMERGENCY',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Text(
+                      _isCalling ? 'CALLING...' : 'CALL 112 EMERGENCY',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ),
                 ],

@@ -15,6 +15,7 @@ class FullMapScreen extends StatefulWidget {
   final Event? selectedEvent;
   final List<Business>? businesses;
   final List<Event>? events;
+  final VoidCallback? onBack;
 
   const FullMapScreen({
     Key? key,
@@ -22,6 +23,7 @@ class FullMapScreen extends StatefulWidget {
     this.selectedEvent,
     this.businesses,
     this.events,
+    this.onBack,
   }) : super(key: key);
 
   @override
@@ -360,33 +362,40 @@ class _FullMapScreenState extends State<FullMapScreen> {
               ),
             ),
 
+          // Back button moved to the end to be on top
           Positioned(
             top: 12,
             left: 12,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(1.0),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.5)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: Colors.white,
-                  size: 24,
+            child: SafeArea(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(1.0),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.5)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                onPressed: () {
-                  Get.back();
-                },
-                tooltip: 'Volver',
-                splashRadius: 28,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  onPressed: () {
+                    if (widget.onBack != null) {
+                      widget.onBack!();
+                    } else {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  tooltip: 'Volver',
+                  splashRadius: 28,
+                ),
               ),
             ),
           ),
