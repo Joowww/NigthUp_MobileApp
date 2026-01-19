@@ -44,25 +44,36 @@ class Business {
       address: json['address'],
       phone: json['phone'],
       email: json['email'],
-      avatar: json['avatar'] ?? '',
-      events: json['events'] != null ? List<String>.from(json['events'].map((e) => e.toString())) : [],
-      managers: json['managers'] != null ? List<String>.from(json['managers'].map((m) => m.toString())) : [],
+      avatar:
+          json['avatar'] ??
+          json['image'] ??
+          json['profilePicture'] ??
+          json['logo'] ??
+          '',
+      events: json['events'] != null
+          ? List<String>.from(json['events'].map((e) => e.toString()))
+          : [],
+      managers: json['managers'] != null
+          ? List<String>.from(json['managers'].map((m) => m.toString()))
+          : [],
       active: json['active'] ?? true,
       lat: lat,
       lng: lng,
     );
   }
 
-  String get safeImageUrl {
-    if (avatar.isEmpty) {
-      return '';
+  String? get safeImageUrl {
+    if (avatar.isEmpty) return null;
+
+    if (avatar.startsWith('http')) {
+      return avatar;
     }
-    
+
     if (avatar.startsWith('/')) {
       return ApiConstants.baseUrl.replaceFirst('/api', '') + avatar;
     }
-    
-    return avatar;
+
+    return '${ApiConstants.baseUrl.replaceFirst('/api', '')}/$avatar';
   }
 
   String get displayAddress => address ?? 'No address provided';

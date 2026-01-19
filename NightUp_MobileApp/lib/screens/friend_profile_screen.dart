@@ -363,6 +363,28 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(40),
+                  child: SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: ImageWithFallback(
+                      imageUrl:
+                          _friendData['avatar'] ??
+                          _friendData['profilePictureUrl'] ??
+                          _friendData['profilePicture'],
+                      fallbackAsset: 'assets/images/default-avatar.png',
+                      isCircle: true,
+                    ),
+                  ),
+                ),
+              ),
               Text(
                 username,
                 style: const TextStyle(

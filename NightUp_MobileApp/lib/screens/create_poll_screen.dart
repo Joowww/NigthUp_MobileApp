@@ -4,7 +4,13 @@ import '../controllers/chat_controller.dart';
 import '../theme/colors.dart';
 
 class CreatePollScreen extends StatefulWidget {
-  const CreatePollScreen({super.key});
+  final String?
+  groupId; // ✅ MODIFICACIÓN: Parámetro opcional para identificar el grupo
+
+  const CreatePollScreen({
+    super.key,
+    this.groupId, // ✅ MODIFICACIÓN: Si es null = encuesta independiente, si tiene valor = encuesta de grupo
+  });
 
   @override
   State<CreatePollScreen> createState() => _CreatePollScreenState();
@@ -77,13 +83,23 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
     });
 
     try {
-      await _chatController.createPoll(
-        question: _questionController.text.trim(),
-        options: options,
-        isPublic: isPublic,
-        expiresAt: expiresAt,
-      );
-
+      // ✅ MODIFICACIÓN: Detectar si es encuesta de grupo o independiente
+      if (widget.groupId != null) {
+        // ✅ MODIFICACIÓN: Es una encuesta DE GRUPO - usar createGroupPoll
+        await _chatController.createGroupPoll(
+          question: _questionController.text.trim(),
+          options: options,
+          expiresAt: expiresAt,
+        );
+      } else {
+        // ✅ MODIFICACIÓN: Es una encuesta INDEPENDIENTE - usar createPoll
+        await _chatController.createPoll(
+          question: _questionController.text.trim(),
+          options: options,
+          isPublic: isPublic,
+          expiresAt: expiresAt,
+        );
+      }
       Get.back();
     } catch (e) {
       // Error ya manejado en el controller
@@ -96,15 +112,43 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ MODIFICACIÓN: Detectar si es encuesta de grupo para cambiar el título
+    final isGroupPoll = widget.groupId != null;
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Crear Encuesta'),
+        // ✅ MODIFICACIÓN: Título diferente según el tipo de encuesta
+        title: Text(isGroupPoll ? 'Crear Encuesta de Grupo' : 'Crear Encuesta'),
         backgroundColor: Colors.black,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // ✅ MODIFICACIÓN: Banner informativo si es encuesta de grupo
+          if (isGroupPoll) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.group, color: AppColors.primary, size: 20),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Esta encuesta será visible solo para los miembros del grupo',
+                      style: TextStyle(color: AppColors.primary, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           // Pregunta
           const Text(
             'Pregunta',
@@ -211,23 +255,26 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
           ),
           const SizedBox(height: 12),
 
-          SwitchListTile(
-            value: isPublic,
-            onChanged: (value) {
-              setState(() {
-                isPublic = value;
-              });
-            },
-            title: const Text(
-              'Encuesta pública',
-              style: TextStyle(color: Colors.white),
+          // ✅ MODIFICACIÓN: El switch de "pública" solo se muestra para encuestas independientes
+          if (!isGroupPoll) ...[
+            SwitchListTile(
+              value: isPublic,
+              onChanged: (value) {
+                setState(() {
+                  isPublic = value;
+                });
+              },
+              title: const Text(
+                'Encuesta pública',
+                style: TextStyle(color: Colors.white),
+              ),
+              subtitle: Text(
+                isPublic ? 'Todos pueden votar' : 'Solo usuarios seleccionados',
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              activeColor: AppColors.primary,
             ),
-            subtitle: Text(
-              isPublic ? 'Todos pueden votar' : 'Solo usuarios seleccionados',
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-            activeColor: AppColors.primary,
-          ),
+          ],
 
           ListTile(
             leading: const Icon(Icons.calendar_today, color: Colors.white),

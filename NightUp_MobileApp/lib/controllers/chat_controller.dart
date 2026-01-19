@@ -379,42 +379,66 @@ class ChatController extends GetxController {
     }
   }
 
+  // ✅ MODIFICACIÓN: REEMPLAZAR el método _handleNewGroupPoll (línea ~384-406)
+
   void _handleNewGroupPoll(dynamic data) {
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('🔔 _handleNewGroupPoll() EVENTO RECIBIDO');
+    print('📦 Data completa: $data');
+
     try {
+      final eventConversationId = data['conversationId'];
+      final currentConvId = currentConversation.value?.id;
+
+      print('🆔 eventConversationId = $eventConversationId');
+      print('🆔 currentConversationId = $currentConvId');
+
       if (currentConversation.value?.id == data['conversationId']) {
-        // Recargar conversación para obtener la nueva encuesta
-        fetchMessages(currentConversation.value!.id);
+        print('✅ IDs COINCIDEN - Procesando...');
+
+        final question = data['question'] ?? 'Sin pregunta';
+        print('📝 Pregunta: "$question"');
+
+        print('🔄 Llamando a refreshCurrentConversation()');
+        refreshCurrentConversation();
 
         Get.snackbar(
           '📊 Nueva encuesta',
-          data['question'] ?? 'Se ha creado una encuesta',
+          question,
           snackPosition: SnackPosition.TOP,
           backgroundColor: AppColors.primary.withOpacity(0.8),
           colorText: Colors.white,
           duration: const Duration(seconds: 3),
         );
+
+        print('✅ _handleNewGroupPoll() COMPLETADO');
+      } else {
+        print('⚠️ IDs NO COINCIDEN - Ignorando');
       }
-    } catch (e) {
-      log(
-        'Error handling new group poll: $e',
-        name: 'ChatController',
-        error: e,
-      );
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } catch (e, stackTrace) {
+      print('💥 _handleNewGroupPoll ERROR: $e');
+      print('Stack trace: $stackTrace');
     }
   }
 
+  // ✅ MODIFICACIÓN: REEMPLAZAR el método _handleGroupPollUpdated (línea ~408-421)
+
   void _handleGroupPollUpdated(dynamic data) {
+    print('🔔 _handleGroupPollUpdated() EVENTO RECIBIDO');
+    print('📦 Data: $data');
+
     try {
       if (currentConversation.value?.id == data['conversationId']) {
-        // Recargar conversación para obtener votos actualizados
-        fetchMessages(currentConversation.value!.id);
+        print('✅ IDs COINCIDEN - Actualizando...');
+        refreshCurrentConversation();
+        print('✅ _handleGroupPollUpdated() COMPLETADO');
+      } else {
+        print('⚠️ IDs NO COINCIDEN - Ignorando');
       }
-    } catch (e) {
-      log(
-        'Error handling group poll updated: $e',
-        name: 'ChatController',
-        error: e,
-      );
+    } catch (e, stackTrace) {
+      print('💥 _handleGroupPollUpdated ERROR: $e');
+      print('Stack trace: $stackTrace');
     }
   }
 
@@ -498,6 +522,97 @@ class ChatController extends GetxController {
       messages.value = [];
     } finally {
       isLoadingMessages.value = false;
+    }
+  }
+
+  // ✅ MODIFICACIÓN: Nuevo método para recargar solo la conversación actual con sus encuestas
+  Future<void> refreshCurrentConversation() async {
+    print('🔄 refreshCurrentConversation() INICIADO');
+
+    if (currentConversation.value == null) {
+      print('❌ refreshCurrentConversation: currentConversation es NULL');
+      return;
+    }
+
+    try {
+      final conversationId = currentConversation.value!.id;
+      print('🆔 refreshCurrentConversation: conversationId = $conversationId');
+
+      print('📡 refreshCurrentConversation: Llamando a GET /chat');
+      final response = await _apiService.get('/chat');
+
+      print(
+        '📦 refreshCurrentConversation: Respuesta recibida, type = ${response.data.runtimeType}',
+      );
+
+      if (response.data is List) {
+        print('✅ refreshCurrentConversation: La respuesta ES una lista');
+
+        final conversations = (response.data as List)
+            .map((json) => Conversation.fromJson(json))
+            .toList();
+
+        print(
+          '📊 refreshCurrentConversation: Total conversaciones = ${conversations.length}',
+        );
+
+        // Encontrar la conversación actual
+        final updatedConv = conversations.firstWhereOrNull(
+          (c) => c.id == conversationId,
+        );
+
+        if (updatedConv != null) {
+          final pollCount = updatedConv.groupPolls?.length ?? 0;
+          print('🎯 refreshCurrentConversation: Conversación encontrada!');
+          print('📊 refreshCurrentConversation: Tiene $pollCount encuestas');
+
+          // ✅ MODIFICACIÓN: Imprimir el JSON RAW de la conversación
+          print('📦 refreshCurrentConversation: JSON de la conversación:');
+          print('   isGroup: ${updatedConv.isGroup}');
+          print('   name: ${updatedConv.name}');
+          print('   groupPolls: ${updatedConv.groupPolls}');
+
+          if (updatedConv.groupPolls != null &&
+              updatedConv.groupPolls!.isNotEmpty) {
+            print('📋 refreshCurrentConversation: Detalles de encuestas:');
+            for (var i = 0; i < updatedConv.groupPolls!.length; i++) {
+              final poll = updatedConv.groupPolls![i];
+              print(
+                '  [$i] ID: ${poll.id}, Pregunta: "${poll.question}", Opciones: ${poll.options.length}',
+              );
+            }
+          } else {
+            print(
+              '⚠️ refreshCurrentConversation: groupPolls está vacío o es null',
+            );
+          }
+
+          final oldPollCount =
+              currentConversation.value?.groupPolls?.length ?? 0;
+          currentConversation.value = updatedConv;
+          print(
+            '✅ refreshCurrentConversation: currentConversation ACTUALIZADA',
+          );
+          print('   Antes: $oldPollCount encuestas');
+          print('   Ahora: $pollCount encuestas');
+
+          currentConversation.refresh();
+          print('🔄 refreshCurrentConversation: UI refresh() llamado');
+        } else {
+          print('❌ refreshCurrentConversation: Conversación NO encontrada');
+          print('📋 refreshCurrentConversation: IDs disponibles:');
+          for (var conv in conversations) {
+            print('   - ${conv.id} (${conv.name})');
+          }
+        }
+      } else {
+        print('❌ refreshCurrentConversation: La respuesta NO es una lista');
+      }
+
+      print('✅ refreshCurrentConversation() COMPLETADO');
+    } catch (e, stackTrace) {
+      print('💥 refreshCurrentConversation ERROR: $e');
+      print('Stack trace: $stackTrace');
     }
   }
 
@@ -820,76 +935,118 @@ class ChatController extends GetxController {
 
   // ==================== ENCUESTAS EN GRUPOS ====================
 
+  // ✅ MODIFICACIÓN: REEMPLAZAR el método createGroupPoll (línea ~825-880)
+
   Future<void> createGroupPoll({
     required String question,
     required List<String> options,
     DateTime? expiresAt,
   }) async {
-    if (currentConversation.value == null ||
-        !currentConversation.value!.isGroup) {
-      Get.snackbar(
-        'Error',
-        'Solo puedes crear encuestas en grupos',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('🎯 createGroupPoll() INICIADO');
+    print('📝 Pregunta: "$question"');
+    print('📋 Opciones (${options.length}): ${options.join(", ")}');
+    print('⏰ ExpiresAt: $expiresAt');
+
+    if (currentConversation.value == null) {
+      print('❌ createGroupPoll: currentConversation es NULL');
+      Get.snackbar('Error', 'No hay conversación activa');
       return;
     }
 
-    if (question.trim().isEmpty) {
-      Get.snackbar(
-        'Error',
-        'La pregunta no puede estar vacía',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+    if (!currentConversation.value!.isGroup) {
+      print('❌ createGroupPoll: NO es un grupo');
+      Get.snackbar('Error', 'Solo se pueden crear encuestas en grupos');
       return;
     }
 
-    if (options.length < 2) {
-      Get.snackbar(
-        'Error',
-        'Debes añadir al menos 2 opciones',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
+    final conversationId = currentConversation.value!.id;
+    print('🆔 createGroupPoll: conversationId = $conversationId');
 
     try {
-      _socketService.socket.emit('createGroupPoll', {
-        'conversationId': currentConversation.value!.id,
-        'question': question.trim(),
-        'options': options.map((o) => o.trim()).toList(),
+      final pollData = {
+        'conversationId': conversationId,
+        'question': question,
+        'options': options,
         if (expiresAt != null) 'expiresAt': expiresAt.toIso8601String(),
-      });
+      };
+
+      print('📡 createGroupPoll: Emitiendo socket "createGroupPoll"');
+      print('📦 createGroupPoll: Data = $pollData');
+
+      _socketService.socket.emit('createGroupPoll', pollData);
+
+      print('✅ createGroupPoll: Socket emit COMPLETADO');
+      print('🎉 createGroupPoll() FINALIZADO');
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       Get.snackbar(
-        '✅ Encuesta creada',
+        '✅ Encuesta Creada',
         question,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.success.withOpacity(0.8),
         colorText: Colors.white,
       );
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'No se pudo crear la encuesta',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+    } catch (e, stackTrace) {
+      print('💥 createGroupPoll ERROR: $e');
+      print('Stack trace: $stackTrace');
+      Get.snackbar('Error', 'No se pudo crear la encuesta');
     }
   }
 
+  // ✅ MODIFICACIÓN: Método voteInGroupPoll con PRINTS para debugging
+  // Reemplaza el método voteInGroupPoll en tu chat_controller.dart (línea ~882)
+
   Future<void> voteInGroupPoll(String pollId, int optionIndex) async {
-    if (currentConversation.value == null) return;
+    // ✅ VALIDACIÓN MEJORADA
+    if (currentConversation.value == null) {
+      Get.snackbar(
+        'Error',
+        'No hay conversación activa',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    final conversationId = currentConversation.value!.id;
+
+    // ✅ VALIDAR QUE conversationId NO SEA NULL
+    if (conversationId == null || conversationId.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'ID de conversación inválido',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    // ✅ VALIDAR QUE pollId NO SEA NULL
+    if (pollId.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'ID de encuesta inválido',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
 
     try {
       _socketService.socket.emit('voteInGroupPoll', {
-        'conversationId': currentConversation.value!.id,
+        'conversationId': conversationId,
         'pollId': pollId,
         'optionIndex': optionIndex,
       });
+
+      Get.snackbar(
+        'Voto registrado',
+        'Tu voto ha sido enviado',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
     } catch (e) {
       Get.snackbar(
         'Error',
-        'No se pudo registrar el voto',
+        'No se pudo registrar el voto: $e',
         snackPosition: SnackPosition.BOTTOM,
       );
     }

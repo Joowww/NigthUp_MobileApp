@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/colors.dart';
+import '../theme/colors.dart'; // Asegúrate de que esta ruta sea correcta
 
 class SplashScreen extends StatefulWidget {
   final VoidCallback onComplete;
@@ -11,53 +11,107 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+    with TickerProviderStateMixin {
+  late AnimationController _mainController;
+  late AnimationController _colorController;
+
   late Animation<double> _scaleAnimation;
-  late Animation<double> _rotationAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<Color?> _colorAnimation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 3),
+
+    // 1. Controlador Principal: Maneja la entrada, el pulso y la salida
+    _mainController = AnimationController(
+      duration: const Duration(seconds: 4),
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
+    // Animación de escala con efecto "respira" en el medio
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 0.0,
+          end: 1.1,
+        ).chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 25, // Aparece
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.1,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 15, // Asienta
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 1.08,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 20, // Pulso/Respiro
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.08,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeInBack)),
+        weight: 25, // Desaparece
+      ),
+    ]).animate(_mainController);
 
-    _rotationAnimation = Tween<double>(
-      begin: 0.0,
-      end: 2.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    // Animación de opacidad (Fade In -> Stay -> Fade Out)
+    _fadeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: 1.0), weight: 20),
+      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 60),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.0), weight: 20),
+    ]).animate(_mainController);
 
-    _controller.forward();
+    // 2. Controlador de Color: Para que el neón exterior cambie suavemente
+    _colorController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
 
-    Future.delayed(const Duration(seconds: 3), widget.onComplete);
+    // Oscila entre tu rosa neón y tu cian secundario
+    _colorAnimation =
+        ColorTween(begin: AppColors.neonPink, end: AppColors.secondary).animate(
+          CurvedAnimation(parent: _colorController, curve: Curves.easeInOut),
+        );
+
+    // Iniciar animaciones
+    _mainController.forward();
+    _colorController.repeat(reverse: true);
+
+    // Escuchar el final para navegar
+    _mainController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        widget.onComplete();
+      }
+    });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _mainController.dispose();
+    _colorController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.background, // Usando tu color de fondo
       body: Center(
         child: AnimatedBuilder(
-          animation: _controller,
+          animation: _mainController,
           builder: (context, child) {
-            return Transform.scale(
-              scale: _scaleAnimation.value,
-              child: Transform.rotate(
-                angle: _rotationAnimation.value * 3.14,
-                child: _buildDiscoBall(),
+            return Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.scale(
+                scale: _scaleAnimation.value,
+                child: _buildLogo(),
               ),
             );
           },
@@ -66,64 +120,39 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  Widget _buildDiscoBall() {
-    return Container(
-      width: 192,
-      height: 192,
-      decoration: BoxDecoration(
-        gradient: const RadialGradient(
-          colors: [Color(0xFFEC4899), Color(0xFFDB2777), Color(0xFFC026D3)],
-          stops: [0.0, 0.5, 1.0],
-        ),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.pink.withOpacity(0.5),
-            blurRadius: 30,
-            spreadRadius: 10,
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          ...List.generate(8, (index) => _buildFacet(index)),
-
-          ...List.generate(12, (index) => _buildLightRay(index)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFacet(int index) {
-    return Positioned(
-      top: index * 24.0,
-      left: 0,
-      right: 0,
-      child: Container(height: 1, color: Colors.white.withOpacity(0.3)),
-    );
-  }
-
-  Widget _buildLightRay(int index) {
-    return Positioned(
-      top: 96,
-      left: 96,
-      child: Transform.rotate(
-        angle: index * (3.14 / 6),
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: 1000 + index * 50),
-          width: 1,
-          height: 128,
+  Widget _buildLogo() {
+    return AnimatedBuilder(
+      animation: _colorController,
+      builder: (context, child) {
+        return Container(
+          width: 280,
+          height: 280,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                index % 2 == 0 ? AppColors.primary : AppColors.accent,
-                Colors.transparent,
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+            shape: BoxShape.circle,
+            boxShadow: [
+              // Efecto de resplandor neón dinámico
+              BoxShadow(
+                color: _colorAnimation.value!.withOpacity(0.5),
+                blurRadius: 45,
+                spreadRadius: 8,
+              ),
+              // Un segundo brillo más pequeño para dar profundidad
+              BoxShadow(
+                color: _colorAnimation.value!.withOpacity(0.3),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ],
           ),
-        ),
+          child: child,
+        );
+      },
+      child: Image.asset(
+        'assets/images/default-disco-removebg-preview.png',
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return const Icon(Icons.local_bar, size: 100, color: AppColors.white);
+        },
       ),
     );
   }

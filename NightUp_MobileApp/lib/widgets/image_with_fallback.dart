@@ -1,6 +1,7 @@
 // lib/widgets/image_with_fallback.dart
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/constants.dart';
 
 class ImageWithFallback extends StatelessWidget {
   final String? imageUrl;
@@ -15,7 +16,7 @@ class ImageWithFallback extends StatelessWidget {
   const ImageWithFallback({
     super.key,
     this.imageUrl,
-    this.fallbackAsset = 'assets/images/google.png',
+    this.fallbackAsset,
     this.fit = BoxFit.cover,
     this.width,
     this.height,
@@ -32,9 +33,9 @@ class ImageWithFallback extends StatelessWidget {
       color: Colors.grey[900],
       child: Center(
         child: Icon(
-          isCircle ? Icons.person : Icons.image,
-          color: Colors.grey[600],
-          size: isCircle ? (width ?? 40) * 0.7 : 50,
+          isCircle ? Icons.person : Icons.image_not_supported_outlined,
+          color: Colors.white12,
+          size: isCircle ? (width ?? 40) * 0.5 : 30,
         ),
       ),
     );
@@ -42,9 +43,12 @@ class ImageWithFallback extends StatelessWidget {
     // Validar que imageUrl sea una string válida
     final String? validImageUrl = _validateImageUrl(imageUrl);
     if (validImageUrl == null) {
-      return _buildFinalWidget(
-        _buildAssetImage(fallbackAsset, defaultFallback),
-      );
+      if (fallbackAsset != null) {
+        return _buildFinalWidget(
+          _buildAssetImage(fallbackAsset, defaultFallback),
+        );
+      }
+      return defaultFallback;
     }
 
     // Widget de CachedNetworkImage para cargar la imagen remota
@@ -58,14 +62,21 @@ class ImageWithFallback extends StatelessWidget {
         height: height,
         color: Colors.grey[900],
         child: const Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white30,
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white10,
+            ),
           ),
         ),
       ),
       errorWidget: (context, url, error) {
-        return _buildAssetImage(fallbackAsset, defaultFallback);
+        if (fallbackAsset != null) {
+          return _buildAssetImage(fallbackAsset, defaultFallback);
+        }
+        return defaultFallback;
       },
     );
 
@@ -89,23 +100,24 @@ class ImageWithFallback extends StatelessWidget {
   String? _validateImageUrl(dynamic url) {
     if (url == null) return null;
     if (url is String) {
-      if (url.isEmpty) return null;
+      final String trimmedUrl = url.trim();
+      if (trimmedUrl.isEmpty) return null;
 
-      // ✅ Si la URL contiene "default-images", es una imagen semilla del backend.
-      // Devolvemos null para que el widget use el [fallbackAsset] local y evitemos el 404.
-      if (url.contains('default-images')) return null;
+      // Si empieza por assets/, es un recurso local
+      if (trimmedUrl.startsWith('assets/')) return null;
 
-      // Si ya es absoluta (http...), la devolvemos tal cual
-      if (Uri.parse(url).isAbsolute) {
-        return url;
+      // ✅ PRIORIDAD: Si ya es absoluta (http...), la devolvemos tal cual
+      if (trimmedUrl.startsWith('http')) {
+        return trimmedUrl;
       }
-      // Si empieza por /, asumimos es relativa a localhost (para desarrollo)
-      if (url.startsWith('/')) {
-        // Asumiendo que las imágenes se sirven desde la raíz http://localhost:3000
-        return 'http://localhost:3000$url';
+
+      // Si empieza por /, asumimos es relativa al servidor
+      if (trimmedUrl.startsWith('/')) {
+        return ApiConstants.baseUrl.replaceFirst('/api', '') + trimmedUrl;
       }
-      // O tal vez es relativa sin / (ej. "uploads/...")
-      return 'http://localhost:3000/$url';
+
+      // Si llegamos aquí y no tiene esquema, asumimos relativa
+      return '${ApiConstants.baseUrl.replaceFirst('/api', '')}/$trimmedUrl';
     }
     return null;
   }

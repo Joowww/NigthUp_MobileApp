@@ -102,7 +102,12 @@ class Event {
       title: json['name'] ?? 'Evento sin título',
       venue: _parseVenue(json['location']),
       description: json['description'] ?? '',
-      image: json['image'] ?? '',
+      image:
+          json['image'] ??
+          json['avatar'] ??
+          json['mediaUrl'] ??
+          json['photo'] ??
+          '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       date: _parseDate(json['schedule']),
       tags: _parseTags(json),
@@ -179,19 +184,17 @@ class Event {
   }
 
   String get safeImageUrl {
-    // Si no hay imagen, devolver string vacío para que ImageWithFallback use el asset por defecto
-    if (image.isEmpty) {
-      return '';
+    if (image.isEmpty) return '';
+
+    if (image.startsWith('http')) {
+      return image;
     }
 
-    // Si la imagen es una ruta relativa (como '/default-images/default-event.jpg')
-    // construir URL completa con tu base URL
     if (image.startsWith('/')) {
       return ApiConstants.baseUrl.replaceFirst('/api', '') + image;
     }
 
-    // Si ya es una URL completa, usarla directamente
-    return image;
+    return '${ApiConstants.baseUrl.replaceFirst('/api', '')}/$image';
   }
 
   // Método para crear copia con nuevos valores

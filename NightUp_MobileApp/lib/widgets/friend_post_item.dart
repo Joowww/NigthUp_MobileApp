@@ -57,7 +57,6 @@ class _FriendPostItemState extends State<FriendPostItem>
   void _initMusic() async {
     final previewUrl = widget.post.music?['preview'];
     if (previewUrl != null && previewUrl.isNotEmpty) {
-      print('🎵 [DEBUG] Post ${widget.post.id} music preview URL: $previewUrl');
       try {
         await _musicPlayer.setUrl(previewUrl);
         await _musicPlayer.setLoopMode(LoopMode.one);
@@ -69,31 +68,21 @@ class _FriendPostItemState extends State<FriendPostItem>
           await _musicPlayer.seek(Duration(milliseconds: startMs.toInt()));
         }
 
-        print(
-          '🎵 [DEBUG] Post ${widget.post.id} music initialized at $startTime',
-        );
+        // Music initialized successfully
       } catch (e) {
-        if (mounted) print('🎵 [DEBUG] Post ${widget.post.id} music error: $e');
+        // music error
       }
     } else {
-      if (mounted) {
-        print(
-          '🎵 [DEBUG] Post ${widget.post.id} music preview URL is NULL or empty',
-        );
-      }
+      // Music URL not available
     }
   }
 
   void _initVideo() {
-    print(
-      '📹 [DEBUG] Post ${widget.post.id} initializing video: ${widget.post.safeMediaUrl}',
-    );
     _videoController =
         VideoPlayerController.networkUrl(Uri.parse(widget.post.safeMediaUrl))
           ..initialize()
               .then((_) {
                 if (!mounted) return;
-                print('📹 [DEBUG] Post ${widget.post.id} video initialized');
                 setState(() {
                   _isInitialized = true;
                 });
@@ -110,10 +99,7 @@ class _FriendPostItemState extends State<FriendPostItem>
               })
               .catchError((error) {
                 if (mounted) {
-                  print(
-                    '📹 [DEBUG] Post ${widget.post.id} video error: $error',
-                  );
-                  // Fallback: stop trying to play video if it fails
+                  // Video error
                   setState(() {
                     _isInitialized = false;
                   });

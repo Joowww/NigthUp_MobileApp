@@ -103,6 +103,7 @@ flutter:
     - assets/images/default-business.jpg
     - assets/images/google.png
     - assets/images/default-mapa.jpg
+    - assets/images/default-disco-removebg-preview.png  
     - assets/.env
   
   fonts:

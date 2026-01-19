@@ -1,5 +1,4 @@
 import 'package:get/get.dart';
-import 'dart:developer';
 import '../models/business.dart';
 import '../models/event.dart';
 import '../models/friend.dart';
@@ -32,18 +31,16 @@ class MenuModalController extends GetxController {
   Future<void> fetchBusinesses() async {
     isLoadingBusinesses.value = true;
     try {
-      final response = await _apiService.get('/business');
+      final response = await _apiService.get('/business?limit=1000');
 
       if (response.data is List) {
         businesses.value = (response.data as List)
             .map((json) => Business.fromJson(json))
             .toList();
-        print('✅ Loaded ${businesses.length} businesses');
       } else if (response.data is Map && response.data['businesses'] is List) {
         businesses.value = (response.data['businesses'] as List)
             .map((json) => Business.fromJson(json))
             .toList();
-        print('✅ Loaded ${businesses.length} businesses');
       } else {
         businesses.value = [
           Business(
@@ -57,10 +54,8 @@ class MenuModalController extends GetxController {
             active: true,
           ),
         ];
-        print('⚠️ Using fallback businesses data');
       }
     } catch (e) {
-      print('❌ Error loading businesses: $e');
       businesses.value = [];
     } finally {
       isLoadingBusinesses.value = false;
@@ -70,18 +65,16 @@ class MenuModalController extends GetxController {
   Future<void> fetchEvents() async {
     isLoadingEvents.value = true;
     try {
-      final response = await _apiService.get('/event');
+      final response = await _apiService.get('/event?limit=1000');
 
       if (response.data is List) {
         events.value = (response.data as List)
             .map((json) => Event.fromJson(json))
             .toList();
-        print('✅ Loaded ${events.length} events');
       } else if (response.data is Map && response.data['events'] is List) {
         events.value = (response.data['events'] as List)
             .map((json) => Event.fromJson(json))
             .toList();
-        print('✅ Loaded ${events.length} events');
       } else {
         events.value = [
           Event(
@@ -97,10 +90,8 @@ class MenuModalController extends GetxController {
             participantsCount: 120,
           ),
         ];
-        print('⚠️ Using fallback events data');
       }
     } catch (e) {
-      print('❌ Error loading events: $e');
       events.value = [];
     } finally {
       isLoadingEvents.value = false;
@@ -111,17 +102,8 @@ class MenuModalController extends GetxController {
     final ApiService apiService = _apiService;
     for (var friend in friends) {
       try {
-        final response = await apiService.get(
-          '/friendship/status/${friend.id}',
-        );
-        if (response.data is Map && response.data['status'] != null) {
-          log(
-            '🔗 Estado amistad de ${friend.username}: ${response.data['status']}',
-          );
-        }
-      } catch (e) {
-        log('❌ Error obteniendo estado de amistad de ${friend.username}: $e');
-      }
+        await apiService.get('/friendship/status/${friend.id}');
+      } catch (e) {}
     }
   }
 
@@ -134,21 +116,11 @@ class MenuModalController extends GetxController {
         friends.value = (response.data as List)
             .map((json) => Friend.fromJson(json))
             .toList();
-        for (var f in friends) {
-          log('👤 ${f.username} online: ${f.isOnline}');
-        }
-        log('✅ Loaded ${friends.length} friends from backend');
-
         await updateFriendsStatus();
       } else if (response.data is Map && response.data['friends'] is List) {
         friends.value = (response.data['friends'] as List)
             .map((json) => Friend.fromJson(json))
             .toList();
-        for (var f in friends) {
-          log('👤 ${f.username} online: ${f.isOnline}');
-        }
-        log('✅ Loaded ${friends.length} friends from backend');
-
         await updateFriendsStatus();
       } else {
         friends.value = [
@@ -160,10 +132,8 @@ class MenuModalController extends GetxController {
             distance: 2.5,
           ),
         ];
-        log('⚠️ Using fallback friends data');
       }
     } catch (e) {
-      log('❌ Error loading friends: $e');
       friends.value = [];
     } finally {
       isLoadingFriends.value = false;

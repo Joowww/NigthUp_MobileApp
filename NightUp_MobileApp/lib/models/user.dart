@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../utils/constants.dart';
 
 class User {
   final String id;
@@ -238,23 +239,37 @@ class User {
   }
 
   String? get safeProfilePictureUrl {
-    final url = profilePictureUrl?.isNotEmpty == true
+    String? url = profilePictureUrl?.isNotEmpty == true
         ? profilePictureUrl
         : (avatar?.isNotEmpty == true ? avatar : null);
 
-    // Si es una ruta de asset, devolvemos null para que el widget use su propio fallback
-    if (url == null || url.isEmpty || url.startsWith('assets/')) {
-      return null;
+    if (url == null || url.trim().isEmpty) return null;
+    url = url.trim();
+
+    if (url.startsWith('http')) {
+      return url;
     }
-    return url;
+
+    if (url.startsWith('/')) {
+      return ApiConstants.baseUrl.replaceFirst('/api', '') + url;
+    }
+
+    return '${ApiConstants.baseUrl.replaceFirst('/api', '')}/$url';
   }
 
   String? get safeCoverPhoto {
-    if (coverPhoto == null ||
-        coverPhoto!.isEmpty ||
-        coverPhoto!.startsWith('assets/')) {
+    if (coverPhoto == null || coverPhoto!.isEmpty) return null;
+
+    if (coverPhoto!.startsWith('assets/') ||
+        coverPhoto!.contains('default-images')) {
       return null;
     }
+
+    // Si es relativa
+    if (coverPhoto!.startsWith('/')) {
+      return ApiConstants.baseUrl.replaceFirst('/api', '') + coverPhoto!;
+    }
+
     return coverPhoto!;
   }
 

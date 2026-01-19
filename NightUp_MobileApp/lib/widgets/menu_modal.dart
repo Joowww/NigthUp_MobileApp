@@ -27,9 +27,7 @@ class MenuModal extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: () => Get.back(),
-            child: Container(
-              color: Colors.black54,
-            ),
+            child: Container(color: Colors.black54),
           ),
           Align(
             alignment: Alignment.centerRight,
@@ -48,7 +46,10 @@ class MenuModal extends StatelessWidget {
                   children: [
                     // HEADER NEÓN CYBERPUNK
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 30,
+                        horizontal: 20,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black,
                         borderRadius: const BorderRadius.only(
@@ -76,8 +77,9 @@ class MenuModal extends StatelessWidget {
                             right: 20,
                             top: 10,
                             child: Row(
-                              children: List.generate(3, (index) => 
-                                Container(
+                              children: List.generate(
+                                3,
+                                (index) => Container(
                                   width: 6,
                                   height: 6,
                                   margin: const EdgeInsets.only(left: 8),
@@ -86,17 +88,19 @@ class MenuModal extends StatelessWidget {
                                     color: AppColors.primary.withOpacity(0.6),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: AppColors.primary.withOpacity(0.8),
+                                        color: AppColors.primary.withOpacity(
+                                          0.8,
+                                        ),
                                         blurRadius: 8,
                                         spreadRadius: 2,
                                       ),
                                     ],
                                   ),
-                                )
+                                ),
                               ),
                             ),
                           ),
-                          
+
                           // Contenido principal
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,7 +117,9 @@ class MenuModal extends StatelessWidget {
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: AppColors.primary.withOpacity(0.5),
+                                          color: AppColors.primary.withOpacity(
+                                            0.5,
+                                          ),
                                           blurRadius: 10,
                                           spreadRadius: 2,
                                         ),
@@ -121,7 +127,11 @@ class MenuModal extends StatelessWidget {
                                     ),
                                     child: IconButton(
                                       onPressed: () => Get.back(),
-                                      icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                      icon: const Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(
                                         minWidth: 36,
@@ -130,7 +140,7 @@ class MenuModal extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(width: 20),
-                                  
+
                                   // Barra vertical decorativa
                                   Container(
                                     width: 3,
@@ -146,7 +156,9 @@ class MenuModal extends StatelessWidget {
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: AppColors.primary.withOpacity(0.6),
+                                          color: AppColors.primary.withOpacity(
+                                            0.6,
+                                          ),
                                           blurRadius: 8,
                                           spreadRadius: 1,
                                         ),
@@ -154,17 +166,18 @@ class MenuModal extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(width: 16),
-                                  
+
                                   // Texto EXPLORE
                                   Expanded(
                                     child: ShaderMask(
-                                      shaderCallback: (bounds) => LinearGradient(
-                                        colors: [
-                                          AppColors.primary,
-                                          AppColors.secondary,
-                                          AppColors.primary,
-                                        ],
-                                      ).createShader(bounds),
+                                      shaderCallback: (bounds) =>
+                                          LinearGradient(
+                                            colors: [
+                                              AppColors.primary,
+                                              AppColors.secondary,
+                                              AppColors.primary,
+                                            ],
+                                          ).createShader(bounds),
                                       child: const Text(
                                         'E X P L O R E',
                                         style: TextStyle(
@@ -192,9 +205,9 @@ class MenuModal extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              
+
                               const SizedBox(height: 12),
-                              
+
                               // Barra decorativa inferior con gradiente neón
                               Padding(
                                 padding: const EdgeInsets.only(left: 76),
@@ -210,7 +223,9 @@ class MenuModal extends StatelessWidget {
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: AppColors.primary.withOpacity(0.6),
+                                        color: AppColors.primary.withOpacity(
+                                          0.6,
+                                        ),
                                         blurRadius: 10,
                                         spreadRadius: 1,
                                       ),
@@ -223,16 +238,18 @@ class MenuModal extends StatelessWidget {
                         ],
                       ),
                     ),
-                    
+
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Obx(() => Row(
-                        children: [
-                          _buildTabButton('Businesses', 0, controller),
-                          _buildTabButton('Events', 1, controller),
-                          _buildTabButton('Friends', 2, controller),
-                        ],
-                      )),
+                      child: Obx(
+                        () => Row(
+                          children: [
+                            _buildTabButton('Businesses', 0, controller),
+                            _buildTabButton('Events', 1, controller),
+                            _buildTabButton('Friends', 2, controller),
+                          ],
+                        ),
+                      ),
                     ),
                     Expanded(
                       child: Obx(() {
@@ -255,7 +272,11 @@ class MenuModal extends StatelessWidget {
     );
   }
 
-  Widget _buildTabButton(String text, int index, MenuModalController controller) {
+  Widget _buildTabButton(
+    String text,
+    int index,
+    MenuModalController controller,
+  ) {
     final isSelected = controller.currentTab.value == index;
     return Expanded(
       child: GestureDetector(
@@ -287,7 +308,9 @@ class MenuModal extends StatelessWidget {
     return Obx(() {
       final businesses = controller.businesses;
       if (controller.isLoadingBusinesses.value) {
-        return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+        return const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        );
       }
       if (businesses.isEmpty) {
         return _buildEmptyState(
@@ -364,7 +387,11 @@ class MenuModal extends StatelessWidget {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(Icons.phone, color: Colors.white70, size: 14),
+                            const Icon(
+                              Icons.phone,
+                              color: Colors.white70,
+                              size: 14,
+                            ),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
@@ -381,7 +408,11 @@ class MenuModal extends StatelessWidget {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(Icons.access_time, color: Colors.white70, size: 14),
+                            const Icon(
+                              Icons.access_time,
+                              color: Colors.white70,
+                              size: 14,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               business.displayHours,
@@ -418,12 +449,15 @@ class MenuModal extends StatelessWidget {
                         children: [
                           GestureDetector(
                             onTap: () {
-                              final controller = Get.find<MenuModalController>();
-                              Get.to(() => FullMapScreen(
-                                businesses: controller.businesses,
-                                events: controller.events,
-                                selectedBusiness: business,
-                              ));
+                              final controller =
+                                  Get.find<MenuModalController>();
+                              Get.to(
+                                () => FullMapScreen(
+                                  businesses: controller.businesses,
+                                  events: controller.events,
+                                  selectedBusiness: business,
+                                ),
+                              );
                             },
                             child: Column(
                               children: [
@@ -440,8 +474,8 @@ class MenuModal extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  business.lat != null && business.lng != null 
-                                      ? 'Location Available' 
+                                  business.lat != null && business.lng != null
+                                      ? 'Location Available'
                                       : 'No Location',
                                   style: const TextStyle(
                                     color: Colors.white70,
@@ -461,7 +495,11 @@ class MenuModal extends StatelessWidget {
                     child: GlassCard(
                       padding: EdgeInsets.zero,
                       child: IconButton(
-                        icon: const Icon(Icons.share, color: Colors.white, size: 20),
+                        icon: const Icon(
+                          Icons.share,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                         onPressed: () {
                           _shareLocation(business);
                         },
@@ -481,7 +519,9 @@ class MenuModal extends StatelessWidget {
     return Obx(() {
       final events = controller.events;
       if (controller.isLoadingEvents.value) {
-        return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+        return const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        );
       }
       if (events.isEmpty) {
         return _buildEmptyState(
@@ -610,12 +650,15 @@ class MenuModal extends StatelessWidget {
                         children: [
                           GestureDetector(
                             onTap: () {
-                              final controller = Get.find<MenuModalController>();
-                              Get.to(() => FullMapScreen(
-                                businesses: controller.businesses,
-                                events: controller.events,
-                                selectedEvent: event,
-                              ));
+                              final controller =
+                                  Get.find<MenuModalController>();
+                              Get.to(
+                                () => FullMapScreen(
+                                  businesses: controller.businesses,
+                                  events: controller.events,
+                                  selectedEvent: event,
+                                ),
+                              );
                             },
                             child: Column(
                               children: [
@@ -651,7 +694,11 @@ class MenuModal extends StatelessWidget {
                     child: GlassCard(
                       padding: EdgeInsets.zero,
                       child: IconButton(
-                        icon: const Icon(Icons.share, color: Colors.white, size: 20),
+                        icon: const Icon(
+                          Icons.share,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                         onPressed: () {
                           _shareLocationFromEvent(event);
                         },
@@ -670,7 +717,9 @@ class MenuModal extends StatelessWidget {
   Widget _buildFriendsTab(MenuModalController controller) {
     return Obx(() {
       if (controller.isLoadingFriends.value) {
-        return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+        return const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        );
       }
       if (controller.friends.isEmpty) {
         return _buildEmptyState(
@@ -701,8 +750,9 @@ class MenuModal extends StatelessWidget {
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(25),
                               child: ImageWithFallback(
-                                imageUrl: friend.profilePictureUrl ?? '',
-                                fallbackAsset: 'assets/images/default-avatar.png',
+                                imageUrl: friend.safeProfilePictureUrl,
+                                fallbackAsset:
+                                    'assets/images/default-avatar.png',
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -714,7 +764,9 @@ class MenuModal extends StatelessWidget {
                               width: 12,
                               height: 12,
                               decoration: BoxDecoration(
-                                color: friend.isOnline ? Colors.green : Colors.grey,
+                                color: friend.isOnline
+                                    ? Colors.green
+                                    : Colors.grey,
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: AppColors.surface,
@@ -741,7 +793,9 @@ class MenuModal extends StatelessWidget {
                             Text(
                               friend.isOnline ? 'Online' : 'Offline',
                               style: TextStyle(
-                                color: friend.isOnline ? Colors.green : Colors.grey,
+                                color: friend.isOnline
+                                    ? Colors.green
+                                    : Colors.grey,
                                 fontSize: 12,
                               ),
                             ),
@@ -762,15 +816,25 @@ class MenuModal extends StatelessWidget {
                         children: [
                           IconButton(
                             onPressed: () {
-                              Get.to(() => FriendProfileScreen(friendId: friend.id));
+                              Get.to(
+                                () => FriendProfileScreen(friendId: friend.id),
+                              );
                             },
-                            icon: const Icon(Icons.person, color: Colors.white70, size: 20),
+                            icon: const Icon(
+                              Icons.person,
+                              color: Colors.white70,
+                              size: 20,
+                            ),
                           ),
                           IconButton(
                             onPressed: () {
                               _openChatWithFriend(friend);
                             },
-                            icon: const Icon(Icons.chat, color: Colors.white70, size: 20),
+                            icon: const Icon(
+                              Icons.chat,
+                              color: Colors.white70,
+                              size: 20,
+                            ),
                           ),
                         ],
                       ),
@@ -806,10 +870,7 @@ class MenuModal extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-              ),
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
           ],
         ),
@@ -845,25 +906,25 @@ class MenuModal extends StatelessWidget {
       log('   Friend ID length: ${friend.id.length}');
       log('   Friend ID type: ${friend.id.runtimeType}');
       log('   Full friend object: ${friend.toString()}');
-      
+
       // Validar que el ID no esté vacío
       if (friend.id.isEmpty) {
         throw Exception('Friend ID is empty');
       }
-      
+
       // Validar que el ID tenga el formato correcto (MongoDB ObjectId tiene 24 caracteres)
       if (friend.id.length != 24) {
         log('⚠️ Warning: Friend ID length is ${friend.id.length}, expected 24');
       }
-      
+
       // 1. Asegurar que el ChatController existe
       if (!Get.isRegistered<ChatController>()) {
         log('⚠️ ChatController not found, creating new instance');
         Get.put(ChatController());
       }
-      
+
       final ChatController chatController = Get.find<ChatController>();
-      
+
       // 2. Mostrar loading con diseño mejorado
       Get.dialog(
         Center(
@@ -901,10 +962,7 @@ class MenuModal extends StatelessWidget {
                 const SizedBox(height: 20),
                 Text(
                   'Abriendo chat con',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -921,50 +979,50 @@ class MenuModal extends StatelessWidget {
         ),
         barrierDismissible: false,
       );
-      
+
       // 3. Crear o encontrar la conversación
       log('📡 Calling createPrivateChat with friendId: ${friend.id}');
       await chatController.createPrivateChat(friend.id);
       log('✅ Private chat created/found successfully');
-      
+
       // 4. Cerrar loading
       if (Get.isDialogOpen ?? false) {
         Get.back();
       }
-      
+
       // 5. Cerrar el MenuModal
       Get.back();
-      
+
       // 6. Esperar un poco para asegurar que la UI se actualice
       await Future.delayed(const Duration(milliseconds: 300));
-      
+
       // 7. Navegar a la pantalla de chat
       log('🚀 Navigating to ChatScreen');
       Get.to(() => const ChatScreen());
-      
+
       log('✅ Successfully navigated to chat with ${friend.username}');
-      
     } catch (e, stackTrace) {
       log('❌ Error opening chat with ${friend.username}');
       log('Error details: $e');
       log('Stack trace: $stackTrace');
-      
+
       // Cerrar loading si está abierto
       if (Get.isDialogOpen ?? false) {
         Get.back();
       }
-      
+
       // Mostrar error detallado al usuario
       String errorMessage = 'No se pudo abrir el chat con ${friend.username}';
-      
+
       if (e.toString().contains('500')) {
-        errorMessage += '\n\nError del servidor. Por favor verifica:\n1. Que sois amigos aceptados\n2. Que el backend esté corriendo\n3. Los logs del backend para más detalles';
+        errorMessage +=
+            '\n\nError del servidor. Por favor verifica:\n1. Que sois amigos aceptados\n2. Que el backend esté corriendo\n3. Los logs del backend para más detalles';
       } else if (e.toString().contains('404')) {
         errorMessage += '\n\nUsuario no encontrado';
       } else if (e.toString().contains('401') || e.toString().contains('403')) {
         errorMessage += '\n\nNo tienes permisos para crear esta conversación';
       }
-      
+
       Get.snackbar(
         'Error',
         errorMessage,

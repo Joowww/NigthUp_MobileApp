@@ -5,7 +5,7 @@ import '../services/api_service.dart';
 import '../theme/colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/image_with_fallback.dart';
-import 'friend_profile_screen.dart';
+
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -104,6 +104,27 @@ class _SearchScreenState extends State<SearchScreen> {
     switch (_activeFilter.value) {
       case 'friends':
         for (var friend in _mapController.nearbyFriends) {
+          if (friend == null) continue;
+
+          // 🛡️ LÓGICA DE VISIBILIDAD HÍBRIDA (Soporta Objeto Friend y Map JSON)
+          bool isHidden = false;
+
+          // OPCIÓN A: Es un objeto de la clase Friend (lo más probable)
+          // Usamos 'dynamic' para acceder a la propiedad .isVisibleOnMap sin que el editor se queje si no la ve aún.
+          try {
+            if ((friend as dynamic).isVisibleOnMap == false) isHidden = true;
+          } catch (e) {
+            // Si el modelo no tiene el campo todavía, no hacemos nada (se muestra)
+          }
+
+          // OPCIÓN B: Es un Mapa JSON (fallback o tests)
+          if (friend is Map && friend['isVisibleOnMap'] == false) {
+            isHidden = true;
+          }
+
+          // SI ESTÁ OCULTO, SALTAMOS
+          if (isHidden) continue;
+
           final marker = _createFriendMarker(friend);
           if (marker != null) markers.add(marker);
         }
@@ -658,6 +679,7 @@ class _SearchScreenState extends State<SearchScreen> {
         : (item['name'] ?? item['title'] ?? 'Unknown');
 
     final String? id = item['_id']?.toString();
+    final String? status = item['status'];
 
     return ListTile(
       dense: true,
@@ -668,9 +690,37 @@ class _SearchScreenState extends State<SearchScreen> {
         color: color,
         size: 20,
       ),
-      title: Text(
-        name,
-        style: const TextStyle(color: Colors.white, fontSize: 14),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              name,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+            ),
+          ),
+          if (type == 'user' && status != null && status != 'none')
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: status == 'friends'
+                    ? Colors.blue.withOpacity(0.2)
+                    : Colors.orange.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: status == 'friends' ? Colors.blue : Colors.orange,
+                  width: 0.5,
+                ),
+              ),
+              child: Text(
+                status.toUpperCase().replaceAll('_', ' '),
+                style: TextStyle(
+                  color: status == 'friends' ? Colors.blue : Colors.orange,
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
       ),
       trailing: _isItemInMap(id, type)
           ? Icon(Icons.location_on, color: Colors.green, size: 20)
@@ -725,24 +775,10 @@ class _SearchScreenState extends State<SearchScreen> {
         _isMinimap.value = false;
         _flutterMapController.move(coords, 15.0);
 
-        Get.snackbar(
-          '✅ Found on map',
-          'Centered on ${type == 'user' ? item['username'] : item['name'] ?? item['title']}',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.green.withOpacity(0.8),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2),
-        );
+        _flutterMapController.move(coords, 15.0);
       }
     } else {
-      Get.snackbar(
-        '❌ Not on map',
-        'This ${type} is not currently visible on the map',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.orange.withOpacity(0.8),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
+      // Not on map, do nothing or show a subtle hint
     }
 
     _showResults.value = false;
@@ -778,26 +814,17 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Marker? _createFriendMarker(dynamic friend) {
     try {
-      if (friend.lat == null || friend.lng == null) {
-        print(
-          '❌ Friend ${friend.username} has invalid coordinates: [${friend.lng}, ${friend.lat}]',
-        );
-        return null;
-      }
+      if (friend.lat == null || friend.lng == null) return null;
+
       final lat = friend.lat as double;
       final lng = friend.lng as double;
       final username = friend.username ?? 'Friend';
-      final avatar = friend.profilePictureUrl ?? '';
+      final avatar = friend.safeProfilePictureUrl ?? '';
       final id = friend.id?.toString() ?? '';
 
-      // ✅ Verificar si está seleccionado
       final isSelected =
           _selectedId.value == id && _selectedType.value == 'user';
       final borderColor = isSelected ? Colors.greenAccent : AppColors.primary;
-
-      print(
-        '📍 Friend Marker: $username at $lat, $lng ${isSelected ? "(SELECTED)" : ""}',
-      );
 
       return Marker(
         point: LatLng(lat, lng),
@@ -805,7 +832,7 @@ class _SearchScreenState extends State<SearchScreen> {
         height: 85,
         child: GestureDetector(
           onTap: () {
-            Get.snackbar("Friend", "Tapped on $username");
+            // Marker tapped
           },
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -859,7 +886,6 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
       );
     } catch (e) {
-      print('❌ Error creating friend marker: $e');
       return null;
     }
   }
@@ -867,11 +893,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Marker? _createEventMarker(Map<String, dynamic> event) {
     try {
       final coords = event['location']?['coordinates'];
-      if (coords is! List || coords.length < 2) {
-        final name = event['name'] ?? event['title'] ?? 'Unknown';
-        print('❌ Event $name has invalid coordinates: $coords');
-        return null;
-      }
+      if (coords is! List || coords.length < 2) return null;
 
       final lng = (coords[0] as num).toDouble();
       final lat = (coords[1] as num).toDouble();
@@ -882,17 +904,13 @@ class _SearchScreenState extends State<SearchScreen> {
           _selectedId.value == id && _selectedType.value == 'event';
       final borderColor = isSelected ? Colors.greenAccent : Colors.pink;
 
-      print(
-        '📍 Event Marker: $name at $lat, $lng ${isSelected ? "(SELECTED)" : ""}',
-      );
-
       return Marker(
         point: LatLng(lat, lng),
         width: 60,
         height: 75,
         child: GestureDetector(
           onTap: () {
-            Get.snackbar("Event", "Tapped on $name");
+            // Marker tapped
           },
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -940,7 +958,6 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
       );
     } catch (e) {
-      print('❌ Error creating event marker: $e');
       return null;
     }
   }
@@ -948,11 +965,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Marker? _createBusinessMarker(Map<String, dynamic> business) {
     try {
       final coords = business['location']?['coordinates'];
-      if (coords is! List || coords.length < 2) {
-        final name = business['name'] ?? 'Unknown';
-        print('❌ Business $name has invalid coordinates: $coords');
-        return null;
-      }
+      if (coords is! List || coords.length < 2) return null;
 
       final lng = (coords[0] as num).toDouble();
       final lat = (coords[1] as num).toDouble();
@@ -963,17 +976,13 @@ class _SearchScreenState extends State<SearchScreen> {
           _selectedId.value == id && _selectedType.value == 'business';
       final borderColor = isSelected ? Colors.greenAccent : Colors.orange;
 
-      print(
-        '📍 Business Marker: $name at $lat, $lng ${isSelected ? "(SELECTED)" : ""}',
-      );
-
       return Marker(
         point: LatLng(lat, lng),
         width: 60,
         height: 75,
         child: GestureDetector(
           onTap: () {
-            Get.snackbar("Business", "Tapped on $name");
+            // Marker tapped
           },
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1021,7 +1030,6 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
       );
     } catch (e) {
-      print('❌ Error creating business marker: $e');
       return null;
     }
   }
@@ -1035,9 +1043,12 @@ class _SearchScreenState extends State<SearchScreen> {
         selected: isActive,
         onSelected: (v) {
           _activeFilter.value = filterValue;
-
           _selectedId.value = '';
           _selectedType.value = '';
+
+          if (_searchController.text.isNotEmpty) {
+            _performSearch(_searchController.text);
+          }
         },
         backgroundColor: Colors.black.withOpacity(0.6),
         selectedColor: activeColor.withOpacity(0.3),
@@ -1065,45 +1076,47 @@ class _SearchScreenState extends State<SearchScreen> {
     _showResults.value = true;
 
     try {
-      final results = await Future.wait([
-        _apiService.get('/user?search=$query&limit=10'),
-        _apiService.get('/event?search=$query&limit=10'),
-        _apiService.get('/business?search=$query&limit=10'),
-      ]);
-
-      List<dynamic> users = [];
-      if (results[0].data is Map && results[0].data['users'] is List) {
-        users = results[0].data['users'];
-      } else if (results[0].data is List) {
-        users = results[0].data;
-      }
-
-      List<dynamic> events = [];
-      if (results[1].data is Map && results[1].data['events'] is List) {
-        events = results[1].data['events'];
-      } else if (results[1].data is List) {
-        events = results[1].data;
-      }
-
-      List<dynamic> businesses = [];
-      if (results[2].data is Map && results[2].data['businesses'] is List) {
-        businesses = results[2].data['businesses'];
-      } else if (results[2].data is List) {
-        businesses = results[2].data;
-      }
-
-      _searchResults.value = {
-        'users': users,
-        'events': events,
-        'businesses': businesses,
-      };
-
-      print(
-        '🔍 Search results: ${users.length} users, ${events.length} events, ${businesses.length} businesses',
-      );
-    } catch (e) {
-      print('❌ Error searching: $e');
       _searchResults.value = {'users': [], 'events': [], 'businesses': []};
+
+      if (_activeFilter.value == 'friends') {
+        final response = await _apiService.get(
+          '/friendship/search?search=$query&limit=20',
+        );
+
+        List<dynamic> users = [];
+        if (response.data is List) {
+          users = response.data;
+        } else if (response.data is Map && response.data['users'] is List) {
+          users = response.data['users'];
+        }
+
+        _searchResults['users'] = users;
+      } else if (_activeFilter.value == 'events') {
+        final response = await _apiService.get('/event?search=$query&limit=20');
+
+        List<dynamic> events = [];
+        if (response.data is Map && response.data['events'] is List) {
+          events = response.data['events'];
+        } else if (response.data is List) {
+          events = response.data;
+        }
+
+        _searchResults['events'] = events;
+      } else if (_activeFilter.value == 'businesses') {
+        final response = await _apiService.get(
+          '/business?search=$query&limit=20',
+        );
+
+        List<dynamic> businesses = [];
+        if (response.data is Map && response.data['businesses'] is List) {
+          businesses = response.data['businesses'];
+        } else if (response.data is List) {
+          businesses = response.data;
+        }
+
+        _searchResults['businesses'] = businesses;
+      }
+    } catch (e) {
     } finally {
       _isSearching.value = false;
     }

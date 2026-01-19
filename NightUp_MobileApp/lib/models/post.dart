@@ -63,12 +63,21 @@ class Post {
   }
 
   String get safeMediaUrl {
-    if (mediaUrl == null || mediaUrl!.isEmpty) {
+    if (mediaUrl == null || mediaUrl!.trim().isEmpty) {
       // Imatge de festa per defecte si no n'hi ha cap
       return 'https://images.unsplash.com/photo-1514525253361-bee8a4874093?w=800';
     }
-    if (mediaUrl!.startsWith('http')) return mediaUrl!;
-    return '${ApiConstants.baseUrl.replaceAll('/api', '')}/$mediaUrl';
+    final String url = mediaUrl!.trim();
+
+    if (url.startsWith('http')) {
+      return url;
+    }
+
+    if (url.startsWith('/')) {
+      return ApiConstants.baseUrl.replaceFirst('/api', '') + url;
+    }
+
+    return '${ApiConstants.baseUrl.replaceFirst('/api', '')}/$url';
   }
 
   // Constructor para posts de Discover (Eventos)

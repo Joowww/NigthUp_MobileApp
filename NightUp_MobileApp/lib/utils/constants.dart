@@ -7,7 +7,8 @@ class ApiConstants {
     if (kReleaseMode) {
       return 'https://api.tu-dominio-produccion.com/api'; // CAMBIAR ESTO
     }
-    return 'http://localhost:3000/api';
+    return 'http://172.20.10.2:3000/api';
+    // return 'http://localhost:3000/api';
   }
 
   static const int connectTimeout = 30000;

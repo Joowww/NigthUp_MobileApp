@@ -42,6 +42,9 @@ class SettingsController extends GetxController {
 
         if (user.value != null) {
           _authController.setUser(user.value!);
+          if (user.value?.isVisibleOnMap != null) {
+            isVisibleOnMap.value = user.value!.isVisibleOnMap!;
+          }
         }
         logger.i('User profile successfully mapped: ${user.value?.username}');
         logger.d('Avatar URL: ${user.value?.profilePictureUrl}');
@@ -164,37 +167,44 @@ class SettingsController extends GetxController {
     }
   }
 
-  Future<void> updatePrivacySettings() async {
-    try {
-      await _apiService.put(
-        '/user/privacy-settings',
-        data: {
-          'isVisibleOnMap': isVisibleOnMap.value,
-          'notificationsEnabled': notificationsEnabled.value,
-        },
-      );
-      Get.snackbar('Éxito', 'Configuración de privacidad actualizada');
-    } catch (e) {
-      Get.snackbar('Error', 'No se pudo actualizar la configuración: $e');
-    }
-  }
+  // Future<void> updatePrivacySettings() async {
+  //   try {
+  //     await _apiService.put(
+  //       '/user/privacy-settings',
+  //       data: {
+  //         'isVisibleOnMap': isVisibleOnMap.value,
+  //         'notificationsEnabled': notificationsEnabled.value,
+  //       },
+  //     );
+  //     Get.snackbar('Éxito', 'Configuración de privacidad actualizada');
+  //   } catch (e) {
+  //     Get.snackbar('Error', 'No se pudo actualizar la configuración: $e');
+  //   }
+  // }
 
+  //
+
+  // MODIFICACION ✅: Nueva función unificada que maneja API del mapa Y API de usuario (persistencia)
   Future<void> updateLocationVisibility(bool visible) async {
+    // 1. Guardar estado previo por si falla
+    final previousValue = isVisibleOnMap.value;
+
+    // 2. Optimistic UI: Cambiar visualmente ya
+    isVisibleOnMap.value = visible;
+
     try {
-      // Usar MapController para la lógica de visibilidad real
+      // 3. Actualizar lógica del Mapa (MapController) para efecto inmediato
       if (Get.isRegistered<MapController>()) {
         await Get.find<MapController>().setVisibilityOnMap(visible);
       } else {
-        // Fallback si el controlador no está listo (aunque debería)
+        // Fallback: Llamada directa a API de mapa si el controller no está
         await _apiService.patch(
           '/map/visibility',
           data: {"isVisible": visible},
         );
       }
 
-      isVisibleOnMap.value = visible;
-
-      // Actualizar privacy settings también
+      // 4. Persistir en backend (Esta llamada es la que daba error 404, ahora funcionará)
       await _apiService.put(
         '/user/privacy-settings',
         data: {
@@ -205,8 +215,18 @@ class SettingsController extends GetxController {
 
       Get.snackbar('Éxito', 'Visibilidad en el mapa actualizada');
     } catch (e) {
-      Get.snackbar('Error', 'No se pudo actualizar la visibilidad: $e');
+      // Si falla, revertimos el botón
+      isVisibleOnMap.value = previousValue;
+      Get.snackbar('Error', 'No se pudo actualizar la configuración: $e');
+      logger.e("Error updating privacy/map settings: $e");
     }
+  }
+  // Fin MODIFICACION ✅
+
+  // MODIFICACION ✅: Redirección para compatibilidad
+  Future<void> updatePrivacySettings() async {
+    // Simplemente usa el valor actual para llamar a la función principal
+    await updateLocationVisibility(isVisibleOnMap.value);
   }
 
   void updateLocationEnabled(bool enabled) {
@@ -224,11 +244,12 @@ class SettingsController extends GetxController {
     cameraEnabled.value = true;
     darkModeEnabled.value = true;
     biometricEnabled.value = false;
-    isVisibleOnMap.value = true;
+    //isVisibleOnMap.value = true;
   }
 
   void saveSettings() {
-    updatePrivacySettings();
+    //updatePrivacySettings();
+    updateLocationVisibility(isVisibleOnMap.value);
   }
 
   void changeLanguage(BuildContext context, String languageCode) {

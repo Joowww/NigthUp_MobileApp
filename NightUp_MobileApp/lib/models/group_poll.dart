@@ -19,14 +19,18 @@ class GroupPoll {
 
   factory GroupPoll.fromJson(Map<String, dynamic> json) {
     return GroupPoll(
-      id: json['_id']?.toString() ?? '',
+      id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
       question: json['question'] ?? '',
       options:
           (json['options'] as List?)
               ?.map((o) => PollOption.fromJson(o))
               .toList() ??
           [],
-      creatorId: json['creator']?.toString() ?? '',
+      creatorId: json['creator'] is Map
+          ? (json['creator']['id']?.toString() ??
+                json['creator']['_id']?.toString() ??
+                '')
+          : json['creator']?.toString() ?? '',
       isActive: json['isActive'] ?? true,
       expiresAt: json['expiresAt'] != null
           ? DateTime.parse(json['expiresAt'])
