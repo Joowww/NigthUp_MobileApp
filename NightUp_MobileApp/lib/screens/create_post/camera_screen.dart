@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:get/get.dart'; // Add Get import
+import 'package:get/get.dart';
 import 'package:nightup_mobile_app/services/image_picker_service.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter/foundation.dart'; // For kIsWeb
-import 'package:nightup_mobile_app/theme/colors.dart'; // Assuming AppColors exists
+import 'package:nightup_mobile_app/theme/colors.dart';
 
-// Import EditPostScreen (will be created next)
+// Asegúrate de que este import apunte a tu fichero real
 import 'edit_post_screen.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -23,15 +22,12 @@ class _CameraScreenState extends State<CameraScreen>
   bool _isCameraInitialized = false;
   int _selectedCameraIndex = 0;
 
-  // Filtros Básicos (ColorMatrix simulados con colores overlay)
+  // Filtros Básicos
   int _selectedFilterIndex = 0;
   final List<Map<String, dynamic>> _filters = [
     {'name': 'Normal', 'color': null},
     {'name': 'Vintage', 'color': Colors.amber.withOpacity(0.2)},
-    {
-      'name': 'B&W',
-      'color': Colors.grey,
-    }, // Requires ShaderMask for true B&W, using overlay for now
+    {'name': 'B&W', 'color': Colors.grey},
     {'name': 'Cold', 'color': Colors.blue.withOpacity(0.2)},
     {'name': 'Warm', 'color': Colors.orange.withOpacity(0.2)},
     {'name': 'Dark', 'color': Colors.black.withOpacity(0.3)},
@@ -95,7 +91,6 @@ class _CameraScreenState extends State<CameraScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Re-initialize camera on resume logic usually goes here
     if (_controller == null || !_controller!.value.isInitialized) {
       return;
     }
@@ -187,6 +182,7 @@ class _CameraScreenState extends State<CameraScreen>
 
   @override
   Widget build(BuildContext context) {
+    // 1. Estado de carga o error
     if (!_isCameraInitialized || _controller == null) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -211,42 +207,50 @@ class _CameraScreenState extends State<CameraScreen>
       );
     }
 
+    // 2. Pantalla principal de la cámara
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Camera Preview
+          // A. Camera Preview
           _buildCameraPreview(),
 
-          // 2. Filters Overlay (Visual only for preview)
+          // B. Filters Overlay
           if (_filters[_selectedFilterIndex]['color'] != null)
-            Container(
-              color: _filters[_selectedFilterIndex]['color'],
-              // Note: For true B&W you'd use a BackdropFilter with ColorFilter.matrix
-              // This is a simplified "tint" filter for demonstration
-            ),
+            Container(color: _filters[_selectedFilterIndex]['color']),
 
-          // 3. UI Controls
+          // C. UI Controls (SOLUCIÓN DEL OVERFLOW AQUÍ)
           SafeArea(
-            child: Column(
-              children: [
-                // Top Bar
-                _buildTopBar(),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: Column(
+                      // Usamos spaceBetween en lugar de Spacer() sueltos
+                      // Esto empuja el contenido a los extremos si hay espacio,
+                      // pero permite scroll si no lo hay.
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Top Bar
+                        _buildTopBar(),
 
-                const Spacer(),
+                        // Right Sidebar (TikTok style)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: _buildRightSidebar(),
+                        ),
 
-                // Right Sidebar (TikTok style)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: _buildRightSidebar(),
-                ),
-
-                const Spacer(),
-
-                // Bottom Controls
-                _buildBottomControls(),
-              ],
+                        // Bottom Controls
+                        _buildBottomControls(),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -268,7 +272,6 @@ class _CameraScreenState extends State<CameraScreen>
             icon: const Icon(Icons.close, color: Colors.white, size: 28),
             onPressed: () => Get.back(),
           ),
-
           // Music Selector
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -290,8 +293,7 @@ class _CameraScreenState extends State<CameraScreen>
               ],
             ),
           ),
-
-          const SizedBox(width: 28), // Spacer balance
+          const SizedBox(width: 28), // Balance spacer
         ],
       ),
     );
@@ -299,23 +301,15 @@ class _CameraScreenState extends State<CameraScreen>
 
   Widget _buildRightSidebar() {
     return Padding(
-      padding: const EdgeInsets.only(right: 16.0),
+      padding: const EdgeInsets.only(right: 16.0, top: 20, bottom: 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildSideIcon(Icons.flip_camera_ios, 'Flip', onTap: _switchCamera),
           const SizedBox(height: 20),
-          _buildSideIcon(
-            Icons.flash_off,
-            'Flash',
-            onTap: () {},
-          ), // Implement flash toggle
+          _buildSideIcon(Icons.flash_off, 'Flash', onTap: () {}),
           const SizedBox(height: 20),
-          _buildSideIcon(
-            Icons.filter_hdr,
-            'Filters',
-            onTap: () {},
-          ), // Could toggle filter menu visibility
+          _buildSideIcon(Icons.filter_hdr, 'Filters', onTap: () {}),
           const SizedBox(height: 20),
           _buildSideIcon(Icons.timer, 'Timer', onTap: () {}),
           const SizedBox(height: 20),
@@ -347,6 +341,8 @@ class _CameraScreenState extends State<CameraScreen>
 
   Widget _buildBottomControls() {
     return Column(
+      mainAxisSize:
+          MainAxisSize.min, // Importante para evitar expansión infinita
       children: [
         // Filter Selector Horizontal List
         SizedBox(
@@ -455,8 +451,8 @@ class _CameraScreenState extends State<CameraScreen>
                 ),
               ),
 
-              // Spacer / Switch Mode (Optional)
-              const SizedBox(width: 40), // Placeholder for balance
+              // Switch Mode Placeholder
+              const SizedBox(width: 40),
             ],
           ),
         ),

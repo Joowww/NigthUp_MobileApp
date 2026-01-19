@@ -56,7 +56,13 @@ class _PanicScreenState extends State<PanicScreen>
     });
 
     const oneSec = Duration(seconds: 1);
-    var timer = Timer.periodic(oneSec, (Timer timer) {
+    Timer.periodic(oneSec, (Timer timer) {
+      // Seguridad: Verificar si el widget sigue en pantalla
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
       setState(() {
         if (_countdown! > 1) {
           _countdown = _countdown! - 1;
@@ -86,10 +92,12 @@ class _PanicScreenState extends State<PanicScreen>
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              setState(() {
-                _isCalling = false;
-                _countdown = null;
-              });
+              if (mounted) {
+                setState(() {
+                  _isCalling = false;
+                  _countdown = null;
+                });
+              }
             },
             child: const Text('OK', style: TextStyle(color: AppColors.primary)),
           ),
@@ -105,31 +113,43 @@ class _PanicScreenState extends State<PanicScreen>
       body: Stack(
         children: [
           _buildWarningBackground(),
-
           _buildPulsingGlow(),
 
+          // CORRECCIÓN AQUÍ:
+          // Usamos CustomScrollView + SliverFillRemaining en lugar de Column directa.
+          // Esto permite que el contenido haga scroll si el contador lo empuja fuera de la pantalla.
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  _buildHeader(),
-                  const Spacer(),
+            child: CustomScrollView(
+              slivers: [
+                SliverFillRemaining(
+                  hasScrollBody:
+                      false, // Importante para que los Spacer() funcionen
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      children: [
+                        _buildHeader(),
+                        const Spacer(), // Empuja contenido al centro
 
-                  _buildMainContent(),
-                  const Spacer(),
+                        _buildMainContent(),
 
-                  _buildEmergencyActions(),
+                        const Spacer(), // Empuja botones abajo
+                        _buildEmergencyActions(),
 
-                  _buildFooter(),
-                ],
-              ),
+                        _buildFooter(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+
+  // --- El resto de tus widgets auxiliares se mantienen igual ---
 
   Widget _buildWarningBackground() {
     return Container(
@@ -248,7 +268,6 @@ class _PanicScreenState extends State<PanicScreen>
                       ],
                     ),
                   ),
-
                   Container(
                     width: 120,
                     height: 120,
@@ -269,7 +288,6 @@ class _PanicScreenState extends State<PanicScreen>
           },
         ),
         const SizedBox(height: 32),
-
         const Text(
           'EMERGENCY',
           style: TextStyle(
@@ -285,7 +303,6 @@ class _PanicScreenState extends State<PanicScreen>
           style: TextStyle(fontSize: 18, color: Colors.red),
         ),
         const SizedBox(height: 32),
-
         if (_countdown != null)
           Text(
             '$_countdown',
@@ -348,7 +365,6 @@ class _PanicScreenState extends State<PanicScreen>
           ),
         ),
         const SizedBox(height: 16),
-
         Row(
           children: [
             Expanded(
@@ -369,7 +385,6 @@ class _PanicScreenState extends State<PanicScreen>
           ],
         ),
         const SizedBox(height: 24),
-
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
