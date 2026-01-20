@@ -2,7 +2,7 @@ class GroupParticipant {
   final String userId;
   final String username;
   final String? avatar;
-  final String role; // 'creator' | 'member'
+  final String role;
   final DateTime? joinedAt;
 
   GroupParticipant({
@@ -14,7 +14,6 @@ class GroupParticipant {
   });
 
   factory GroupParticipant.fromJson(Map<String, dynamic> json) {
-    // El participante puede venir como objeto completo o como ObjectId
     final participantData = json['participant'] is Map
         ? json['participant']
         : json;
@@ -35,5 +34,5 @@ class GroupParticipant {
   }
 
   bool get isCreator => role == 'creator';
-  bool get isAdmin => role == 'creator'; // Por ahora creator = admin
+  bool get isAdmin => role == 'creator';
 }

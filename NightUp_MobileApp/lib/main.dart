@@ -1,4 +1,7 @@
 import 'bindings/auth_binding.dart';
+import 'bindings/main_binding.dart';
+import 'screens/login_screen.dart';
+import 'screens/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -11,28 +14,22 @@ import 'app.dart';
 import 'services/storage_service.dart';
 import 'services/api_service.dart';
 import 'services/poll_service.dart';
-import 'services/cloudinary_service.dart'; // ✅ NUEVO
-import 'services/notification_service.dart'; // ✅ NUEVO
-import 'services/jitsi_service.dart'; // ✅ NUEVO
+import 'services/cloudinary_service.dart';
+import 'services/notification_service.dart';
+import 'services/jitsi_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializar Firebase con opciones multiplataforma (obligatorio en web)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Inicializar servicios globales
   await Get.putAsync<StorageService>(() => StorageService().init());
   Get.put<http.Client>(http.Client());
   Get.put<ApiService>(ApiService());
   Get.put<PollService>(PollService());
-  Get.put<CloudinaryService>(CloudinaryService()); // ✅ NUEVO
-  Get.put<JitsiService>(JitsiService()); // ✅ NUEVO
-  await Get.putAsync<NotificationService>(
-    () => NotificationService().init(),
-  ); // ✅ NUEVO
-
-  // Controladores se inicializan vía Bindings o en _initPrivateControllers
+  Get.put<CloudinaryService>(CloudinaryService());
+  Get.put<JitsiService>(JitsiService());
+  await Get.putAsync<NotificationService>(() => NotificationService().init());
 
   var delegate = await LocalizationDelegate.create(
     fallbackLocale: 'es',
@@ -61,7 +58,20 @@ class NightUpApp extends StatelessWidget {
       supportedLocales: localizationDelegate.supportedLocales,
       locale: localizationDelegate.currentLocale,
       initialBinding: AuthBinding(),
-      home: const App(),
+      getPages: [
+        GetPage(name: '/', page: () => const App()),
+        GetPage(name: '/home', page: () => const App(), binding: MainBinding()),
+        GetPage(
+          name: '/login',
+          page: () => LoginScreen(
+            onLogin: () => Get.offAllNamed('/home'),
+            onRegister: () => Get.to(
+              () => RegisterScreen(onBack: Get.back, onRegister: () {}),
+            ),
+            onForgotPassword: () {},
+          ),
+        ),
+      ],
     );
   }
 }

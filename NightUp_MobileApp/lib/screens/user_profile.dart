@@ -396,17 +396,17 @@ class _UserProfileState extends State<UserProfile>
                         children: [
                           _buildStatItem(
                             _friendsCount.value.toString(),
-                            'Friends',
+                            'Amigos',
                           ),
                           const SizedBox(width: 16),
                           _buildStatItem(
                             _userEvents.length.toString(),
-                            'Events',
+                            'Eventos',
                           ),
                           const SizedBox(width: 16),
                           _buildStatItem(
                             _groupsCount.value.toString(),
-                            'Groups',
+                            'Grupos',
                           ),
                         ],
                       ),
@@ -457,7 +457,7 @@ class _UserProfileState extends State<UserProfile>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'About Me',
+                'Sobre mí',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -466,7 +466,7 @@ class _UserProfileState extends State<UserProfile>
               ),
               const SizedBox(height: 8),
               Text(
-                user.bio ?? 'No bio yet',
+                user.bio ?? 'Sin biografía',
                 style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
 
@@ -484,9 +484,9 @@ class _UserProfileState extends State<UserProfile>
                   else if (user.country != null && user.country!.isNotEmpty)
                     _buildInfoItem(Icons.location_on, user.country!)
                   else
-                    _buildInfoItem(Icons.location_on, 'No location'),
+                    _buildInfoItem(Icons.location_on, 'Sin ubicación'),
 
-                  if (age != null) _buildInfoItem(Icons.cake, '$age years old'),
+                  if (age != null) _buildInfoItem(Icons.cake, '$age años'),
                 ],
               ),
 
@@ -494,7 +494,7 @@ class _UserProfileState extends State<UserProfile>
 
               if (user.interests != null && user.interests!.isNotEmpty) ...[
                 const Text(
-                  'Interests',
+                  'Intereses',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -790,18 +790,18 @@ class _UserProfileState extends State<UserProfile>
         children: [
           _iconButton(
             icon: Icons.settings,
-            label: 'Settings',
+            label: 'Ajustes',
             onTap: widget.onSettingsOpen,
           ),
           _iconButton(
             icon: Icons.calendar_today,
-            label: 'Calendar',
+            label: 'Calendario',
             onTap: widget.onCalendarOpen,
           ),
-          _iconButton(icon: Icons.map, label: 'Map', onTap: widget.onMapOpen),
+          _iconButton(icon: Icons.map, label: 'Mapa', onTap: widget.onMapOpen),
           _iconButton(
             icon: Icons.warning,
-            label: 'Emergency',
+            label: 'Emergencia',
             onTap: widget.onPanicOpen,
             color: Colors.red,
           ),
@@ -849,8 +849,6 @@ class _UserProfileState extends State<UserProfile>
     );
   }
 
-  // -------------------- MAIN BUILD --------------------
-
   @override
   Widget build(BuildContext context) {
     return Obx(() {
@@ -888,8 +886,8 @@ class _UserProfileState extends State<UserProfile>
                     unselectedLabelColor: Colors.white70,
                     tabs: const [
                       Tab(text: 'Info'),
-                      Tab(text: 'Events'),
-                      Tab(text: 'Reviews'),
+                      Tab(text: 'Eventos'),
+                      Tab(text: 'Reseñas'),
                       Tab(text: 'Solicitudes'),
                     ],
                   ),
@@ -912,8 +910,6 @@ class _UserProfileState extends State<UserProfile>
     });
   }
 }
-
-// -------------------- TAB BAR DELEGATE --------------------
 
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabBar tabBar;

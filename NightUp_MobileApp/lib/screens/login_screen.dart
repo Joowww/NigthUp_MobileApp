@@ -36,8 +36,6 @@ class _LoginScreenState extends State<LoginScreen> {
   // bool _isGoogleInitialized = false;
 
   @override
-  @override
-  @override
   void initState() {
     super.initState();
     _loadSavedCredentials();
@@ -93,12 +91,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Removed _handleGISCredential as it relies on _authController.googleLoginWeb which is deprecated for mobile
-
+  // Removed _handleGISCredential
   // Removed _initializeGoogleGIS
-
   // Removed _loadAndInitializeGIS
-
   // Removed _initializeGIS
 
   void _showErrorDialog(String error) {
@@ -127,27 +122,84 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: Colors.black,
       body: Stack(
         children: [
           _buildBackgroundGradients(),
-          SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 60,
-              ),
-              child: Column(
-                children: [
-                  _buildLogo(),
-                  const SizedBox(height: 40),
-                  _buildLoginForm(),
-                  const SizedBox(height: 20),
-                  _buildRegisterPrompt(),
-                ],
+
+          // 🔥 CAMBIO 1: Usamos Positioned.fill para el contenido principal
+          Positioned.fill(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 60,
+                ),
+                child: Column(
+                  children: [
+                    _buildLogo(),
+                    const SizedBox(height: 40),
+                    _buildLoginForm(),
+
+                    // 🔥 CAMBIO 2: Espacio extra al final para que los botones
+                    // fijos de abajo no tapen el formulario si la pantalla es pequeña
+                    const SizedBox(height: 150),
+                  ],
+                ),
               ),
             ),
           ),
+
+          // 🔥 CAMBIO 3: Botones "flotantes" pegados abajo con SafeArea
+          // Esto soluciona el problema de clics en Samsung/Android
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              // Opcional: un degradado negro suave para que se lean mejor
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Colors.black, Colors.transparent],
+                  stops: [0.2, 1.0],
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Botón Olvidé Contraseña (Movido aquí)
+                      TextButton(
+                        onPressed: widget.onForgotPassword,
+                        child: Text(
+                          translate('login.forgot_password'),
+                          style: const TextStyle(
+                            color: AppColors.neonPink,
+                            fontWeight: FontWeight.w600,
+                            shadows: [
+                              Shadow(blurRadius: 5, color: Color(0x80FF00FF)),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // Botón Registrarme (Movido aquí)
+                      _buildRegisterPrompt(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
           if (_authController.isLoading) _buildLoadingOverlay(),
         ],
       ),
@@ -290,7 +342,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 16),
             _buildPasswordField(),
             const SizedBox(height: 16),
-            _buildRememberForgot(),
+            _buildRememberMeOnly(), // 🔥 CAMBIO 4: Renombrado, ya solo tiene el checkbox
             const SizedBox(height: 16),
             GradientButton(
               onPressed: _login,
@@ -354,43 +406,27 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildRememberForgot() {
-    return Column(
+  // 🔥 CAMBIO 5: Modificado para quitar el botón de "olvidé contraseña"
+  // Ahora solo se encarga del Checkbox "Recordarme"
+  Widget _buildRememberMeOnly() {
+    return Row(
       children: [
-        Row(
-          children: [
-            Theme(
-              data: ThemeData(
-                checkboxTheme: const CheckboxThemeData(
-                  fillColor: MaterialStatePropertyAll(AppColors.neonPink),
-                ),
-              ),
-              child: Checkbox(
-                value: _rememberMe,
-                onChanged: (value) => setState(() => _rememberMe = value!),
-              ),
+        Theme(
+          data: ThemeData(
+            checkboxTheme: const CheckboxThemeData(
+              fillColor: MaterialStatePropertyAll(AppColors.neonPink),
             ),
-            Text(
-              translate('login.remember_me'),
-              style: const TextStyle(
-                color: Color(0xCCFFFFFF),
-                shadows: [Shadow(blurRadius: 5, color: Color(0x4DFF00FF))],
-              ),
-            ),
-          ],
+          ),
+          child: Checkbox(
+            value: _rememberMe,
+            onChanged: (value) => setState(() => _rememberMe = value!),
+          ),
         ),
-        SizedBox(
-          width: double.infinity,
-          child: TextButton(
-            onPressed: widget.onForgotPassword,
-            child: Text(
-              translate('login.forgot_password'),
-              style: const TextStyle(
-                color: AppColors.neonPink,
-                fontWeight: FontWeight.w600,
-                shadows: [Shadow(blurRadius: 5, color: Color(0x80FF00FF))],
-              ),
-            ),
+        Text(
+          translate('login.remember_me'),
+          style: const TextStyle(
+            color: Color(0xCCFFFFFF),
+            shadows: [Shadow(blurRadius: 5, color: Color(0x4DFF00FF))],
           ),
         ),
       ],
@@ -430,8 +466,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Removed _buildGoogleWebButton as we are using the Flutter button for all platforms
-
+  // Removed _buildGoogleWebButton
   // Removed _showGoogleSignInModal
 
   Widget _buildRegisterPrompt() {
@@ -445,17 +480,23 @@ class _LoginScreenState extends State<LoginScreen> {
             shadows: [Shadow(blurRadius: 5, color: Color(0x4DFF00FF))],
           ),
         ),
+        const SizedBox(width: 5),
         GestureDetector(
           onTap: widget.onRegister,
-          child: Text(
-            translate('login.register_here'),
-            style: const TextStyle(
-              color: AppColors.neonPink,
-              fontWeight: FontWeight.w600,
-              shadows: [
-                Shadow(blurRadius: 8, color: Color(0x99FF00FF)),
-                Shadow(blurRadius: 15, color: Color(0x4DFF00FF)),
-              ],
+          // Aumentamos el área de toque para que sea más fácil pulsar en móvil
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              translate('login.register_here'),
+              style: const TextStyle(
+                color: AppColors.neonPink,
+                fontWeight: FontWeight.w600,
+                shadows: [
+                  Shadow(blurRadius: 8, color: Color(0x99FF00FF)),
+                  Shadow(blurRadius: 15, color: Color(0x4DFF00FF)),
+                ],
+              ),
             ),
           ),
         ),

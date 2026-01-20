@@ -93,7 +93,6 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
         ),
         child: Column(
           children: [
-            // Cabecera
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -114,8 +113,6 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
                 ],
               ),
             ),
-
-            // Preview
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -135,14 +132,11 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
                 ),
               ),
             ),
-
-            // Controles
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // Cambiar cámara
                   if (_cameras.length > 1)
                     IconButton(
                       icon: const Icon(
@@ -152,8 +146,6 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
                       ),
                       onPressed: _switchCamera,
                     ),
-
-                  // Botón Obturador
                   GestureDetector(
                     onTap: _takePicture,
                     child: Container(
@@ -176,8 +168,6 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
                       ),
                     ),
                   ),
-
-                  // Espaciador si no hay cambio de cámara para centrar
                   if (_cameras.length <= 1) const SizedBox(width: 48),
                 ],
               ),

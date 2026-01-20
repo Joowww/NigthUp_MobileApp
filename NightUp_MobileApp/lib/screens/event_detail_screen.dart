@@ -877,25 +877,25 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     children: [
                       _buildInfoCard(
                         Icons.calendar_today,
-                        'Date',
+                        'Fecha',
                         event.formattedDate,
                         AppColors.primary,
                       ),
                       _buildInfoCard(
                         Icons.access_time,
-                        'Time',
+                        'Hora',
                         event.formattedDate,
                         AppColors.secondary,
                       ),
                       _buildInfoCard(
                         Icons.attach_money,
-                        'Price',
+                        'Precio',
                         event.displayPrice,
                         Colors.green,
                       ),
                       _buildInfoCard(
                         Icons.people,
-                        'Attending',
+                        'Asistentes',
                         '${event.participantsCount}',
                         Colors.purple,
                       ),
@@ -912,7 +912,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'About the Event',
+                              'Sobre el evento',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
@@ -959,7 +959,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                 height: 48,
                                 alignment: Alignment.center,
                                 child: const Text(
-                                  'Leave Event',
+                                  'Salir del evento',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -972,7 +972,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                         )
                       : GradientButton(
                           onPressed: _joinEvent,
-                          text: 'Join Event',
+                          text: 'Unirse al evento',
                         ),
 
                   if (_isJoined ||

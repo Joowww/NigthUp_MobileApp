@@ -32,7 +32,6 @@ class MenuModalController extends GetxController {
     isLoadingBusinesses.value = true;
     try {
       final response = await _apiService.get('/business?limit=1000');
-
       if (response.data is List) {
         businesses.value = (response.data as List)
             .map((json) => Business.fromJson(json))
@@ -66,7 +65,6 @@ class MenuModalController extends GetxController {
     isLoadingEvents.value = true;
     try {
       final response = await _apiService.get('/event?limit=1000');
-
       if (response.data is List) {
         events.value = (response.data as List)
             .map((json) => Event.fromJson(json))
@@ -111,7 +109,6 @@ class MenuModalController extends GetxController {
     isLoadingFriends.value = true;
     try {
       final response = await _apiService.get('/friendship/friends');
-
       if (response.data is List) {
         friends.value = (response.data as List)
             .map((json) => Friend.fromJson(json))

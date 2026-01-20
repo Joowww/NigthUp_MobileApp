@@ -12,7 +12,6 @@ class RatingController extends GetxController {
     try {
       final userId = _apiService.getUserId();
       if (userId == null) {
-        Get.snackbar('Error', 'Usuario no identificado');
         return false;
       }
 
@@ -27,8 +26,6 @@ class RatingController extends GetxController {
       );
       return true;
     } catch (e) {
-      print('❌ Error submitting rating: $e');
-      Get.snackbar('Error', 'No se pudo enviar la valoración: $e');
       return false;
     }
   }
@@ -45,8 +42,6 @@ class RatingController extends GetxController {
       );
       return true;
     } catch (e) {
-      print('❌ Error updating rating: $e');
-      Get.snackbar('Error', 'No se pudo actualizar la valoración: $e');
       return false;
     }
   }
@@ -56,8 +51,6 @@ class RatingController extends GetxController {
       await _apiService.delete('/rating/$ratingId');
       return true;
     } catch (e) {
-      print('❌ Error deleting rating: $e');
-      Get.snackbar('Error', 'No se pudo eliminar la valoración: $e');
       return false;
     }
   }
@@ -67,7 +60,6 @@ class RatingController extends GetxController {
       final response = await _apiService.get('/rating/event/$eventId/stats');
       return response.data;
     } catch (e) {
-      print('❌ Error getting rating stats: $e');
       return null;
     }
   }
@@ -82,7 +74,6 @@ class RatingController extends GetxController {
       }
       return [];
     } catch (e) {
-      print('❌ Error getting event ratings: $e');
       return [];
     }
   }
@@ -100,7 +91,6 @@ class RatingController extends GetxController {
       }
       return null;
     } catch (e) {
-      print('❌ Error getting user event rating: $e');
       return null;
     }
   }

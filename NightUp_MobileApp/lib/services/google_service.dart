@@ -1,18 +1,17 @@
 import 'package:google_sign_in/google_sign_in.dart';
-import '../utils/logger.dart';
 
 class GoogleSignInService {
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-
     signInOption: SignInOption.standard,
+    serverClientId:
+        '750097459792-9cbl6emgs6j9vbpip10q8ddo1ru3i2s3.apps.googleusercontent.com',
   );
 
   static Future<GoogleSignInAccount?> signIn() async {
     try {
       return await _googleSignIn.signIn();
     } catch (error) {
-      logger.e('Google Sign-In Error: $error');
       return null;
     }
   }
@@ -26,7 +25,6 @@ class GoogleSignInService {
       }
       return null;
     } catch (error) {
-      logger.e('Google Token Error: $error');
       return null;
     }
   }
@@ -35,7 +33,7 @@ class GoogleSignInService {
     try {
       await _googleSignIn.signOut();
     } catch (error) {
-      logger.e('Google Sign-Out Error: $error');
+      //nothing
     }
   }
 
@@ -43,7 +41,6 @@ class GoogleSignInService {
     try {
       return await _googleSignIn.isSignedIn();
     } catch (error) {
-      logger.e('Google isSignedIn Error: $error');
       return false;
     }
   }
@@ -52,7 +49,6 @@ class GoogleSignInService {
     try {
       return _googleSignIn.currentUser;
     } catch (error) {
-      logger.e('Google getCurrentUser Error: $error');
       return null;
     }
   }

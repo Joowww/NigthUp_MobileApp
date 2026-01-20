@@ -1,4 +1,3 @@
-// lib/models/friend.dart
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 import '../utils/constants.dart';

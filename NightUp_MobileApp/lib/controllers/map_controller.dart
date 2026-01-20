@@ -38,8 +38,6 @@ class MapController extends GetxController {
         fetchNearbyFriends();
         fetchNearbyEvents();
         fetchNearbyBusinesses();
-      } else {
-        print('⚠️ No token, no se cargan datos de mapa');
       }
     });
   }
@@ -51,40 +49,29 @@ class MapController extends GetxController {
 
       serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        print('📍 Location services are disabled - using default location');
         return;
       }
 
-      // CHECK USER PREFERENCE
       if (!_settingsController.locationEnabled.value) {
-        print('📍 Location sharing disabled by user in Settings');
-        return; // No obtenemos ubicación si está desactivado por el usuario
+        return;
       }
 
       permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          print('📍 Location permissions denied - using default location');
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        print(
-          '📍 Location permissions permanently denied - using default location',
-        );
         return;
       }
 
       Position position = await Geolocator.getCurrentPosition();
       currentPosition.value = position;
-      print('📍 Current location: ${position.latitude}, ${position.longitude}');
-
       _updateUserLocationIfAuthenticated(position.latitude, position.longitude);
-    } catch (e) {
-      print('❌ Error getting location: $e - using default location');
-    }
+    } catch (e) {}
   }
 
   void _updateUserLocationIfAuthenticated(double lat, double lng) async {
@@ -92,20 +79,13 @@ class MapController extends GetxController {
       final token = await _apiService.getUserId();
       if (token != null) {
         await updateUserLocation(lat, lng);
-      } else {
-        print('⚠️ User not authenticated, skipping location update');
       }
-    } catch (e) {
-      print('❌ Error checking authentication for location update: $e');
-    }
+    } catch (e) {}
   }
 
   void fetchNearbyFriends() async {
     final userId = _apiService.getUserId();
-    final token = Get.find<StorageService>().read('token');
-    print('🟢 TOKEN ENVIADO: $token');
     if (userId == null) {
-      print('⚠️ No token, no se cargan nearby friends');
       isLoading.value = false;
       return;
     }
@@ -119,11 +99,9 @@ class MapController extends GetxController {
           final recipient = item['recipient'];
           final isMeRequester = requester['_id'] == userId;
           final userJson = isMeRequester ? recipient : requester;
-          print('🟢 Friend JSON: $userJson');
           return Friend.fromJson(userJson);
         }).toList();
         nearbyFriends.value = friends;
-        print('✅ Loaded ${nearbyFriends.length} friends (parsed)');
       } else if (response.data is Map && response.data['friends'] is List) {
         final List<dynamic> friendships = response.data['friends'];
         final List<Friend> friends = friendships.map<Friend>((item) {
@@ -134,7 +112,6 @@ class MapController extends GetxController {
           return Friend.fromJson(userJson);
         }).toList();
         nearbyFriends.value = friends;
-        print('✅ Loaded ${nearbyFriends.length} friends (parsed)');
       } else {
         nearbyFriends.value = [
           Friend.fromJson({
@@ -154,10 +131,8 @@ class MapController extends GetxController {
             },
           }),
         ];
-        print('⚠️ Using fallback friends data');
       }
     } catch (e) {
-      print('❌ Error loading nearby friends: $e');
       nearbyFriends.value = [];
     } finally {
       isLoading.value = false;
@@ -167,15 +142,12 @@ class MapController extends GetxController {
   void fetchNearbyEvents() async {
     final userId = _apiService.getUserId();
     if (userId == null) {
-      print('⚠️ No token, no se cargan nearby events');
       return;
     }
     try {
       final response = await _apiService.get('/event?limit=50');
-
       if (response.statusCode == 200) {
         List<dynamic> eventsList = [];
-
         if (response.data is Map && response.data['events'] is List) {
           eventsList = response.data['events'];
         } else if (response.data is List) {
@@ -183,7 +155,6 @@ class MapController extends GetxController {
         }
 
         nearbyEvents.value = eventsList;
-        print('✅ Loaded ${nearbyEvents.length} events');
       } else {
         nearbyEvents.value = [
           {
@@ -205,10 +176,8 @@ class MapController extends GetxController {
             'image': '',
           },
         ];
-        print('⚠️ Using fallback events data');
       }
     } catch (e) {
-      print('❌ Error loading nearby events: $e');
       nearbyEvents.value = [];
     }
   }
@@ -216,15 +185,12 @@ class MapController extends GetxController {
   void fetchNearbyBusinesses() async {
     final userId = _apiService.getUserId();
     if (userId == null) {
-      print('⚠️ No token, no se cargan nearby businesses');
       return;
     }
     try {
       final response = await _apiService.get('/business?limit=50');
-
       if (response.statusCode == 200) {
         List<dynamic> businessesList = [];
-
         if (response.data is Map && response.data['businesses'] is List) {
           businessesList = response.data['businesses'];
         } else if (response.data is List) {
@@ -232,7 +198,6 @@ class MapController extends GetxController {
         }
 
         nearbyBusinesses.value = businessesList;
-        print('✅ Loaded ${nearbyBusinesses.length} businesses');
       } else {
         nearbyBusinesses.value = [
           {
@@ -254,30 +219,19 @@ class MapController extends GetxController {
             'avatar': '',
           },
         ];
-        print('⚠️ Using fallback businesses data');
       }
     } catch (e) {
-      print('❌ Error loading nearby businesses: $e');
       nearbyBusinesses.value = [];
     }
   }
 
   Future<void> updateUserLocation(double lat, double lng) async {
     try {
-      final response = await _apiService.post(
+      await _apiService.post(
         '/map/location',
         data: {'longitude': lng, 'latitude': lat},
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        print('✅ Location updated to: $lat, $lng');
-      } else {
-        print(
-          '📍 Location update endpoint not available (status: ${response.statusCode})',
-        );
-      }
-    } catch (e) {
-      print('📍 Location update not available: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> setVisibilityOnMap(bool isVisible) async {
@@ -288,13 +242,8 @@ class MapController extends GetxController {
       );
       if (response.statusCode == 200) {
         isVisibleOnMap.value = isVisible;
-        print('✅ User visibility updated: $isVisible');
-      } else {
-        print('👁️ Visibility update endpoint not available');
       }
-    } catch (e) {
-      print('👁️ Visibility update not available: $e');
-    }
+    } catch (e) {}
   }
 
   void refreshData() {

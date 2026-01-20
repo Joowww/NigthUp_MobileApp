@@ -24,8 +24,6 @@ class NotificationService extends GetxService {
   Future<NotificationService> init() async {
     if (isInitialized.value) return this;
 
-    log('🔔 Initializing NotificationService...');
-
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
@@ -49,9 +47,8 @@ class NotificationService extends GetxService {
       await _requestPermissions();
 
       isInitialized.value = true;
-      log('✅ NotificationService initialized');
     } catch (e) {
-      log('❌ Error initializing notifications: $e');
+      //nothing
     }
 
     return this;
@@ -59,7 +56,6 @@ class NotificationService extends GetxService {
 
   Future<void> _requestPermissions() async {
     try {
-      // ✅ CORRECCIÓN: Añadir < > correctamente
       final androidPlugin = _notifications
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
@@ -69,7 +65,6 @@ class NotificationService extends GetxService {
         await androidPlugin.requestNotificationsPermission();
       }
 
-      // ✅ CORRECCIÓN: Añadir < > correctamente
       final iosPlugin = _notifications
           .resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin
@@ -83,13 +78,11 @@ class NotificationService extends GetxService {
         );
       }
     } catch (e) {
-      log('❌ Error requesting permissions: $e');
+      //nothing
     }
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    log('🔔 Notification tapped: ${response.payload}');
-
     if (response.payload != null && response.payload!.isNotEmpty) {
       try {
         final conversationId = response.payload!;
@@ -98,12 +91,10 @@ class NotificationService extends GetxService {
           arguments: {'conversationId': conversationId},
         );
       } catch (e) {
-        log('❌ Error navigating from notification: $e');
+        //nothing
       }
     }
   }
-
-  // ==================== NOTIFICACIÓN IN-APP (BANNER) ====================
 
   void showInAppNotification({
     required String title,
@@ -153,7 +144,6 @@ class NotificationService extends GetxService {
     bool? isGroup,
   }) async {
     if (!isInitialized.value) {
-      log('⚠️ Notifications not initialized yet');
       return;
     }
 
@@ -201,20 +191,16 @@ class NotificationService extends GetxService {
         notificationDetails,
         payload: conversationId,
       );
-
-      log('✅ Notification shown: $notificationTitle - $displayBody');
     } catch (e) {
-      log('❌ Error showing notification: $e');
+      //nothing
     }
   }
 
   Future<void> cancelAll() async {
     await _notifications.cancelAll();
-    log('🔕 All notifications cancelled');
   }
 
   Future<void> cancel(int id) async {
     await _notifications.cancel(id);
-    log('🔕 Notification $id cancelled');
   }
 }

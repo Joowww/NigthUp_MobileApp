@@ -49,8 +49,6 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
     super.dispose();
   }
 
-  // ==================== SWIPE GESTURE ====================
-
   void _handleDragStart(DragStartDetails details) {
     _dragUnderway = true;
   }
@@ -90,7 +88,6 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
       onLongPress: widget.onLongPress,
       child: Stack(
         children: [
-          // Icono de reply al hacer swipe
           Positioned(
             right: widget.isMe ? 20 : null,
             left: !widget.isMe ? 20 : null,
@@ -111,7 +108,6 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
             ),
           ),
 
-          // Mensaje deslizable
           SlideTransition(
             position: _slideAnimation,
             child: Padding(
@@ -122,7 +118,6 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
                     : MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Avatar (solo si no es mensaje propio)
                   if (!widget.isMe) ...[
                     Container(
                       width: 32,
@@ -153,15 +148,12 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
                     ),
                     const SizedBox(width: 8),
                   ],
-
-                  // Burbuja
                   Flexible(
                     child: Column(
                       crossAxisAlignment: widget.isMe
                           ? CrossAxisAlignment.end
                           : CrossAxisAlignment.start,
                       children: [
-                        // Nombre del remitente
                         if (!widget.isMe)
                           Padding(
                             padding: const EdgeInsets.only(left: 12, bottom: 4),
@@ -175,7 +167,6 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
                             ),
                           ),
 
-                        // Reply preview
                         if (widget.message.replyTo != null)
                           Container(
                             margin: const EdgeInsets.only(bottom: 4),
@@ -215,7 +206,6 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
                             ),
                           ),
 
-                        // Contenedor del mensaje
                         Container(
                           constraints: BoxConstraints(
                             maxWidth: MediaQuery.of(context).size.width * 0.7,
@@ -257,9 +247,7 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Contenido del mensaje
                                 if (widget.message.isDeleted)
-                                  // Mensaje eliminado
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
@@ -281,7 +269,6 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
                                   )
                                 else if (widget.message.isImage &&
                                     widget.message.imageUrl != null)
-                                  // Mensaje con imagen
                                   Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -364,7 +351,6 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
                                     ],
                                   )
                                 else if (widget.message.isAudio)
-                                  // Mensaje de audio
                                   AudioMessageBubble(
                                     audioUrl:
                                         widget.message.audioUrl ??
@@ -373,7 +359,6 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
                                     isMe: widget.isMe,
                                   )
                                 else
-                                  // Mensaje de texto normal
                                   Text(
                                     widget.message.text,
                                     style: const TextStyle(
@@ -384,7 +369,6 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
 
                                 const SizedBox(height: 4),
 
-                                // Reacciones
                                 if (widget.message.reactions.isNotEmpty)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 4),
@@ -397,7 +381,6 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
                                     ),
                                   ),
 
-                                // Metadata (hora, editado, estado)
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -445,8 +428,6 @@ class _SwipeableMessageBubbleState extends State<SwipeableMessageBubble>
       ),
     );
   }
-
-  // ==================== HELPERS ====================
 
   List<Widget> _buildReactionChips(List<Reaction> reactions) {
     final reactionCounts = <String, int>{};

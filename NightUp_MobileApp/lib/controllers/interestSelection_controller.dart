@@ -37,22 +37,15 @@ class InterestSelectionController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    print('🟢 [InterestController] onInit called');
-
     try {
       final authController = Get.find<AuthController>();
       final user = authController.currentUser;
       if (user != null && user.username == 'JoelMoreno') {
-        print(
-          '🟢 [InterestController] Usuario JoelMoreno detectado, saltando onboarding',
-        );
         _storageService.write('onboarding_complete', true);
         Future.delayed(Duration.zero, () => Get.offAll(() => const App()));
         return;
       }
-    } catch (e) {
-      print('Error comprobando usuario para skip onboarding: $e');
-    }
+    } catch (e) {}
     _loadTags();
   }
 
@@ -60,7 +53,7 @@ class InterestSelectionController extends GetxController {
     isLoading.value = true;
     errorMessage.value = '';
     bool completed = false;
-    Future timeout = Future.delayed(const Duration(seconds: 15), () {
+    Future.delayed(const Duration(seconds: 15), () {
       if (!completed) {
         errorMessage.value =
             'No se pudo cargar. Comprueba tu conexión o reintenta.';
@@ -68,17 +61,14 @@ class InterestSelectionController extends GetxController {
         update();
       }
     });
+
     try {
-      print('🟢 [InterestController] _loadTags called');
       final types = ['MusicType', 'Musician', 'EventType', 'ChildhoodIdol'];
       for (final type in types) {
         try {
-          print('🟢 [InterestController] Requesting tags for $type');
           final response = await _apiService.getTagsByType(type);
-          print('🟢 [InterestController] Response for $type: $response');
           if (response is List) {
             tagOptions[type] = response.map<Map<String, dynamic>>((tag) {
-              print('🟢 [InterestController] Mapping tag: $tag');
               return {
                 'id': tag['_id']?.toString() ?? '',
                 'name': tag['name']?.toString() ?? '',
@@ -86,26 +76,16 @@ class InterestSelectionController extends GetxController {
               };
             }).toList();
           } else {
-            print(
-              '🔴 [InterestController] Unexpected response format for $type: $response',
-            );
             tagOptions[type] = [];
           }
         } catch (e) {
-          print('🔴 [InterestController] Error loading tags for $type: $e');
           tagOptions[type] = [];
         }
       }
-      print('🟢 [InterestController] All tags loaded successfully');
-      print('🟢 [InterestController] Tags summary:');
-      tagOptions.forEach((key, value) {
-        print('   $key: ${value.length} items');
-      });
       completed = true;
       isLoading.value = false;
       update();
     } catch (e) {
-      print('🔴 [InterestController] Error loading tags: $e');
       _loadFallbackTags();
       completed = true;
       isLoading.value = false;
@@ -116,8 +96,6 @@ class InterestSelectionController extends GetxController {
   }
 
   void _loadFallbackTags() {
-    print('🔄 Loading fallback tags...');
-
     tagOptions['MusicType'] = [
       {'id': '1', 'name': 'Techno', 'color': '#8b5cf6'},
       {'id': '2', 'name': 'House', 'color': '#3b82f6'},
@@ -126,56 +104,43 @@ class InterestSelectionController extends GetxController {
       {'id': '5', 'name': 'EDM', 'color': '#10b981'},
       {'id': '6', 'name': 'Rock', 'color': '#f97316'},
     ];
-
     tagOptions['Musician'] = [
       {'id': '7', 'name': 'Peggy Gou', 'color': '#8b5cf6'},
       {'id': '8', 'name': 'Bad Bunny', 'color': '#3b82f6'},
       {'id': '9', 'name': 'Fred Again..', 'color': '#ef4444'},
       {'id': '10', 'name': 'The Weeknd', 'color': '#f59e0b'},
     ];
-
     tagOptions['EventType'] = [
-      {'id': '11', 'name': 'Clubbing', 'color': '#8b5cf6'},
+      {'id': '11', 'name': 'Discotecas', 'color': '#8b5cf6'},
       {'id': '12', 'name': 'Festival', 'color': '#3b82f6'},
       {'id': '13', 'name': 'Rave', 'color': '#ef4444'},
-      {'id': '14', 'name': 'Bar Crawl', 'color': '#f59e0b'},
+      {'id': '14', 'name': 'Ruta de Bares', 'color': '#f59e0b'},
     ];
-
     tagOptions['ChildhoodIdol'] = [
       {'id': '15', 'name': 'Spider-Man', 'color': '#8b5cf6'},
       {'id': '16', 'name': 'Messi', 'color': '#3b82f6'},
       {'id': '17', 'name': 'Hannah Montana', 'color': '#ef4444'},
       {'id': '18', 'name': 'Goku', 'color': '#f59e0b'},
     ];
-
     update();
   }
 
   void selectOption(String category, String id) {
-    print('🟢 [InterestController] Selecting $category: $id');
     selections[category] = id;
     update();
   }
 
   void nextPage() {
-    print(
-      '🟢 [InterestController] nextPage called. currentPage: ${currentPage.value}',
-    );
     if (currentPage.value < 3) {
-      print('🟢 [InterestController] Moving to page ${currentPage.value + 1}');
       currentPage.value++;
       update();
     } else {
-      print(
-        '🟢 [InterestController] Final page reached, submitting interests...',
-      );
       _submitInterests();
     }
   }
 
   void previousPage() {
     if (currentPage.value > 0) {
-      print('⬅️ Moving to page ${currentPage.value - 1}');
       currentPage.value--;
       update();
     }
@@ -184,22 +149,16 @@ class InterestSelectionController extends GetxController {
   Future<void> _submitInterests() async {
     try {
       isLoading.value = true;
-      print('🟢 [InterestController] _submitInterests called');
 
       final missingSelections = selections.entries
           .where((entry) => entry.value.isEmpty)
           .toList();
+
       if (missingSelections.isNotEmpty) {
-        print('🔴 [InterestController] Missing selections: $missingSelections');
-        Get.snackbar(
-          'Error',
-          'Por favor completa todas las selecciones',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
         isLoading.value = false;
         return;
       }
+
       final dataToSend = {
         'musicType': _getNameFromId('MusicType', selections['MusicType']!),
         'musician': _getNameFromId('Musician', selections['Musician']!),
@@ -209,23 +168,12 @@ class InterestSelectionController extends GetxController {
           selections['ChildhoodIdol']!,
         ),
       };
-      print('🟢 [InterestController] Enviando intereses: $dataToSend');
+
       await _apiService.saveInitialInterests(dataToSend);
       await _storageService.write('onboarding_complete', true);
-      print('🟢 [InterestController] Intereses guardados exitosamente');
       Get.offAll(() => const App());
     } catch (e) {
-      print('🔴 [InterestController] Error submitting interests: $e');
-      Get.snackbar(
-        'Error',
-        'Error al guardar intereses: $e',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
     } finally {
-      print(
-        '🟢 [InterestController] _submitInterests finally. Setting isLoading to false',
-      );
       isLoading.value = false;
     }
   }
@@ -238,19 +186,16 @@ class InterestSelectionController extends GetxController {
       );
       return option?['name'] ?? '';
     } catch (e) {
-      print('❌ Error getting name for $category:$id: $e');
       return '';
     }
   }
 
   void skipOnboarding() async {
-    print('🟢 [InterestController] skipOnboarding called');
     await _storageService.write('onboarding_complete', true);
     Get.offAll(() => const App());
   }
 
   void reloadTags() {
-    print('🟢 [InterestController] reloadTags called');
     _loadTags();
   }
 
@@ -281,7 +226,6 @@ class InterestSelectionController extends GetxController {
       }
       return Color(int.parse(hexColor, radix: 16));
     } catch (e) {
-      print('❌ Error converting color $hexColor: $e');
       return Colors.blue;
     }
   }

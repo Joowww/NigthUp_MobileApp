@@ -1,14 +1,11 @@
-// lib/models/post.dart
 import 'user.dart';
 import '../utils/constants.dart';
 
 class Post {
   final String id;
-  // Comunes
   final String? mediaUrl;
   final int likes;
 
-  // Específico de Friends (Posts de Usuario)
   final User? user;
   final String? caption;
   final String? location;
@@ -16,13 +13,12 @@ class Post {
   final bool isVideo;
   final bool isLiked;
   final Map<String, dynamic>? music;
-  final String? filterColor; // HEX string like #AARRGGBB
+  final String? filterColor;
 
-  // Específico de Discover (Eventos)
   final String? title;
   final String? venue;
   final String? price;
-  final String? eventId; // Usaremos String si el _id de Mongo es el ID
+  final String? eventId;
 
   Post({
     required this.id,
@@ -64,7 +60,6 @@ class Post {
 
   String get safeMediaUrl {
     if (mediaUrl == null || mediaUrl!.trim().isEmpty) {
-      // Imatge de festa per defecte si no n'hi ha cap
       return 'https://images.unsplash.com/photo-1514525253361-bee8a4874093?w=800';
     }
     final String url = mediaUrl!.trim();
@@ -80,23 +75,20 @@ class Post {
     return '${ApiConstants.baseUrl.replaceFirst('/api', '')}/$url';
   }
 
-  // Constructor para posts de Discover (Eventos)
   factory Post.fromDiscoverJson(Map<String, dynamic> json) {
     return Post(
       id: json['_id'] as String? ?? '0',
       mediaUrl: json['mediaUrl'] as String?,
       title: json['title'] as String?,
       venue: json['venue'] as String?,
-      // Si el precio es 0, lo muestra como Free Entry
       price: json['price'] != null && (json['price'] as num) > 0
           ? '\$${json['price']}'
-          : 'Free Entry',
+          : 'Entrada Gratis',
       eventId: json['_id'] as String?,
       likes: json['likesCount'] as int? ?? 0,
     );
   }
 
-  // Constructor para posts de Friends
   factory Post.fromFriendPostJson(Map<String, dynamic> json) {
     return Post(
       id: json['_id'] as String? ?? '0',

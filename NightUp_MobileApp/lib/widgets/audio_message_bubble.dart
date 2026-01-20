@@ -38,9 +38,6 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
 
     _audioPlayer.onDurationChanged.listen((newDuration) {
       if (mounted) {
-        debugPrint(
-          "⏳ Duración detectada en reproductor: ${newDuration.inSeconds}s",
-        );
         setState(() {
           _duration = newDuration;
         });
@@ -88,29 +85,19 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
       setState(() => _isLoading = true);
       try {
         String finalUrl = widget.audioUrl;
-
-        // 🔥 HACK DE COMPATIBILIDAD: Cloudinary convierte cualquier audio a MP3 si cambiamos la extensión.
-        // Ahora soportamos .mp4 y .webm (el formato nativo de Chrome).
         if (finalUrl.contains('cloudinary.com') &&
             (finalUrl.endsWith('.mp4') || finalUrl.endsWith('.webm'))) {
           finalUrl = finalUrl
               .replaceAll('.mp4', '.mp3')
               .replaceAll('.webm', '.mp3');
-          debugPrint("🔄 URL transformada para compatibilidad: $finalUrl");
         }
-
-        debugPrint("🎵 Intentando reproducir: $finalUrl");
 
         await _audioPlayer.setSource(UrlSource(finalUrl));
 
-        // Esperar un momento a que cargue los metadatos
         await _audioPlayer.resume();
-
-        debugPrint("✅ Playback iniciado");
       } catch (e) {
-        debugPrint("❌ Error playing audio: $e");
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Error al reproducir: El formato no es compatible'),
           ),
         );
@@ -131,7 +118,7 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      width: 240, // Fixed width prevents overflow
+      width: 240,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -173,7 +160,7 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 SizedBox(
-                  height: 24, // Constrain slider height
+                  height: 24,
                   child: SliderTheme(
                     data: SliderTheme.of(context).copyWith(
                       activeTrackColor: Colors.white,

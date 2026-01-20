@@ -1,11 +1,9 @@
-// lib/widgets/image_with_fallback.dart
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/constants.dart';
 
 class ImageWithFallback extends StatelessWidget {
   final String? imageUrl;
-  // Usamos google.png como la imagen de reserva que ya existe en tu assets
   final String? fallbackAsset;
   final BoxFit fit;
   final double? width;
@@ -26,7 +24,6 @@ class ImageWithFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Widget de reserva por defecto (si no hay imagen ni asset de reserva)
     final Widget defaultFallback = Container(
       width: width,
       height: height,
@@ -40,7 +37,6 @@ class ImageWithFallback extends StatelessWidget {
       ),
     );
 
-    // Validar que imageUrl sea una string válida
     final String? validImageUrl = _validateImageUrl(imageUrl);
     if (validImageUrl == null) {
       if (fallbackAsset != null) {
@@ -51,7 +47,6 @@ class ImageWithFallback extends StatelessWidget {
       return defaultFallback;
     }
 
-    // Widget de CachedNetworkImage para cargar la imagen remota
     final Widget imageWidget = CachedNetworkImage(
       imageUrl: validImageUrl,
       fit: fit,
@@ -83,7 +78,6 @@ class ImageWithFallback extends StatelessWidget {
     return _buildFinalWidget(imageWidget);
   }
 
-  // Helper para imágenes de assets
   Widget _buildAssetImage(String? asset, Widget errorWidget) {
     if (asset == null || asset.isEmpty) return errorWidget;
     return Image.asset(
@@ -91,38 +85,30 @@ class ImageWithFallback extends StatelessWidget {
       fit: fit,
       width: width,
       height: height,
-      // Si el asset falla (ej. no existe), mostramos el widget por defecto
       errorBuilder: (context, error, stackTrace) => errorWidget,
     );
   }
 
-  // Valida que la url sea un String y una URL absoluta
   String? _validateImageUrl(dynamic url) {
     if (url == null) return null;
     if (url is String) {
       final String trimmedUrl = url.trim();
       if (trimmedUrl.isEmpty) return null;
 
-      // Si empieza por assets/, es un recurso local
       if (trimmedUrl.startsWith('assets/')) return null;
 
-      // ✅ PRIORIDAD: Si ya es absoluta (http...), la devolvemos tal cual
       if (trimmedUrl.startsWith('http')) {
         return trimmedUrl;
       }
 
-      // Si empieza por /, asumimos es relativa al servidor
       if (trimmedUrl.startsWith('/')) {
         return ApiConstants.baseUrl.replaceFirst('/api', '') + trimmedUrl;
       }
-
-      // Si llegamos aquí y no tiene esquema, asumimos relativa
       return '${ApiConstants.baseUrl.replaceFirst('/api', '')}/$trimmedUrl';
     }
     return null;
   }
 
-  // Helper para aplicar Clip Oval/RRect al widget final
   Widget _buildFinalWidget(Widget child) {
     if (isCircle) {
       return ClipOval(child: child);

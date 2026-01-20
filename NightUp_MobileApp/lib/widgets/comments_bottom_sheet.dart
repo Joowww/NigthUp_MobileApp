@@ -37,7 +37,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error fetching comments: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -51,10 +50,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
 
       await _apiService.post(
         '/post/${widget.post.id}/comment',
-        data: {'text': content}, // Cambiado de 'content' a 'text'
+        data: {'text': content},
       );
 
-      _fetchComments(); // Refresh list
+      _fetchComments();
     } catch (e) {
       String errorMsg = 'No se pudo publicar el comentario';
       if (e is dio.DioException && e.response?.data != null) {
@@ -69,7 +68,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         backgroundColor: Colors.red.withOpacity(0.8),
         colorText: Colors.white,
       );
-      _commentController.text = content; // Devolver el texto si falla
+      _commentController.text = content;
     }
   }
 
@@ -94,7 +93,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
           ),
           const SizedBox(height: 16),
           Text(
-            '${_comments.length} Comments',
+            '${_comments.length} Comentarios',
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -109,7 +108,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                 : _comments.isEmpty
                 ? const Center(
                     child: Text(
-                      'No comments yet. Be the first!',
+                      'No hay comentarios. Sé el primero!',
                       style: TextStyle(color: Colors.white54),
                     ),
                   )
@@ -188,7 +187,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               controller: _commentController,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'Add a comment...',
+                hintText: 'Agregar un comentario...',
                 hintStyle: const TextStyle(color: Colors.white54),
                 border: InputBorder.none,
                 filled: true,

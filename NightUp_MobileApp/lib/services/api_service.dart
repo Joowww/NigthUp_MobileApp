@@ -7,13 +7,10 @@ import 'package:get/get.dart';
 import '../models/user.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
-import '../utils/logger.dart';
 
 class ApiService extends GetxService {
   late dio.Dio _dio;
   final StorageService _storageService = Get.find<StorageService>();
-
-  // ✅ EXPONER BASEURL PARA SOCKET
   String get baseUrl => ApiConstants.baseUrl;
 
   @override
@@ -213,12 +210,9 @@ class ApiService extends GetxService {
       );
     } catch (e) {
       if (e is dio.DioException) {
-        logger.e('Cloudinary Upload Error Status: ${e.response?.statusCode}');
-        logger.e('Cloudinary Upload Error Body: ${e.response?.data}');
         final errorMessage = e.response?.data?['message'] ?? e.message;
         throw Exception('Error del servidor: $errorMessage');
       }
-      logger.e('Cloudinary Upload Error: $e');
       rethrow;
     }
   }
@@ -260,20 +254,17 @@ class ApiService extends GetxService {
     } else if (lowerName.endsWith('.aac')) {
       contentType = 'audio/aac';
     } else if (lowerName.endsWith('.webm')) {
-      contentType =
-          'audio/webm'; // O video/webm dependiento del contenido, pero audio rec suele ser esto
+      contentType = 'audio/webm';
     } else if (lowerName.endsWith('.ogg')) {
-      contentType = 'audio/ogg'; // O video/ogg
+      contentType = 'audio/ogg';
     }
 
     if (kIsWeb) {
       if (finalFileName.isEmpty ||
           finalFileName == 'blob' ||
           !finalFileName.contains('.')) {
-        // En web a veces el nombre se pierde. Ajustamos según resourceType
         final String resourceType = data?['resourceType'] ?? 'image';
         if (resourceType == 'video' || resourceType == 'audio') {
-          // En Web, casi siempre grabamos en webm. Usar .webm ayuda a Cloudinary a entender el codec.
           finalFileName =
               'upload_${DateTime.now().millisecondsSinceEpoch}.webm';
         } else {
@@ -363,7 +354,7 @@ class ApiService extends GetxService {
         );
         try {
           return await dioLocal.get(path, queryParameters: queryParameters);
-        } on dio.DioException catch (e2) {
+        } on dio.DioException {
           rethrow;
         }
       }
@@ -390,7 +381,7 @@ class ApiService extends GetxService {
         );
         try {
           return await dioLocal.post(path, data: data);
-        } on dio.DioException catch (e2) {
+        } on dio.DioException {
           rethrow;
         }
       }
@@ -417,7 +408,7 @@ class ApiService extends GetxService {
         );
         try {
           return await dioLocal.put(path, data: data);
-        } on dio.DioException catch (e2) {
+        } on dio.DioException {
           rethrow;
         }
       }
@@ -444,7 +435,7 @@ class ApiService extends GetxService {
         );
         try {
           return await dioLocal.patch(path, data: data);
-        } on dio.DioException catch (e2) {
+        } on dio.DioException {
           rethrow;
         }
       }
@@ -471,7 +462,7 @@ class ApiService extends GetxService {
         );
         try {
           return await dioLocal.delete(path);
-        } on dio.DioException catch (e2) {
+        } on dio.DioException {
           rethrow;
         }
       }
@@ -483,8 +474,6 @@ class ApiService extends GetxService {
     return e.type == dio.DioExceptionType.connectionError ||
         e.type == dio.DioExceptionType.unknown;
   }
-
-  // ==================== JWT HELPERS ====================
 
   String? getUserId() {
     final token = _storageService.read(StorageKeys.token);
@@ -513,7 +502,6 @@ class ApiService extends GetxService {
     return null;
   }
 
-  // ✅ AÑADIR MÉTODO PARA OBTENER USERNAME DEL TOKEN JWT
   String? getUsername() {
     final token = _storageService.read(StorageKeys.token);
     if (token != null) {
@@ -534,7 +522,6 @@ class ApiService extends GetxService {
         final decoded = utf8.decode(base64Url.decode(payload));
         final payloadMap = json.decode(decoded);
 
-        // Intentar obtener username de diferentes campos posibles
         return payloadMap['username']?.toString() ??
             payloadMap['name']?.toString() ??
             payloadMap['email']?.toString()?.split('@')[0] ??
@@ -546,7 +533,6 @@ class ApiService extends GetxService {
     return 'Usuario';
   }
 
-  // ✅ MÉTODO ADICIONAL: Obtener información completa del usuario del token
   Map<String, dynamic>? getUserFromToken() {
     final token = _storageService.read(StorageKeys.token);
     if (token != null) {

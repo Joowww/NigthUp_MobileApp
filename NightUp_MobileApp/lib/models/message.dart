@@ -82,7 +82,6 @@ class Message {
       status = MessageStatus.read;
     }
 
-    // Determinar tipo de mensaje
     MessageType type = MessageType.text;
     if (json['messageType'] == 'image') {
       type = MessageType.image;

@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import '../utils/logger.dart';
 
 class StorageService extends GetxService {
   late SharedPreferences _prefs;
@@ -28,7 +27,6 @@ class StorageService extends GetxService {
       }
       return false;
     } catch (e) {
-      logger.e('Error writing to storage: $e');
       return false;
     }
   }
@@ -37,7 +35,6 @@ class StorageService extends GetxService {
     try {
       return _prefs.get(key);
     } catch (e) {
-      logger.e('Error reading from storage: $e');
       return null;
     }
   }
@@ -46,7 +43,6 @@ class StorageService extends GetxService {
     try {
       return await _prefs.remove(key);
     } catch (e) {
-      logger.e('Error removing from storage: $e');
       return false;
     }
   }
@@ -55,7 +51,6 @@ class StorageService extends GetxService {
     try {
       return _prefs.containsKey(key);
     } catch (e) {
-      logger.e('Error checking key in storage: $e');
       return false;
     }
   }
@@ -68,7 +63,6 @@ class StorageService extends GetxService {
       }
       return null;
     } catch (e) {
-      logger.e('Error reading JSON from storage: $e');
       return null;
     }
   }

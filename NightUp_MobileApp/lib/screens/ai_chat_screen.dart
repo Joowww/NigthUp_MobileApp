@@ -37,7 +37,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     AiChatMessage(
       isUser: false,
       text:
-          'Hello! I am your NightUp event assistant.\n\nYou can ask me things like:\n"Cheap techno party today" or "Art events this weekend".',
+          'Hola! Soy el asistente de NightUp.\n\nMe puedes preguntar cosas como:\n"Fiesta techno barata hoy" o "Eventos artísticos este fin de semana".',
     ),
   ];
 
@@ -48,7 +48,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     setState(() {
       _messages.add(AiChatMessage(isUser: true, text: text));
       _messages.add(
-        AiChatMessage(isUser: false, text: 'Thinking...', isLoading: true),
+        AiChatMessage(isUser: false, text: 'Pensando...', isLoading: true),
       );
       _controller.clear();
     });
@@ -71,8 +71,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
           if (responseText.isEmpty) {
             responseText = events.isNotEmpty
-                ? 'Here are the results:'
-                : 'No events found for "$text". Try different terms.';
+                ? 'Aquí están los resultados:'
+                : 'No se encontraron eventos para "$text". Intenta con otros términos.';
           }
 
           _messages.add(
@@ -90,7 +90,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         setState(() {
           _messages.removeLast();
           _messages.add(
-            AiChatMessage(isUser: false, text: 'Error searching: $e'),
+            AiChatMessage(isUser: false, text: 'Error buscando: $e'),
           );
         });
       }
@@ -227,7 +227,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         child: ImageWithFallback(
                           imageUrl: event.safeImageUrl,
                           fit: BoxFit.cover,
-                          fallbackAsset: 'assets/images/google.png',
+                          fallbackAsset: 'assets/images/default_event.png',
                         ),
                       ),
                     ),
@@ -289,7 +289,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
             child: TextField(
               controller: _controller,
               decoration: InputDecoration(
-                hintText: 'Ex: Party this weekend...',
+                hintText: 'Ex: Fiesta este fin de semana...',
                 hintStyle: const TextStyle(color: Colors.white54),
                 filled: true,
                 fillColor: AppColors.glassWhite,

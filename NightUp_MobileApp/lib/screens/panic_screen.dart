@@ -81,11 +81,11 @@ class _PanicScreenState extends State<PanicScreen>
         backgroundColor: Colors.black,
         surfaceTintColor: Colors.transparent,
         title: const Text(
-          'Emergency Call',
+          'Llamada de emergencia',
           style: TextStyle(color: Colors.white),
         ),
         content: const Text(
-          'Calling emergency services...\n\nYour location has been shared with emergency responders.',
+          'Llamando a los servicios de emergencia...\n\nTu ubicación ha sido compartida con los socorristas.',
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
@@ -289,7 +289,7 @@ class _PanicScreenState extends State<PanicScreen>
         ),
         const SizedBox(height: 32),
         const Text(
-          'EMERGENCY',
+          'EMERGENCIA',
           style: TextStyle(
             fontSize: 36,
             fontWeight: FontWeight.bold,
@@ -299,7 +299,7 @@ class _PanicScreenState extends State<PanicScreen>
         ),
         const SizedBox(height: 8),
         const Text(
-          'Help is one tap away',
+          'La ayuda está a un toque de distancia',
           style: TextStyle(fontSize: 18, color: Colors.red),
         ),
         const SizedBox(height: 32),
@@ -349,7 +349,7 @@ class _PanicScreenState extends State<PanicScreen>
                   const SizedBox(width: 12),
                   Flexible(
                     child: Text(
-                      _isCalling ? 'CALLING...' : 'CALL 112 EMERGENCY',
+                      _isCalling ? 'LLAMANDO...' : 'LLAMAR AL 112',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -370,7 +370,7 @@ class _PanicScreenState extends State<PanicScreen>
             Expanded(
               child: _buildSecondaryAction(
                 icon: Icons.location_on,
-                text: 'Share Location',
+                text: 'Compartir ubicación',
                 onTap: () {},
               ),
             ),
@@ -378,7 +378,7 @@ class _PanicScreenState extends State<PanicScreen>
             Expanded(
               child: _buildSecondaryAction(
                 icon: Icons.people,
-                text: 'Alert Friends',
+                text: 'Alertar a amigos',
                 onTap: () {},
               ),
             ),
@@ -393,7 +393,7 @@ class _PanicScreenState extends State<PanicScreen>
             border: Border.all(color: Colors.red.withOpacity(0.3)),
           ),
           child: const Text(
-            'Press the button above to immediately call emergency services. Your location will be shared automatically with first responders.',
+            'Presiona el botón de arriba para llamar inmediatamente a los servicios de emergencia. Tu ubicación será compartida automáticamente con los socorristas.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.red, fontSize: 12),
           ),
@@ -451,7 +451,7 @@ class _PanicScreenState extends State<PanicScreen>
           Icon(Icons.security, color: Colors.red, size: 16),
           SizedBox(width: 8),
           Text(
-            'Your safety is our priority',
+            'Tu seguridad es nuestra prioridad',
             style: TextStyle(color: Colors.red, fontSize: 14),
           ),
         ],

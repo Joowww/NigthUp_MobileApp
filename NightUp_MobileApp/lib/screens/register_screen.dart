@@ -3,6 +3,7 @@ import 'package:flutter_translate/flutter_translate.dart';
 import 'dart:math';
 import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
+import '../services/api_service.dart';
 import '../theme/colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/gradient_button.dart';
@@ -31,7 +32,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   final _securityAnswerController = TextEditingController();
 
-  final AuthController _authController = Get.find<AuthController>();
+  late final AuthController _authController;
 
   String? _selectedSecurityQuestion;
   double _passwordStrength = 0;
@@ -103,6 +104,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
+    if (Get.isRegistered<AuthController>()) {
+      _authController = Get.find<AuthController>();
+    } else {
+      if (!Get.isRegistered<ApiService>()) {
+        Get.put(ApiService());
+      }
+      _authController = Get.put(AuthController());
+    }
     _passwordController.addListener(_updatePasswordStrength);
     _confirmPasswordController.addListener(_validatePasswordMatch);
   }

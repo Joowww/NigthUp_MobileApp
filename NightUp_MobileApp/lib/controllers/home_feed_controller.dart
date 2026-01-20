@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-import 'dart:developer';
 import '../models/post.dart';
 import '../models/event.dart';
 import '../services/api_service.dart';
@@ -45,43 +44,32 @@ class HomeFeedController extends GetxController
 
   void fetchDiscoverEvents() async {
     final userId = _apiService.getUserId();
-    log('👤 User ID from token: $userId');
 
     if (userId == null) {
-      log('⚠️ No token or User ID invalid, no se cargan eventos');
       isLoadingDiscover.value = false;
       return;
     }
     isLoadingDiscover.value = true;
     try {
-      log('🔄 Fetching ALL events from /event endpoint...');
-
       final response = await _apiService.get('/event?limit=1000&page=1');
-
-      log('📦 Raw API Response: ${response.data}');
 
       if (response.data is Map && response.data['events'] is List) {
         final eventsList = response.data['events'] as List;
-        log('📋 Found ${eventsList.length} events in list');
 
         discoverEvents.value = eventsList.map((i) {
           return Event.fromJson(i);
         }).toList();
-
         await loadLikeStatusForEvents();
       } else if (response.data is List) {
-        log('📋 Response is a direct List, converting...');
         final eventsList = response.data as List;
         discoverEvents.value = eventsList
             .map((i) => Event.fromJson(i))
             .toList();
         await loadLikeStatusForEvents();
       } else {
-        log('❌ Unexpected response format: ${response.data.runtimeType}');
         discoverEvents.value = [];
       }
     } catch (e) {
-      log('❌ Error loading events: $e');
       discoverEvents.value = [];
     } finally {
       isLoadingDiscover.value = false;
@@ -92,19 +80,14 @@ class HomeFeedController extends GetxController
   void fetchFriendsPosts() async {
     final userId = _apiService.getUserId();
     if (userId == null) {
-      log('⚠️ No token, no se cargan posts de amigos');
       isLoadingFriends.value = false;
       return;
     }
     isLoadingFriends.value = true;
     try {
-      log('🔄 Fetching friends posts from backend...');
       final response = await _apiService.get('/post/feed/friends');
 
-      log('📦 Friends API Response Raw: ${response.data}');
-
       List<dynamic> postsData = [];
-
       if (response.data is List) {
         postsData = response.data;
       } else if (response.data is Map && response.data['posts'] is List) {
@@ -117,15 +100,7 @@ class HomeFeedController extends GetxController
           .where((i) => i != null)
           .map((i) => Post.fromFriendPostJson(i))
           .toList();
-
-      log('✅ Loaded ${friendsPosts.length} posts from friends');
     } catch (e) {
-      log('❌ Error loading friends posts: $e');
-      Get.snackbar(
-        'Error',
-        'No se pudo cargar el feed de Amigos: $e',
-        snackPosition: SnackPosition.BOTTOM,
-      );
     } finally {
       isLoadingFriends.value = false;
       update(['friends_feed']);
@@ -151,9 +126,7 @@ class HomeFeedController extends GetxController
         );
       }
       update(['friends_feed']);
-    } catch (e) {
-      log('❌ Error toggling post like: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> toggleLikeEvent(Event event) async {
@@ -162,12 +135,8 @@ class HomeFeedController extends GetxController
       final userId = apiService.getUserId();
 
       if (userId == null) {
-        Get.snackbar('Error', 'Usuario no identificado');
         return;
       }
-
-      log('🎯 Toggling like for event: ${event.id}');
-      log('📊 Current state - Liked: ${event.isLiked}, Likes: ${event.likes}');
 
       final index = discoverEvents.indexWhere((e) => e.id == event.id);
       if (index != -1) {
@@ -187,35 +156,23 @@ class HomeFeedController extends GetxController
 
       if (event.isLiked) {
         await apiService.post('/event/${event.id}/unlike', data: {});
-        log('✅ Like removed from event: ${event.id}');
       } else {
         await apiService.post('/event/${event.id}/like', data: {});
-        log('✅ Like added to event: ${event.id}');
       }
     } catch (e) {
-      log('❌ Error toggling like: $e');
-
       final index = discoverEvents.indexWhere((e) => e.id == event.id);
       if (index != -1) {
         discoverEvents[index] = event;
         update(['discover_feed', 'bottom_actions']);
       }
-
-      Get.snackbar(
-        'Error',
-        'No se pudo actualizar el like: $e',
-        snackPosition: SnackPosition.BOTTOM,
-      );
     }
   }
 
   Future<void> shareEvent(Event event) async {
     try {
       final shareText =
-          '¡Mira este evento: ${event.title} en ${event.venue}! ${event.displayPrice} - ${event.formattedDate}';
+          '¡Mira este evento: ${event.title} en ${event.venue}!\n${event.displayPrice} - ${event.formattedDate}';
       final eventUrl = 'https://nightup.com/events/${event.id}';
-
-      log('📤 Sharing event: ${event.id}');
 
       await Get.dialog(
         Dialog(
@@ -229,18 +186,17 @@ class HomeFeedController extends GetxController
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
                 Container(
                   width: double.infinity,
-                  padding: EdgeInsets.all(20),
-                  decoration: BoxDecoration(
+                  padding: const EdgeInsets.all(20),
+                  decoration: const BoxDecoration(
                     gradient: AppColors.neonGradient,
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
                     ),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
                       Icon(Icons.share, color: Colors.white, size: 24),
                       SizedBox(width: 12),
@@ -255,16 +211,15 @@ class HomeFeedController extends GetxController
                     ],
                   ),
                 ),
-
                 Padding(
-                  padding: EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      Text(
+                      const Text(
                         'Copia el texto para compartir:',
                         style: TextStyle(color: Colors.white, fontSize: 16),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
@@ -292,7 +247,6 @@ class HomeFeedController extends GetxController
                     ],
                   ),
                 ),
-
                 Container(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -323,15 +277,7 @@ class HomeFeedController extends GetxController
         ),
         barrierDismissible: true,
       );
-    } catch (e) {
-      log('❌ Error sharing event: $e');
-      Get.snackbar(
-        'Compartir',
-        'Texto listo para compartir: ${event.title}',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: Duration(seconds: 3),
-      );
-    }
+    } catch (e) {}
   }
 
   Future<void> sharePost(Post post) async {
@@ -339,8 +285,6 @@ class HomeFeedController extends GetxController
       final shareText =
           '¡Mira el nuevo post de @${post.user?.username ?? "user"} en NightUp!\n"${post.caption ?? ""}"';
       final postUrl = 'https://nightup.com/posts/${post.id}';
-
-      log('📤 Sharing post: ${post.id}');
 
       await Get.dialog(
         Dialog(
@@ -441,9 +385,7 @@ class HomeFeedController extends GetxController
           ),
         ),
       );
-    } catch (e) {
-      log('❌ Error sharing post: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> loadLikeStatusForEvents() async {
@@ -452,16 +394,12 @@ class HomeFeedController extends GetxController
       final userId = apiService.getUserId();
 
       if (userId == null) {
-        log('⚠️ No user ID found for loading like status');
         return;
       }
 
       final eventsToLoad = discoverEvents.length > 20
           ? 20
           : discoverEvents.length;
-      log(
-        'Loading like status for first $eventsToLoad events (out of ${discoverEvents.length})...',
-      );
 
       for (int i = 0; i < eventsToLoad; i++) {
         final event = discoverEvents[i];
@@ -473,26 +411,16 @@ class HomeFeedController extends GetxController
           final likesCount = response.data['likesCount'] ?? event.likes;
 
           final isJoined = await _checkUserParticipation(event.id, userId);
-
           discoverEvents[i] = event.copyWith(
             isLiked: isLiked,
             likes: likesCount,
             isJoined: isJoined,
           );
-
-          log(
-            '   ✅ Event ${event.id}: Liked=$isLiked, Likes=$likesCount, Joined=$isJoined',
-          );
-        } catch (e) {
-          debugPrint('❌ Error loading like status for event ${event.id}: $e');
-        }
+        } catch (e) {}
       }
 
       update(['discover_feed', 'bottom_actions']);
-      log('✅ Like status loaded for first $eventsToLoad events');
-    } catch (e) {
-      debugPrint('❌ Error loading like status: $e');
-    }
+    } catch (e) {}
   }
 
   Future<bool> _checkUserParticipation(String eventId, String userId) async {
@@ -507,7 +435,6 @@ class HomeFeedController extends GetxController
       }
       return false;
     } catch (e) {
-      debugPrint('❌ Error checking user participation: $e');
       return false;
     }
   }
@@ -535,7 +462,6 @@ class HomeFeedController extends GetxController
 
   void saveCurrentPage() {
     lastViewedPage.value = currentPage.value;
-    log('💾 Saved current page: ${lastViewedPage.value}');
   }
 
   void restoreLastPage() {
@@ -545,12 +471,7 @@ class HomeFeedController extends GetxController
       if (pageController.hasClients) {
         pageController.jumpToPage(lastViewedPage.value);
       }
-      log('📖 Restored to page: ${lastViewedPage.value}');
       update(['current_page', 'bottom_actions']);
-    } else {
-      log(
-        '⚠️ Cannot restore page - events: ${discoverEvents.length}, last page: ${lastViewedPage.value}',
-      );
     }
   }
 

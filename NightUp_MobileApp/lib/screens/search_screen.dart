@@ -105,24 +105,15 @@ class _SearchScreenState extends State<SearchScreen> {
       case 'friends':
         for (var friend in _mapController.nearbyFriends) {
           if (friend == null) continue;
-
-          // 🛡️ LÓGICA DE VISIBILIDAD HÍBRIDA (Soporta Objeto Friend y Map JSON)
           bool isHidden = false;
-
-          // OPCIÓN A: Es un objeto de la clase Friend (lo más probable)
-          // Usamos 'dynamic' para acceder a la propiedad .isVisibleOnMap sin que el editor se queje si no la ve aún.
           try {
             if ((friend as dynamic).isVisibleOnMap == false) isHidden = true;
           } catch (e) {
             // Si el modelo no tiene el campo todavía, no hacemos nada (se muestra)
           }
-
-          // OPCIÓN B: Es un Mapa JSON (fallback o tests)
           if (friend is Map && friend['isVisibleOnMap'] == false) {
             isHidden = true;
           }
-
-          // SI ESTÁ OCULTO, SALTAMOS
           if (isHidden) continue;
 
           final marker = _createFriendMarker(friend);
@@ -230,7 +221,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
-                          hintText: 'Search users, events, businesses...',
+                          hintText: 'Busca usuarios, eventos, negocios...',
                           hintStyle: const TextStyle(color: Colors.white70),
                           prefixIcon: const Icon(
                             Icons.search,
@@ -281,7 +272,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         _greyGlassButton(
                           icon: Icons.my_location,
                           onPressed: _centerMapOnMarkers,
-                          tooltip: 'Center map',
+                          tooltip: 'Centrar mapa',
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -290,15 +281,15 @@ class _SearchScreenState extends State<SearchScreen> {
                             child: Row(
                               children: [
                                 _filterChip(
-                                  'Friends',
+                                  'Amigos',
                                   'friends',
                                   AppColors.primary,
                                 ),
                                 const SizedBox(width: 8),
-                                _filterChip('Events', 'events', Colors.pink),
+                                _filterChip('Eventos', 'events', Colors.pink),
                                 const SizedBox(width: 8),
                                 _filterChip(
-                                  'Businesses',
+                                  'Negocios',
                                   'businesses',
                                   Colors.orange,
                                 ),
@@ -831,9 +822,7 @@ class _SearchScreenState extends State<SearchScreen> {
         width: 70,
         height: 85,
         child: GestureDetector(
-          onTap: () {
-            // Marker tapped
-          },
+          onTap: () {},
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -909,9 +898,7 @@ class _SearchScreenState extends State<SearchScreen> {
         width: 60,
         height: 75,
         child: GestureDetector(
-          onTap: () {
-            // Marker tapped
-          },
+          onTap: () {},
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -981,9 +968,7 @@ class _SearchScreenState extends State<SearchScreen> {
         width: 60,
         height: 75,
         child: GestureDetector(
-          onTap: () {
-            // Marker tapped
-          },
+          onTap: () {},
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

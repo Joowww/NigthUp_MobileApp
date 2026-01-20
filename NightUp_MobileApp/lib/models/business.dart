@@ -40,7 +40,7 @@ class Business {
 
     return Business(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
-      name: json['name'] ?? 'Business',
+      name: json['name'] ?? 'Negocio',
       address: json['address'],
       phone: json['phone'],
       email: json['email'],
@@ -76,9 +76,9 @@ class Business {
     return '${ApiConstants.baseUrl.replaceFirst('/api', '')}/$avatar';
   }
 
-  String get displayAddress => address ?? 'No address provided';
-  String get displayContact => phone ?? email ?? 'No contact info';
-  String get displayHours => '9 PM - 4 AM';
+  String get displayAddress => address ?? 'Dirección no disponible';
+  String get displayContact => phone ?? email ?? 'Sin contacto';
+  String get displayHours => '21:00 - 04:00';
 
   Map<String, dynamic> toJson() {
     return {

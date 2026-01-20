@@ -77,7 +77,6 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
-    // Si la respuesta viene envuelta en un campo 'user' o 'data', extraerlo
     if (json.containsKey('user') && json['user'] is Map<String, dynamic>) {
       json = json['user'];
     } else if (json.containsKey('data') &&
@@ -85,7 +84,6 @@ class User {
       json = json['data'];
     }
 
-    // ✅ Manejar intereses extrayendo SOLO el campo 'name'
     List<String>? parsedInterests;
     if (json['interests'] != null) {
       try {
@@ -94,7 +92,6 @@ class User {
             if (i == null) return 'Unknown';
 
             if (i is String) {
-              // Si es un string que parece un mapa JSON, parsearlo
               if (i.trim().startsWith('{') && i.trim().endsWith('}')) {
                 try {
                   final normalized = i
@@ -104,7 +101,6 @@ class User {
                       )
                       .replaceAll("'", '"');
                   final map = Map<String, dynamic>.from(jsonDecode(normalized));
-                  // ✅ Extraer SOLO el campo 'name'
                   return map['name']?.toString() ?? 'Unknown';
                 } catch (_) {
                   return i;
@@ -112,7 +108,6 @@ class User {
               }
               return i;
             } else if (i is Map) {
-              // ✅ Si es un Map directo, extraer SOLO el campo 'name'
               return i['name']?.toString() ?? 'Unknown';
             } else {
               return i.toString();
@@ -120,7 +115,6 @@ class User {
           }),
         );
       } catch (e) {
-        print('Error parsing interests: $e');
         parsedInterests = null;
       }
     }
@@ -175,9 +169,9 @@ class User {
       firstName: json['firstName'],
       lastName: json['lastName'],
       isVisibleOnMap: json['isVisibleOnMap'],
-      location: json['location'] != null
+      location: json['location'] is Map
           ? Map<String, dynamic>.from(json['location'])
-          : null,
+          : (json['location'] is String ? {'name': json['location']} : null),
       posts: json['posts'] != null
           ? List<String>.from(json['posts'].map((p) => p.toString()))
           : null,
@@ -265,7 +259,6 @@ class User {
       return null;
     }
 
-    // Si es relativa
     if (coverPhoto!.startsWith('/')) {
       return ApiConstants.baseUrl.replaceFirst('/api', '') + coverPhoto!;
     }

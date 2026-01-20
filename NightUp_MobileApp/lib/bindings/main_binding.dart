@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:nightup_mobile_app/controllers/auth_controller.dart';
 import '../controllers/home_feed_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/map_controller.dart';
@@ -9,6 +10,9 @@ import '../controllers/rating_controller.dart';
 class MainBinding implements Bindings {
   @override
   void dependencies() {
+    if (!Get.isRegistered<AuthController>()) {
+      Get.put(AuthController());
+    }
     Get.lazyPut(() => HomeFeedController());
     Get.lazyPut(() => ChatController());
     Get.lazyPut(() => MapController());

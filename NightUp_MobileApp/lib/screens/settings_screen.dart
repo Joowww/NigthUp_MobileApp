@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:nightup_mobile_app/services/api_service.dart';
 import '../controllers/settings_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../theme/colors.dart';
@@ -15,27 +16,44 @@ class SettingsScreen extends StatefulWidget {
   final VoidCallback onBack;
 
   const SettingsScreen({super.key, required this.onBack});
-
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final SettingsController _settingsController = Get.find<SettingsController>();
+  late final AuthController _authController;
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-
+    if (Get.isRegistered<AuthController>()) {
+      _authController = Get.find<AuthController>();
+    } else {
+      if (!Get.isRegistered<ApiService>()) {
+        Get.put(ApiService());
+      }
+      _authController = Get.put(AuthController());
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = _settingsController.user.value;
       if (user != null) {
         _bioController.text = user.bio ?? '';
-        _locationController.text = user.location != null
-            ? user.location as String
-            : '';
+        if (user.location != null) {
+          if (user.location is String) {
+            _locationController.text = user.location as String;
+          } else if (user.location is Map) {
+            // Si es un mapa, intentamos sacar el nombre
+            final map = user.location as Map;
+            _locationController.text =
+                map['name']?.toString() ??
+                map['city']?.toString() ??
+                map['address']?.toString() ??
+                '';
+          }
+        }
       }
     });
   }
@@ -54,7 +72,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: widget.onBack,
             ),
             title: const Text(
-              'Settings',
+              'Ajustes',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 24,
@@ -75,7 +93,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionTitle('Profile'),
+                      _buildSectionTitle('Perfil'),
                       GlassCard(
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -162,7 +180,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                   BorderRadius.circular(8),
                                             ),
                                             child: const Text(
-                                              'Change Cover Photo',
+                                              'Cambiar foto de portada',
                                               style: TextStyle(
                                                 color: AppColors.primary,
                                                 fontSize: 12,
@@ -200,7 +218,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               TextField(
                                 controller: _locationController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Location',
+                                  labelText: 'Ubicación',
                                   labelStyle: TextStyle(color: Colors.white70),
                                   border: OutlineInputBorder(),
                                   enabledBorder: OutlineInputBorder(
@@ -224,31 +242,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     'location': _locationController.text,
                                   });
                                 },
-                                text: 'Save Profile',
+                                text: 'Guardar perfil',
                                 isLoading: _settingsController.isUpdating.value,
                               ),
                             ],
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 24),
                       _buildSectionTitle('Security'),
                       _buildSettingItem(
                         icon: Icons.lock,
-                        title: 'Change Password',
-                        subtitle: 'Update your security credentials',
+                        title: 'Cambiar contraseña',
+                        subtitle: 'Actualiza tus credenciales de seguridad',
                         color: AppColors.secondary,
                         onTap: _showChangePasswordDialog,
                       ),
                       _buildSettingItem(
                         icon: Icons.security,
-                        title: 'Privacy Settings',
-                        subtitle: 'Control your privacy options',
+                        title: 'Configuración de privacidad',
+                        subtitle: 'Controla tus opciones de privacidad',
                         color: Colors.green,
                         onTap: _showPrivacySettingsDialog,
                       ),
-
                       const SizedBox(height: 24),
                       _buildSectionTitle('General'),
                       GlassCard(
@@ -267,7 +283,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ),
                           title: const Text(
-                            'Language',
+                            'Idioma',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -291,99 +307,99 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           onTap: () => _showLanguageDialog(context),
                         ),
                       ),
-
                       const SizedBox(height: 24),
                       _buildSectionTitle('Support'),
                       _buildSettingItem(
                         icon: Icons.help,
-                        title: 'Help & Support',
-                        subtitle: 'Get help with the app',
+                        title: 'Ayuda y soporte',
+                        subtitle: 'Obtén ayuda con la aplicación',
                         color: Colors.blue,
                         onTap: () {
                           Get.to(
                             () => const SupportScreen(
-                              title: 'Help & Support',
+                              title: 'Ayuda y soporte',
                               content:
-                                  'If you need assistance, please contact our support team at support@nightup.com. We are available 24/7 to help you with any issues you may encounter while using the app.',
+                                  'Si necesitas ayuda, por favor contacta a nuestro equipo de soporte en support@nightup.com.\nEstamos disponibles 24/7 para ayudarte con cualquier problema que puedas encontrar al usar la aplicación.',
                             ),
                           );
                         },
                       ),
                       _buildSettingItem(
                         icon: Icons.description,
-                        title: 'Terms of Service',
-                        subtitle: 'Read our terms and conditions',
+                        title: 'Términos de servicio',
+                        subtitle: 'Lee nuestros términos y condiciones',
                         color: Colors.grey,
                         onTap: () {
                           Get.to(
                             () => const SupportScreen(
-                              title: 'Terms of Service',
+                              title: 'Términos de servicio',
                               content:
-                                  'By using NightUp, you agree to our Terms of Service. These terms govern your use of the app and provide information about your rights and responsibilities. Please read them carefully.',
+                                  'Al usar NightUp, aceptas nuestros Términos de Servicio. Estos términos rigen el uso de la aplicación y proporcionan información sobre tus derechos y responsabilidades. Por favor, léelos detenidamente.',
                             ),
                           );
                         },
                       ),
                       _buildSettingItem(
                         icon: Icons.security,
-                        title: 'Privacy Policy',
-                        subtitle: 'Learn about our privacy practices',
+                        title: 'Política de privacidad',
+                        subtitle: 'Conoce nuestras prácticas de privacidad',
                         color: Colors.green,
                         onTap: () {
                           Get.to(
                             () => const SupportScreen(
-                              title: 'Privacy Policy',
+                              title: 'Política de privacidad',
                               content:
-                                  'Your privacy is important to us. This Privacy Policy explains how we collect, use, and protect your personal information. We are committed to ensuring your data is secure.',
+                                  'Tu privacidad es importante para nosotros.\nEsta Política de Privacidad explica cómo recopilamos, usamos y protegemos tu información personal.\nEstamos comprometidos a garantizar la seguridad de tus datos.',
                             ),
                           );
                         },
                       ),
                       _buildSettingItem(
                         icon: Icons.bug_report,
-                        title: 'Report a Problem',
-                        subtitle: 'Found a bug? Let us know',
+                        title: 'Reportar un problema',
+                        subtitle: '¿Encontraste un error? Háznoslo saber',
                         color: Colors.red,
                         onTap: () {
                           Get.to(
                             () => const SupportScreen(
-                              title: 'Report a Problem',
+                              title: 'Reportar un problema',
                               content:
-                                  'If you encounter a bug or have feedback, please email us at bugs@nightup.com. Your feedback helps us improve the app for everyone.',
+                                  'Si encuentras un error o tienes comentarios, por favor envíanos un correo electrónico a bugs@nightup.com. Tus comentarios nos ayudan a mejorar la aplicación para todos.',
                             ),
                           );
                         },
                       ),
-
                       const SizedBox(height: 24),
-                      _buildSectionTitle('About'),
+                      _buildSectionTitle('Acerca de'),
                       GlassCard(
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
                             children: [
-                              _buildAboutItem('Version', '2.0.0'),
+                              _buildAboutItem('Versión', '2.0.0'),
                               _buildAboutItem('Build', '2025.11.17'),
-                              _buildAboutItem('Last Updated', 'November 2025'),
+                              _buildAboutItem(
+                                'Última actualización',
+                                'Noviembre 2025',
+                              ),
                             ],
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 32),
                       GradientButton(
                         onPressed: () async {
-                          await Get.find<AuthController>().logout();
-
-                          Get.offAll(
-                            () => LoginScreen(
-                              onLogin: () {},
-                              onRegister: () {},
-                              onForgotPassword: () {},
-                            ),
-                          );
+                          await _authController.logout();
+                          Get.offAllNamed('/login');
+                          // Get.offAll(
+                          //   () => LoginScreen(
+                          //     onLogin: () {},
+                          //     onRegister: () {},
+                          //     onForgotPassword: () {},
+                          //   ),
+                          //);
                         },
-                        text: 'Log Out',
+                        text: 'Cerrar sesión',
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -403,115 +419,127 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final TextEditingController newPasswordController = TextEditingController();
     final TextEditingController confirmPasswordController =
         TextEditingController();
-
     Get.dialog(
-      GlassCard(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Change Password',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: currentPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Current Password',
-                  labelStyle: TextStyle(color: Colors.white70),
-                  border: OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white70),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primary),
-                  ),
-                ),
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: newPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'New Password',
-                  labelStyle: TextStyle(color: Colors.white70),
-                  border: OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white70),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primary),
-                  ),
-                ),
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: confirmPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm New Password',
-                  labelStyle: TextStyle(color: Colors.white70),
-                  border: OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white70),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primary),
-                  ),
-                ),
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white70),
+      Material(
+        type: MaterialType.transparency,
+        child: Center(
+          child: SingleChildScrollView(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              child: GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Cambiar contraseña',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      child: const Text('Cancel'),
-                    ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: currentPasswordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Contraseña actual',
+                          labelStyle: TextStyle(color: Colors.white70),
+                          border: OutlineInputBorder(),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white70),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: newPasswordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Nueva contraseña',
+                          labelStyle: TextStyle(color: Colors.white70),
+                          border: OutlineInputBorder(),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white70),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: confirmPasswordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Confirmar contraseña',
+                          labelStyle: TextStyle(color: Colors.white70),
+                          border: OutlineInputBorder(),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white70),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Get.back(),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: const BorderSide(color: Colors.white70),
+                              ),
+                              child: const Text('Cancelar'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: GradientButton(
+                              onPressed: () {
+                                if (newPasswordController.text !=
+                                    confirmPasswordController.text) {
+                                  Get.snackbar(
+                                    'Error',
+                                    'Passwords do not match',
+                                  );
+                                  return;
+                                }
+                                if (newPasswordController.text.length < 6) {
+                                  Get.snackbar(
+                                    'Error',
+                                    'Password must be at least 6 characters',
+                                  );
+                                  return;
+                                }
+                                _settingsController.changePassword(
+                                  currentPasswordController.text,
+                                  newPasswordController.text,
+                                );
+                                Get.back();
+                              },
+                              text: 'Actualizar',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GradientButton(
-                      onPressed: () {
-                        if (newPasswordController.text !=
-                            confirmPasswordController.text) {
-                          Get.snackbar('Error', 'Passwords do not match');
-                          return;
-                        }
-                        if (newPasswordController.text.length < 6) {
-                          Get.snackbar(
-                            'Error',
-                            'Password must be at least 6 characters',
-                          );
-                          return;
-                        }
-                        _settingsController.changePassword(
-                          currentPasswordController.text,
-                          newPasswordController.text,
-                        );
-                        Get.back();
-                      },
-                      text: 'Update',
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -533,7 +561,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Privacy Settings',
+                        'Configuración de privacidad',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -542,16 +570,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 16),
                       _buildPrivacySwitch(
-                        'Visible on Map',
-                        'Allow friends to see your location on the map',
+                        'Visible en el mapa',
+                        'Permitir que tus amigos vean tu ubicación en el mapa',
                         _settingsController.isVisibleOnMap.value,
                         (value) {
                           _settingsController.updateLocationVisibility(value);
                         },
                       ),
                       _buildPrivacySwitch(
-                        'Push Notifications',
-                        'Receive event updates and messages',
+                        'Notificaciones Push',
+                        'Recibir actualizaciones de eventos y mensajes',
                         _settingsController.notificationsEnabled.value,
                         (value) {
                           _settingsController.notificationsEnabled.value =
@@ -560,8 +588,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         },
                       ),
                       _buildPrivacySwitch(
-                        'Location Services',
-                        'Share your location for better recommendations',
+                        'Servicios de ubicación',
+                        'Comparte tu ubicación para obtener mejores recomendaciones',
                         _settingsController.locationEnabled.value,
                         (value) {
                           _settingsController.locationEnabled.value = value;
@@ -588,7 +616,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 _settingsController.saveSettings();
                                 Get.back();
                               },
-                              text: 'Save',
+                              text: 'Guardar',
                             ),
                           ),
                         ],
@@ -652,7 +680,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Select Language',
+                    'Seleccionar idioma',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -660,13 +688,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildLanguageOption(context, 'English', 'en'),
+                  _buildLanguageOption(context, 'Inglés', 'en'),
                   _buildLanguageOption(context, 'Español', 'es'),
-                  _buildLanguageOption(context, 'Français', 'fr'),
-                  _buildLanguageOption(context, 'Deutsch', 'de'),
+                  _buildLanguageOption(context, 'Francés', 'fr'),
+                  _buildLanguageOption(context, 'Alemán', 'de'),
                   _buildLanguageOption(context, 'Italiano', 'it'),
                   const SizedBox(height: 24),
-                  GradientButton(onPressed: () => Get.back(), text: 'Cancel'),
+                  GradientButton(onPressed: () => Get.back(), text: 'Cancelar'),
                 ],
               ),
             ),

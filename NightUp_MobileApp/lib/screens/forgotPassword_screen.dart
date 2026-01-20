@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../controllers/auth_controller.dart';
+import '../services/api_service.dart';
 import '../theme/colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/gradient_button.dart';
@@ -21,13 +22,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  final AuthController _authController = Get.find<AuthController>();
+  late final AuthController _authController;
   String? _selectedSecurityQuestion;
   int _currentStep = 0;
   double _passwordStrength = 0;
   bool _passwordsMatch = true;
   String? _resetToken;
   String? _userEmail;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Get.isRegistered<AuthController>()) {
+      _authController = Get.find<AuthController>();
+    } else {
+      if (!Get.isRegistered<ApiService>()) {
+        Get.put(ApiService());
+      }
+      _authController = Get.put(AuthController());
+    }
+  }
 
   void _updatePasswordStrength() {
     final password = _newPasswordController.text;
@@ -136,11 +150,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.black87,
         title: Text(
-          translate('forgot_password.success_title'),
+          translate('Cambiar contraseña'),
           style: const TextStyle(color: Colors.white),
         ),
         content: Text(
-          translate('forgot_password.success_message'),
+          translate('Contraseña cambiada correctamente'),
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
@@ -189,23 +203,49 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       body: Stack(
         children: [
           _buildBackgroundGradients(),
-          SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 40,
-              ),
-              child: Column(
-                children: [
-                  _buildBackButton(),
-                  const SizedBox(height: 30),
-                  _buildTitle(),
-                  const SizedBox(height: 30),
-                  _buildForgotPasswordForm(),
-                ],
+          Positioned.fill(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 80, // Más espacio arriba para el botón de atrás
+                ),
+                child: Column(
+                  children: [
+                    // _buildBackButton(), // Lo quitamos de aquí para ponerlo flotante
+                    _buildTitle(),
+                    const SizedBox(height: 30),
+                    _buildForgotPasswordForm(),
+                  ],
+                ),
               ),
             ),
           ),
+          Positioned(
+            top: 0,
+            left: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: GestureDetector(
+                  onTap: widget.onBack,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0x1AFFFFFF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
           if (_authController.isLoading) _buildLoadingOverlay(),
         ],
       ),

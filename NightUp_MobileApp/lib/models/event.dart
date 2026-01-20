@@ -79,7 +79,6 @@ class Event {
       eventId = 'NO_ID';
     }
 
-    // Obtener lista de IDs de participantes
     List<String> participantsIds = [];
     if (json['participants'] is List) {
       participantsIds = (json['participants'] as List)
@@ -88,7 +87,6 @@ class Event {
           .toList();
     }
 
-    // Obtener lista de IDs de likedBy
     List<String> likedByIds = [];
     if (json['likedBy'] is List) {
       likedByIds = (json['likedBy'] as List)
@@ -114,8 +112,8 @@ class Event {
       likes: (json['likes'] as num?)?.toInt() ?? 0,
       participantsCount: _getParticipantsCount(json),
       participantsIds: participantsIds,
-      isLiked: false, // Se actualizará después
-      isJoined: false, // Se actualizará después
+      isLiked: false,
+      isJoined: false,
       lat: lat,
       lng: lng,
     );
@@ -125,9 +123,8 @@ class Event {
     if (location is String) {
       return location;
     } else if (location is Map<String, dynamic>) {
-      // If it's a GeoJSON Point or similar Map without name
       if (location['type'] == 'Point' && location['coordinates'] is List) {
-        return '📍 View on Map';
+        return '📍 Ver en mapa';
       }
       return location['name'] ??
           location['address'] ??
@@ -149,8 +146,6 @@ class Event {
 
   static List<String> _parseTags(Map<String, dynamic> json) {
     final tags = <String>[];
-
-    // Añadir categoría como tag principal
     if (json['category'] is String) {
       tags.add(json['category']);
     }
@@ -165,7 +160,6 @@ class Event {
     return 0;
   }
 
-  // Getters para la UI
   String get formattedDate {
     final now = DateTime.now();
     final difference = date.difference(now);
@@ -197,7 +191,6 @@ class Event {
     return '${ApiConstants.baseUrl.replaceFirst('/api', '')}/$image';
   }
 
-  // Método para crear copia con nuevos valores
   Event copyWith({
     String? id,
     String? title,

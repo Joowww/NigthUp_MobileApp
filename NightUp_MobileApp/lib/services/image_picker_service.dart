@@ -104,7 +104,7 @@ class ImagePickerService {
     } catch (e) {
       Get.snackbar(
         'Error',
-        'Could not access ${selectedSource == ImageSource.camera ? 'camera' : 'gallery'}: $e',
+        'No se puede acceder a ${selectedSource == ImageSource.camera ? 'cámara' : 'galería'}: $e',
       );
       return null;
     }
@@ -119,7 +119,7 @@ class ImagePickerService {
       );
       return images;
     } catch (e) {
-      Get.snackbar('Error', 'Could not access gallery: $e');
+      Get.snackbar('Error', 'No se puede acceder a la galería: $e');
       return [];
     }
   }

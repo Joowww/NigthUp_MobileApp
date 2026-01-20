@@ -47,33 +47,28 @@ class _FriendPostItemState extends State<FriendPostItem>
     if (widget.post.isVideo && widget.post.mediaUrl != null) {
       _initVideo();
     }
-
-    // Inicializar música SIEMPRE que haya música seleccionada (ya sea foto o vídeo)
     if (widget.post.music != null) {
       _initMusic();
     }
   }
 
   void _initMusic() async {
-    final previewUrl = widget.post.music?['preview'];
+    final previewUrl = widget.post.music?['prevista'];
     if (previewUrl != null && previewUrl.isNotEmpty) {
       try {
         await _musicPlayer.setUrl(previewUrl);
         await _musicPlayer.setLoopMode(LoopMode.one);
 
-        // Buscar el punto de inicio si existe
-        final startTime = widget.post.music?['startTime'];
+        final startTime = widget.post.music?['inicio'];
         if (startTime != null) {
           final startMs = (double.tryParse(startTime.toString()) ?? 0.0) * 1000;
           await _musicPlayer.seek(Duration(milliseconds: startMs.toInt()));
         }
-
-        // Music initialized successfully
       } catch (e) {
-        // music error
+        //nothing
       }
     } else {
-      // Music URL not available
+      //nothing
     }
   }
 
@@ -88,7 +83,6 @@ class _FriendPostItemState extends State<FriendPostItem>
                 });
                 _videoController?.setLooping(true);
 
-                // Si hay música de fondo, silenciamos el vídeo para que no se mezclen los audios
                 if (widget.post.music != null) {
                   _videoController?.setVolume(0);
                 }
@@ -99,7 +93,6 @@ class _FriendPostItemState extends State<FriendPostItem>
               })
               .catchError((error) {
                 if (mounted) {
-                  // Video error
                   setState(() {
                     _isInitialized = false;
                   });
@@ -163,7 +156,6 @@ class _FriendPostItemState extends State<FriendPostItem>
             }
             _musicDiscController.repeat();
           }
-          // Request focus for keyboard events
           FocusScope.of(context).requestFocus(_focusNode);
         } else {
           _isPlayingPage = false;
@@ -189,10 +181,8 @@ class _FriendPostItemState extends State<FriendPostItem>
           color: Colors.black,
           child: Stack(
             children: [
-              // 1. Multimedia (Vídeo o Foto)
               _buildMedia(),
 
-              // 2. Filtro overlay
               if (widget.post.filterColor != null)
                 Positioned.fill(
                   child: IgnorePointer(
@@ -202,13 +192,8 @@ class _FriendPostItemState extends State<FriendPostItem>
                   ),
                 ),
 
-              // 3. Gradient inferior per llegibilitat
               _buildGradient(),
-
-              // 4. Informació l'usuari i la música (Esquerra inferior)
               _buildLeftOverlay(),
-
-              // 5. Botons d'acció (Dreta inferior)
               _buildRightOverlay(),
             ],
           ),
@@ -313,7 +298,7 @@ class _FriendPostItemState extends State<FriendPostItem>
               ),
               const SizedBox(width: 10),
               Text(
-                '@${widget.post.user?.username ?? 'user'}',
+                '@${widget.post.user?.username ?? 'usuario'}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -351,7 +336,7 @@ class _FriendPostItemState extends State<FriendPostItem>
                   child: SizedBox(
                     height: 20,
                     child: Text(
-                      '${widget.post.music?['title'] ?? 'Unknown'} - ${widget.post.music?['artist'] ?? 'Unknown'}',
+                      '${widget.post.music?['titulo'] ?? 'Desconocido'} - ${widget.post.music?['artista'] ?? 'Desconocido'}',
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -392,12 +377,11 @@ class _FriendPostItemState extends State<FriendPostItem>
           const SizedBox(height: 20),
           _ActionButton(
             icon: Icons.share,
-            label: 'Share',
+            label: 'Compartir',
             onTap: () {
               Get.find<HomeFeedController>().sharePost(widget.post);
             },
           ),
-          // Botó Mute
           IconButton(
             onPressed: _toggleMute,
             icon: Icon(
@@ -407,7 +391,6 @@ class _FriendPostItemState extends State<FriendPostItem>
             ),
           ),
           const SizedBox(height: 20),
-          // El Disc de Música que gira
           RotationTransition(
             turns: _musicDiscController,
             child: Container(

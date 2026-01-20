@@ -4,8 +4,6 @@ import 'package:get/get.dart';
 import 'package:nightup_mobile_app/services/image_picker_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:nightup_mobile_app/theme/colors.dart';
-
-// Asegúrate de que este import apunte a tu fichero real
 import 'edit_post_screen.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -21,8 +19,6 @@ class _CameraScreenState extends State<CameraScreen>
   List<CameraDescription> _cameras = [];
   bool _isCameraInitialized = false;
   int _selectedCameraIndex = 0;
-
-  // Filtros Básicos
   int _selectedFilterIndex = 0;
   final List<Map<String, dynamic>> _filters = [
     {'name': 'Normal', 'color': null},
@@ -45,11 +41,8 @@ class _CameraScreenState extends State<CameraScreen>
       _cameras = await availableCameras();
       if (_cameras.isNotEmpty) {
         await _initializeCameraController(_cameras[_selectedCameraIndex]);
-      } else {
-        Get.snackbar('Error', 'No cameras found');
       }
     } catch (e) {
-      print('Error initializing camera: $e');
       if (mounted) {
         setState(() {
           _isCameraInitialized = false;
@@ -77,9 +70,7 @@ class _CameraScreenState extends State<CameraScreen>
           _isCameraInitialized = true;
         });
       }
-    } catch (e) {
-      print('Camera initialization error: $e');
-    }
+    } catch (e) {}
   }
 
   @override
@@ -122,9 +113,7 @@ class _CameraScreenState extends State<CameraScreen>
       setState(() {
         _isRecording = true;
       });
-    } catch (e) {
-      print('Error starting video recording: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _stopVideoRecording() async {
@@ -142,9 +131,7 @@ class _CameraScreenState extends State<CameraScreen>
           filterColor: _filters[_selectedFilterIndex]['color'],
         ),
       );
-    } catch (e) {
-      print('Error stopping video recording: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _takePicture() async {
@@ -160,9 +147,7 @@ class _CameraScreenState extends State<CameraScreen>
           filterColor: _filters[_selectedFilterIndex]['color'],
         ),
       );
-    } catch (e) {
-      print('Error taking picture: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _pickFromGallery() async {
@@ -182,7 +167,6 @@ class _CameraScreenState extends State<CameraScreen>
 
   @override
   Widget build(BuildContext context) {
-    // 1. Estado de carga o error
     if (!_isCameraInitialized || _controller == null) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -206,21 +190,14 @@ class _CameraScreenState extends State<CameraScreen>
         ),
       );
     }
-
-    // 2. Pantalla principal de la cámara
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // A. Camera Preview
           _buildCameraPreview(),
-
-          // B. Filters Overlay
           if (_filters[_selectedFilterIndex]['color'] != null)
             Container(color: _filters[_selectedFilterIndex]['color']),
-
-          // C. UI Controls (SOLUCIÓN DEL OVERFLOW AQUÍ)
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -230,21 +207,13 @@ class _CameraScreenState extends State<CameraScreen>
                       minHeight: constraints.maxHeight,
                     ),
                     child: Column(
-                      // Usamos spaceBetween en lugar de Spacer() sueltos
-                      // Esto empuja el contenido a los extremos si hay espacio,
-                      // pero permite scroll si no lo hay.
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Top Bar
                         _buildTopBar(),
-
-                        // Right Sidebar (TikTok style)
                         Align(
                           alignment: Alignment.centerRight,
                           child: _buildRightSidebar(),
                         ),
-
-                        // Bottom Controls
                         _buildBottomControls(),
                       ],
                     ),
@@ -272,7 +241,6 @@ class _CameraScreenState extends State<CameraScreen>
             icon: const Icon(Icons.close, color: Colors.white, size: 28),
             onPressed: () => Get.back(),
           ),
-          // Music Selector
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
@@ -293,7 +261,7 @@ class _CameraScreenState extends State<CameraScreen>
               ],
             ),
           ),
-          const SizedBox(width: 28), // Balance spacer
+          const SizedBox(width: 28),
         ],
       ),
     );
@@ -341,10 +309,8 @@ class _CameraScreenState extends State<CameraScreen>
 
   Widget _buildBottomControls() {
     return Column(
-      mainAxisSize:
-          MainAxisSize.min, // Importante para evitar expansión infinita
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Filter Selector Horizontal List
         SizedBox(
           height: 60,
           child: ListView.builder(
@@ -398,15 +364,12 @@ class _CameraScreenState extends State<CameraScreen>
         ),
 
         const SizedBox(height: 20),
-
-        // Shutter & Gallery Row
         Padding(
           padding: const EdgeInsets.only(bottom: 40, left: 30, right: 30),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Gallery Button
               GestureDetector(
                 onTap: _pickFromGallery,
                 child: Container(
@@ -424,8 +387,6 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                 ),
               ),
-
-              // Shutter Button
               GestureDetector(
                 onTap: _takePicture,
                 onLongPressStart: (_) => _startVideoRecording(),
@@ -450,14 +411,20 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                 ),
               ),
-
-              // Switch Mode Placeholder
-              const SizedBox(width: 40),
             ],
           ),
         ),
-
-        // Mode Selector (Photo / Video text)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildModeText('Camera', true),
+              const SizedBox(width: 20),
+              _buildModeText('Video', false),
+            ],
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: Row(

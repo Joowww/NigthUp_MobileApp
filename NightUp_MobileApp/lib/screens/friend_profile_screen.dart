@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -60,13 +59,8 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
         if (ratingsResponse.data is List) {
           _trustRatings.value = ratingsResponse.data;
         }
-
-        log(
-          '✅ Trust score loaded: ${_trustScore.value} (${_totalRatings.value} ratings)',
-        );
       }
     } catch (e) {
-      log('❌ Error loading trust score: $e');
       _trustScore.value = 0.0;
       _totalRatings.value = 0;
     }
@@ -79,8 +73,6 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
         '/friendship/status/${widget.friendId}',
       );
 
-      log('🔍 FRIENDSHIP STATUS RESPONSE: ${response.data}');
-
       if (response.data is Map && response.data['status'] is Map) {
         final statusData = response.data['status'];
         _friendshipStatus.value = statusData['friendshipStatus'] ?? 'none';
@@ -88,14 +80,11 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
         if (_friendshipStatus.value == 'accepted') {
           await _getFriendshipDataAndLocation();
         }
-
-        log('✅ Friendship status: ${_friendshipStatus.value}');
       } else {
         _friendshipStatus.value = 'none';
         _friendshipId.value = '';
       }
     } catch (e) {
-      log('❌ Error loading friendship status: $e');
       _friendshipStatus.value = 'none';
       _friendshipId.value = '';
     } finally {
@@ -105,85 +94,50 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
 
   Future<void> _getFriendshipDataAndLocation() async {
     try {
-      print('🔍 Getting friendship data and location...');
       final response = await _apiService.get('/friendship/friends');
 
-      print('🔍 FRIENDSHIP/FRIENDS RESPONSE:');
-      print('   Type: ${response.data.runtimeType}');
-      print('   Is List: ${response.data is List}');
-
       if (response.data is List) {
-        print('   List length: ${response.data.length}');
-
         for (var friendship in response.data) {
           final recipient = friendship['recipient'];
           final requester = friendship['requester'];
 
-          print('   Checking friendship:');
-          print('      recipient._id: ${recipient?['_id']}');
-          print('      requester._id: ${requester?['_id']}');
-          print('      Looking for: ${widget.friendId}');
-
           Map<String, dynamic>? friendData;
 
           if (recipient != null && recipient['_id'] == widget.friendId) {
-            print('   ✅ FOUND in recipient!');
             _friendshipId.value = friendship['_id'];
             friendData = recipient;
           } else if (requester != null && requester['_id'] == widget.friendId) {
-            print('   ✅ FOUND in requester!');
             _friendshipId.value = friendship['_id'];
             friendData = requester;
           }
 
           if (friendData != null) {
-            log('✅ Friendship ID found: ${_friendshipId.value}');
-
-            print('   🔍 Friend data:');
-            print('      location: ${friendData['location']}');
-            print(
-              '      location type: ${friendData['location']?.runtimeType}',
-            );
-
             if (friendData['location'] is Map) {
               final location = friendData['location'] as Map;
-              print('      coordinates: ${location['coordinates']}');
-              print(
-                '      coordinates type: ${location['coordinates']?.runtimeType}',
-              );
 
               if (location['coordinates'] is List) {
                 final coords = location['coordinates'] as List;
-                print(
-                  '      ✅ coordinates is List with ${coords.length} elements',
-                );
 
                 if (coords.length >= 2) {
                   _friendLng = (coords[0] as num).toDouble();
                   _friendLat = (coords[1] as num).toDouble();
-                  print('      ✅ EXTRACTED: lat=$_friendLat, lng=$_friendLng');
-                  log(
-                    '✅ Friend location extracted: lat=$_friendLat, lng=$_friendLng',
-                  );
                 } else {
-                  print('      ❌ coords.length < 2');
+                  //nothing
                 }
               } else {
-                print('      ❌ coordinates is NOT a List');
+                //nothing
               }
             } else {
-              print('      ❌ location is NOT a Map');
+              //nothing
             }
             return;
           }
         }
-        print('   ❌ Friend not found in list');
       } else {
-        print('   ❌ Response is NOT a List');
+        //nothing
       }
     } catch (e) {
-      log('❌ Error getting friendship data and location: $e');
-      print('❌ Exception: $e');
+      //nothing
     }
   }
 
@@ -232,22 +186,17 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
       } else {
         _friendData.value = {};
       }
-      log('✅ Loaded friend profile: ${_friendData['username']}');
     } catch (e) {
       _friendData.value = {};
       if (e is dio.DioException && e.response != null) {
         if (e.response?.statusCode == 401) {
-          log('🔐 Sesión expirada. Por favor inicia sesión de nuevo.');
           Get.snackbar('Sesión expirada', 'Por favor inicia sesión de nuevo');
         } else if (e.response?.statusCode == 404) {
-          log('❌ Recurso no encontrado (404)');
           Get.snackbar('No encontrado', 'El usuario no existe o fue eliminado');
         } else {
-          log('❌ Error loading friend profile: $e');
           Get.snackbar('Error', 'No se pudo cargar el perfil');
         }
       } else {
-        log('❌ Error loading friend profile: $e');
         Get.snackbar('Error', 'No se pudo cargar el perfil');
       }
     } finally {
@@ -262,14 +211,12 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
       );
       if (response.data is Map && response.data['events'] is List) {
         _friendEvents.value = response.data['events'];
-        log('✅ Loaded ${_friendEvents.length} events for friend');
       } else if (response.data is List) {
         _friendEvents.value = response.data;
       } else {
         _friendEvents.value = [];
       }
     } catch (e) {
-      log('❌ Error loading friend events: $e');
       _friendEvents.value = [];
     }
   }
@@ -445,7 +392,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Contact Information',
+                  'Información de Contacto',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -838,7 +785,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
                           }
                         }
                       } catch (e) {
-                        log('❌ Error getting my location: $e');
+                        //nothing
                       }
 
                       if (myLat != null && myLng != null) {

@@ -1,6 +1,4 @@
 class ContentModerationService {
-  // ==================== PALABRAS PROHIBIDAS ====================
-
   static const Map<String, List<String>> bannedWords = {
     'general': [
       'idiota',
@@ -140,8 +138,6 @@ class ContentModerationService {
     ],
   };
 
-  // ==================== PATRONES DE BULLYING ====================
-
   static const Map<String, List<String>> bullyingPatterns = {
     'threats': [
       r'te\s+voy\s+a\s+matar',
@@ -192,30 +188,19 @@ class ContentModerationService {
     ],
   };
 
-  // ==================== SEVERIDAD ====================
-
   static const Map<String, String> wordSeverity = {
-    // Low severity
     'idiota': 'low',
     'tonto': 'low',
     'bobo': 'low',
-
-    // Medium severity
     'pene': 'medium',
     'vagina': 'medium',
-
-    // High severity
     'puto': 'high',
     'cabrón': 'high',
     'mierda': 'high',
     'matar': 'high',
-
-    // Critical severity
     'suicidio': 'critical',
     'escoria': 'critical',
   };
-
-  // ==================== MODERACIÓN ====================
 
   static ModerationResult moderateMessage(String text) {
     if (text.trim().isEmpty) {
@@ -231,13 +216,10 @@ class ContentModerationService {
     final detectedPatterns = <String>[];
     String? highestSeverity;
 
-    // 1. Verificar palabras prohibidas
     bannedWords.forEach((category, words) {
       for (final word in words) {
         if (lowerText.contains(word.toLowerCase())) {
           detectedWords.add(word);
-
-          // Determinar severidad
           final severity = wordSeverity[word] ?? 'medium';
           if (highestSeverity == null ||
               _isMoreSevere(severity, highestSeverity!)) {
@@ -247,18 +229,16 @@ class ContentModerationService {
       }
     });
 
-    // 2. Verificar patrones de bullying
     bullyingPatterns.forEach((category, patterns) {
       for (final pattern in patterns) {
         final regex = RegExp(pattern, caseSensitive: false);
         if (regex.hasMatch(lowerText)) {
           detectedPatterns.add(category);
-          highestSeverity = 'critical'; // Bullying siempre es crítico
+          highestSeverity = 'critical';
         }
       }
     });
 
-    // 3. Determinar si el mensaje es permitido
     if (detectedWords.isNotEmpty || detectedPatterns.isNotEmpty) {
       return ModerationResult(
         isAllowed: false,
@@ -274,7 +254,6 @@ class ContentModerationService {
       );
     }
 
-    // 4. Mensaje permitido
     return ModerationResult(
       isAllowed: true,
       reason: null,
@@ -282,8 +261,6 @@ class ContentModerationService {
       sanitizedMessage: text.trim(),
     );
   }
-
-  // ==================== HELPERS ====================
 
   static bool _isMoreSevere(String severity1, String severity2) {
     const severityLevels = {
@@ -331,8 +308,6 @@ class ContentModerationService {
     return '⚠️ Este mensaje contiene lenguaje no permitido';
   }
 }
-
-// ==================== MODELO DE RESULTADO ====================
 
 class ModerationResult {
   final bool isAllowed;

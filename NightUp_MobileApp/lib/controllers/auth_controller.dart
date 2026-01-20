@@ -4,13 +4,10 @@ import '../app.dart';
 import '../models/user.dart';
 import '../services/storage_service.dart';
 import '../services/google_service.dart';
-// import 'package:flutter/foundation.dart' show kIsWeb;
-// import 'dart:js' as js;
 import 'dart:convert';
 
 class AuthController extends GetxController {
   final ApiService _apiService = Get.find<ApiService>();
-
   final Rx<User?> _currentUser = Rx<User?>(null);
   final RxString _token = ''.obs;
   final RxString _refreshToken = ''.obs;
@@ -33,12 +30,10 @@ class AuthController extends GetxController {
     try {
       _isLoading.value = true;
       _error.value = '';
-      print('🔐 Attempting login with email: $email');
 
       final response = await _apiService.login(
         LoginRequest(username: email, password: password),
       );
-
       _token.value = response.token;
       _refreshToken.value = response.refreshToken;
       _currentUser.value = response.user;
@@ -53,18 +48,14 @@ class AuthController extends GetxController {
         final onboardingComplete = storage.read('onboarding_complete');
         if (onboardingComplete == true) {
           await storage.write('onboarding_complete', true);
-          print('✅ Onboarding marcado como completo tras login');
         }
       }
-
-      print('✅ Login successful for user: ${response.user.username}');
 
       await _navigateAfterLogin();
 
       return true;
     } catch (e) {
       _error.value = e.toString();
-      print('❌ Login error: $e');
       return false;
     } finally {
       _isLoading.value = false;
@@ -72,10 +63,6 @@ class AuthController extends GetxController {
   }
 
   Future<Map<String, dynamic>> googleLoginWeb(String idToken) async {
-    // This was utilizing dart:js for web which is not supported on mobile.
-    // Forwarding to standard google login if needed or deprecating.
-    // For now, implementing a fallback or just returning failure as this method
-    // was specifically for the manual JS flow.
     return {'success': false, 'isNewUser': false};
   }
 
@@ -99,14 +86,14 @@ class AuthController extends GetxController {
 
       final account = await GoogleSignInService.signIn();
       if (account == null) {
-        _error.value = 'Google Sign-In cancelled';
+        _error.value = 'Google Sign-In cancelado';
         return false;
       }
 
       final auth = await account.authentication;
       final token = auth.idToken;
       if (token == null) {
-        _error.value = 'Failed to get Google token';
+        _error.value = 'Error al obtener el token de Google';
         return false;
       }
 
@@ -121,7 +108,6 @@ class AuthController extends GetxController {
       return true;
     } catch (e) {
       _error.value = e.toString();
-      print('❌ Google login error: $e');
       return false;
     } finally {
       _isLoading.value = false;
@@ -141,7 +127,7 @@ class AuthController extends GetxController {
       _isLoading.value = true;
       _error.value = '';
 
-      final response = await _apiService.register(
+      await _apiService.register(
         RegisterRequest(
           username: username,
           email: email,
@@ -153,15 +139,13 @@ class AuthController extends GetxController {
         ),
       );
 
-      _token.value = response.token;
-      _refreshToken.value = response.refreshToken;
-      _currentUser.value = response.user;
+      // _token.value = response.token;
+      // _refreshToken.value = response.refreshToken;
+      // _currentUser.value = response.user;
 
-      await _saveAuthData();
+      // await _saveAuthData();
 
-      print('✅ Registration successful, user should go to interest selection');
-
-      Get.offAll(() => const App());
+      // Get.offAll(() => const App());
 
       return true;
     } catch (e) {
@@ -174,11 +158,8 @@ class AuthController extends GetxController {
 
   Future<void> _navigateAfterLogin() async {
     try {
-      print('Navigating to main screen (Interests disabled)');
-      Get.offAll(() => const App());
+      Get.offAllNamed('/home');
     } catch (e) {
-      print('Error navigating after login: $e');
-
       Get.offAll(() => const App());
     }
   }
@@ -189,7 +170,6 @@ class AuthController extends GetxController {
       final onboardingComplete = storage.read('onboarding_complete');
       return onboardingComplete == true;
     } catch (e) {
-      print('Error checking onboarding status: $e');
       return false;
     }
   }
@@ -198,10 +178,7 @@ class AuthController extends GetxController {
     try {
       final storage = Get.find<StorageService>();
       await storage.write('onboarding_complete', true);
-      print('✅ Onboarding marked as complete');
-    } catch (e) {
-      print('Error marking onboarding complete: $e');
-    }
+    } catch (e) {}
   }
 
   Future<bool> saveInitialInterests({
@@ -221,16 +198,12 @@ class AuthController extends GetxController {
         'childhoodIdol': childhoodIdol,
       };
 
-      print('💾 Saving initial interests: $dataToSend');
-
       await _apiService.saveInitialInterests(dataToSend);
       await markOnboardingComplete();
 
-      print('✅ Initial interests saved successfully');
       return true;
     } catch (e) {
       _error.value = e.toString();
-      print('❌ Error saving initial interests: $e');
       return false;
     } finally {
       _isLoading.value = false;
@@ -241,7 +214,6 @@ class AuthController extends GetxController {
     try {
       return await _apiService.getTagsByType(type);
     } catch (e) {
-      print('Error getting tags by type: $e');
       rethrow;
     }
   }
@@ -273,7 +245,7 @@ class AuthController extends GetxController {
         await _apiService.resetPassword(resetToken, newPassword);
         return {'success': true};
       } else {
-        throw Exception('Invalid flow parameters');
+        throw Exception('Parámetros de flujo inválidos');
       }
     } catch (e) {
       _error.value = e.toString();
@@ -296,20 +268,16 @@ class AuthController extends GetxController {
   Future<bool> refreshAuthToken() async {
     try {
       if (_refreshToken.value.isEmpty) return false;
-
       final response = await _apiService.refreshToken(
         _refreshToken.value,
         _currentUser.value?.id ?? '',
       );
-
       _token.value = response.token;
       _refreshToken.value = response.refreshToken;
       await _saveAuthData();
 
-      print('✅ Token refreshed successfully');
       return true;
     } catch (e) {
-      print('❌ Error refreshing token: $e');
       return false;
     }
   }
@@ -327,7 +295,6 @@ class AuthController extends GetxController {
         'user': _currentUser.value,
       };
     } catch (e) {
-      print('Error checking auth status: $e');
       return {'isLoggedIn': false, 'onboardingComplete': false};
     }
   }
@@ -336,7 +303,6 @@ class AuthController extends GetxController {
     try {
       await GoogleSignInService.signOut();
     } catch (e) {
-      print('Error during Google signout: $e');
     } finally {
       _token.value = '';
       _refreshToken.value = '';
@@ -351,10 +317,7 @@ class AuthController extends GetxController {
     try {
       final storage = Get.find<StorageService>();
       await storage.remove('onboarding_complete');
-      print('✅ Onboarding data cleared');
-    } catch (e) {
-      print('Error clearing onboarding data: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _clearAuthData() async {
@@ -363,10 +326,7 @@ class AuthController extends GetxController {
       await storage.remove('token');
       await storage.remove('refreshToken');
       await storage.remove('user');
-      print('✅ Auth data cleared');
-    } catch (e) {
-      print('Error clearing auth data: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _saveAuthData() async {
@@ -377,10 +337,7 @@ class AuthController extends GetxController {
       if (_currentUser.value != null) {
         await storage.write('user', _currentUser.value!.toJson());
       }
-      print('✅ Auth data saved successfully');
-    } catch (e) {
-      print('Error saving auth data: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> loadAuthData() async {
@@ -389,7 +346,6 @@ class AuthController extends GetxController {
       final token = await storage.read('token');
       final refreshToken = await storage.read('refreshToken');
       final userData = await storage.read('user');
-
       if (token != null && token.isNotEmpty) {
         _token.value = token;
         _refreshToken.value = refreshToken ?? '';
@@ -400,17 +356,10 @@ class AuthController extends GetxController {
               _currentUser.value = User.fromJson(decoded);
             } else if (userData is Map<String, dynamic>) {
               _currentUser.value = User.fromJson(userData);
-            } else {
-              print('User data format not recognized');
-            }
-            print('✅ User data loaded: ${_currentUser.value?.username}');
-          } catch (e) {
-            print('Error parsing user data: $e');
-          }
+            } else {}
+          } catch (e) {}
         }
       }
-    } catch (e) {
-      print('Error loading auth data: $e');
-    }
+    } catch (e) {}
   }
 }

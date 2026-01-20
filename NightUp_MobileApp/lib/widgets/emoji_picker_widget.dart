@@ -201,7 +201,6 @@ class EmojiPickerWidget extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Handle
           Container(
             margin: const EdgeInsets.symmetric(vertical: 8),
             width: 40,
@@ -212,7 +211,6 @@ class EmojiPickerWidget extends StatelessWidget {
             ),
           ),
 
-          // Tabs
           DefaultTabController(
             length: emojiCategories.length,
             child: Expanded(

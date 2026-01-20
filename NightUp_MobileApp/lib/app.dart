@@ -16,7 +16,7 @@ import 'screens/create_post/camera_screen.dart';
 import 'widgets/menu_modal.dart';
 import 'widgets/bottom_navigation.dart';
 import 'controllers/auth_controller.dart';
-import 'controllers/chat_controller.dart'; // ✅ AÑADIR
+import 'controllers/chat_controller.dart';
 import 'package:get/get.dart';
 import 'dart:developer';
 import 'services/socket_service.dart';
@@ -46,10 +46,11 @@ class _AppState extends State<App> {
   }
 
   void _checkAuthStatus() async {
+    if (!Get.isRegistered<AuthController>()) {
+      Get.put(AuthController());
+    }
     final AuthController authController = Get.find<AuthController>();
     final status = await authController.checkAuthStatus();
-
-    log('🔐 Auth status: $status', name: 'App');
 
     if (status['isLoggedIn'] == true) {
       changeScreen(AppScreen.main);
@@ -69,18 +70,13 @@ class _AppState extends State<App> {
     }
   }
 
-  // ✅ ACTUALIZAR ESTE MÉTODO
   void _initPrivateControllers() {
-    // Inicializar SocketService si no está registrado
     if (!Get.isRegistered<SocketService>()) {
       Get.put(SocketService());
-      log('✅ SocketService initialized');
     }
 
-    // Inicializar ChatController si no está registrado
     if (!Get.isRegistered<ChatController>()) {
       Get.put(ChatController());
-      log('✅ ChatController initialized');
     }
   }
 
@@ -106,7 +102,7 @@ class _AppState extends State<App> {
       case AppScreen.register:
         return RegisterScreen(
           onBack: () => changeScreen(AppScreen.login),
-          onRegister: () => changeScreen(AppScreen.main),
+          onRegister: () => changeScreen(AppScreen.login),
         );
       case AppScreen.forgotPassword:
         return ForgotPasswordScreen(
@@ -140,10 +136,6 @@ class _AppState extends State<App> {
         children: [
           HomeFeed(
             onEventClick: (eventId) {
-              log('🚀 NAVIGATING TO EVENT DETAIL:');
-              log('   Original eventId: $eventId');
-              log('   Type: ${eventId.runtimeType}');
-              log('   Length: ${eventId.length}');
               setState(() {
                 _selectedEventId = eventId;
                 _currentScreen = AppScreen.eventDetail;
@@ -153,7 +145,7 @@ class _AppState extends State<App> {
           ),
           SearchScreen(),
           const CameraScreen(),
-          ChatScreen(), // ✅ ChatController ya está inicializado aquí
+          ChatScreen(),
           UserProfile(
             onSettingsOpen: () => changeScreen(AppScreen.settings),
             onCalendarOpen: () => changeScreen(AppScreen.calendar),

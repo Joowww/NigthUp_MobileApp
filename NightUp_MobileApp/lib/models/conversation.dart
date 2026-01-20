@@ -27,64 +27,54 @@ class Conversation {
   });
 
   factory Conversation.fromJson(Map<String, dynamic> json) {
-    try {
-      // ✅ Parsear participants como Strings (IDs)
-      List<String> participantsList = [];
-      if (json['participants'] != null) {
-        participantsList = List<String>.from(
-          json['participants'].map((p) {
-            if (p is String) return p;
-            if (p is Map && p['_id'] != null) return p['_id'].toString();
-            if (p is Map && p['participant'] != null) {
-              return p['participant'].toString();
-            }
-            return p.toString();
-          }),
-        );
-      }
-
-      // ✅ Parsear groupParticipants SOLO si existe ese campo separado
-      List<GroupParticipant>? groupParticipantsList;
-      if (json['groupParticipants'] != null) {
-        groupParticipantsList = (json['groupParticipants'] as List)
-            .map((gp) => GroupParticipant.fromJson(gp as Map<String, dynamic>))
-            .toList();
-      }
-
-      // ✅ Parsear groupPolls
-      List<GroupPoll>? groupPollsList;
-      if (json['groupPolls'] != null) {
-        groupPollsList = (json['groupPolls'] as List)
-            .map((p) => GroupPoll.fromJson(p as Map<String, dynamic>))
-            .toList();
-      }
-
-      return Conversation(
-        id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
-        isGroup: json['isGroup'] ?? false,
-        name:
-            json['name']?.toString() ??
-            json['groupName']?.toString() ??
-            'Desconocido',
-        avatar:
-            json['avatar']?.toString() ??
-            json['groupAvatar']?.toString() ??
-            'assets/images/google.png',
-        lastMessage: json['lastMessage']?.toString() ?? '',
-        lastMessageTime: json['lastMessageTime'] != null
-            ? DateTime.parse(json['lastMessageTime'])
-            : DateTime.now(),
-        participants: participantsList,
-        groupParticipants: groupParticipantsList,
-        groupPolls: groupPollsList,
-        unreadCount: json['unreadCount'] ?? 0,
+    List<String> participantsList = [];
+    if (json['participants'] != null) {
+      participantsList = List<String>.from(
+        json['participants'].map((p) {
+          if (p is String) return p;
+          if (p is Map && p['_id'] != null) return p['_id'].toString();
+          if (p is Map && p['participant'] != null) {
+            return p['participant'].toString();
+          }
+          return p.toString();
+        }),
       );
-    } catch (e, stackTrace) {
-      print('❌ Error parsing Conversation: $e');
-      print('   Stack trace: $stackTrace');
-      print('   JSON was: $json');
-      rethrow;
     }
+
+    List<GroupParticipant>? groupParticipantsList;
+    if (json['groupParticipants'] != null) {
+      groupParticipantsList = (json['groupParticipants'] as List)
+          .map((gp) => GroupParticipant.fromJson(gp as Map<String, dynamic>))
+          .toList();
+    }
+
+    List<GroupPoll>? groupPollsList;
+    if (json['groupPolls'] != null) {
+      groupPollsList = (json['groupPolls'] as List)
+          .map((p) => GroupPoll.fromJson(p as Map<String, dynamic>))
+          .toList();
+    }
+
+    return Conversation(
+      id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
+      isGroup: json['isGroup'] ?? false,
+      name:
+          json['name']?.toString() ??
+          json['groupName']?.toString() ??
+          'Desconocido',
+      avatar:
+          json['avatar']?.toString() ??
+          json['groupAvatar']?.toString() ??
+          'assets/images/google.png',
+      lastMessage: json['lastMessage']?.toString() ?? '',
+      lastMessageTime: json['lastMessageTime'] != null
+          ? DateTime.parse(json['lastMessageTime'])
+          : DateTime.now(),
+      participants: participantsList,
+      groupParticipants: groupParticipantsList,
+      groupPolls: groupPollsList,
+      unreadCount: json['unreadCount'] ?? 0,
+    );
   }
 
   Map<String, dynamic> toJson() => {

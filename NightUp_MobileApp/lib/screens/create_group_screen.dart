@@ -15,7 +15,12 @@ class CreateGroupScreen extends StatefulWidget {
 
 class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final TextEditingController _groupNameController = TextEditingController();
-  final ChatController _chatController = Get.find<ChatController>();
+
+  // Inyección segura del controlador
+  final ChatController _chatController = Get.isRegistered<ChatController>()
+      ? Get.find<ChatController>()
+      : Get.put(ChatController());
+
   final ApiService _apiService = Get.find<ApiService>();
 
   final RxList<String> selectedParticipants = <String>[].obs;
@@ -48,13 +53,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         friends.value = friendships;
       }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'No se pudieron cargar los amigos',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
-        colorText: Colors.white,
-      );
+      print("Error loading friends: $e");
     } finally {
       isLoadingFriends.value = false;
     }
@@ -62,24 +61,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
   Future<void> _createGroup() async {
     if (_groupNameController.text.trim().isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Ingresa un nombre para el grupo',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
-        colorText: Colors.white,
-      );
       return;
     }
 
     if (selectedParticipants.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Selecciona al menos un participante',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
-        colorText: Colors.white,
-      );
       return;
     }
 
@@ -89,15 +74,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         _groupNameController.text.trim(),
         selectedParticipants.toList(),
       );
-      // El éxito ya se maneja en el controller
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'No se pudo crear el grupo',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
-        colorText: Colors.white,
-      );
+      print("Error creating group: $e");
     } finally {
       isCreating.value = false;
     }
@@ -117,7 +95,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       ),
       body: Column(
         children: [
-          // Nombre del grupo
+          // 1. INPUT DEL NOMBRE
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: GlassCard(
@@ -128,7 +106,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Nombre del Grupo',
                     labelStyle: TextStyle(color: Colors.white70),
-                    hintText: 'Ej: Amigos de la Universidad',
+                    hintText: 'Ej: Amigos',
                     hintStyle: TextStyle(color: Colors.white30),
                     border: OutlineInputBorder(),
                     enabledBorder: OutlineInputBorder(
@@ -148,13 +126,15 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             ),
           ),
 
-          // Header de participantes
+          // 2. TÍTULO Y CONTADOR (AQUÍ ESTABA EL PROBLEMA)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Flexible(
+                // 🔥 SOLUCIÓN: Expanded obliga al texto largo a respetar el espacio
+                // Si el contador crece, este texto se encoge automáticamente.
+                const Expanded(
                   child: Text(
                     'Seleccionar Participantes',
                     style: TextStyle(
@@ -162,14 +142,17 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    overflow: TextOverflow.ellipsis, // Pone "..." si no cabe
+                    maxLines: 1,
                   ),
                 ),
-                const SizedBox(width: 8),
+
+                const SizedBox(width: 10), // Un poco de aire
+                // El contador se mantiene fijo a la derecha
                 Obx(
                   () => Text(
                     '${selectedParticipants.length} sel.',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.primary,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -179,10 +162,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               ],
             ),
           ),
-
           const SizedBox(height: 12),
 
-          // Lista de amigos
+          // 3. LISTA DE AMIGOS
           Expanded(
             child: Obx(() {
               if (isLoadingFriends.value) {
@@ -190,9 +172,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   child: CircularProgressIndicator(color: AppColors.primary),
                 );
               }
-
               if (friends.isEmpty) {
-                return Center(
+                return const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -201,26 +182,25 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                         size: 64,
                         color: Colors.white30,
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
+                      SizedBox(height: 16),
+                      Text(
                         'No tienes amigos todavía',
                         style: TextStyle(color: Colors.white70, fontSize: 16),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Añade amigos desde el mapa',
-                        style: TextStyle(color: Colors.white54, fontSize: 14),
                       ),
                     ],
                   ),
                 );
               }
-
               return ListView.builder(
                 itemCount: friends.length,
                 itemBuilder: (context, index) {
                   final friendship = friends[index];
                   final currentUserId = _apiService.getUserId();
+
+                  if (friendship['requester'] == null ||
+                      friendship['recipient'] == null) {
+                    return const SizedBox();
+                  }
 
                   final requesterData = friendship['requester'];
                   final recipientData = friendship['recipient'];
@@ -264,7 +244,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                           ),
                           child: Row(
                             children: [
-                              // Avatar
                               Container(
                                 width: 50,
                                 height: 50,
@@ -288,7 +267,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              // Nombre
+                              // Expanded aquí también protege el nombre del usuario
                               Expanded(
                                 child: Text(
                                   username,
@@ -301,9 +280,11 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                                         ? FontWeight.bold
                                         : FontWeight.normal,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              // Checkbox
+                              const SizedBox(width: 8),
                               Container(
                                 width: 24,
                                 height: 24,
@@ -338,7 +319,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             }),
           ),
 
-          // Botón crear
+          // 4. BOTÓN DE CREAR
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Obx(

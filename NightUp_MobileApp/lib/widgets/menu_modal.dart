@@ -1,8 +1,6 @@
-//menu_modal.dart
 import '../screens/friend_profile_screen.dart';
 import '../screens/chat_screen.dart';
 import '../controllers/chat_controller.dart';
-import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/menu_modal_controller.dart';
@@ -44,7 +42,6 @@ class MenuModal extends StatelessWidget {
               child: SizedBox.expand(
                 child: Column(
                   children: [
-                    // HEADER NEÓN CYBERPUNK
                     Container(
                       padding: const EdgeInsets.symmetric(
                         vertical: 30,
@@ -72,7 +69,6 @@ class MenuModal extends StatelessWidget {
                       ),
                       child: Stack(
                         children: [
-                          // Partículas decorativas de fondo
                           Positioned(
                             right: 20,
                             top: 10,
@@ -101,13 +97,11 @@ class MenuModal extends StatelessWidget {
                             ),
                           ),
 
-                          // Contenido principal
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  // Botón cerrar con neón
                                   Container(
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
@@ -141,12 +135,11 @@ class MenuModal extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 20),
 
-                                  // Barra vertical decorativa
                                   Container(
                                     width: 3,
                                     height: 40,
                                     decoration: BoxDecoration(
-                                      gradient: LinearGradient(
+                                      gradient: const LinearGradient(
                                         begin: Alignment.topCenter,
                                         end: Alignment.bottomCenter,
                                         colors: [
@@ -167,11 +160,10 @@ class MenuModal extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 16),
 
-                                  // Texto EXPLORE
                                   Expanded(
                                     child: ShaderMask(
                                       shaderCallback: (bounds) =>
-                                          LinearGradient(
+                                          const LinearGradient(
                                             colors: [
                                               AppColors.primary,
                                               AppColors.secondary,
@@ -208,13 +200,12 @@ class MenuModal extends StatelessWidget {
 
                               const SizedBox(height: 12),
 
-                              // Barra decorativa inferior con gradiente neón
                               Padding(
                                 padding: const EdgeInsets.only(left: 76),
                                 child: Container(
                                   height: 2,
                                   decoration: BoxDecoration(
-                                    gradient: LinearGradient(
+                                    gradient: const LinearGradient(
                                       colors: [
                                         AppColors.primary,
                                         AppColors.secondary,
@@ -475,8 +466,8 @@ class MenuModal extends StatelessWidget {
                                 const SizedBox(height: 8),
                                 Text(
                                   business.lat != null && business.lng != null
-                                      ? 'Location Available'
-                                      : 'No Location',
+                                      ? 'Ubicación Disponible'
+                                      : 'Sin Ubicación',
                                   style: const TextStyle(
                                     color: Colors.white70,
                                     fontSize: 12,
@@ -526,8 +517,8 @@ class MenuModal extends StatelessWidget {
       if (events.isEmpty) {
         return _buildEmptyState(
           Icons.event,
-          'No Events Found',
-          'There are no events available at the moment.',
+          'No se han encontrado eventos',
+          'No hay eventos disponibles en este momento.',
         );
       }
       return RefreshIndicator(
@@ -618,7 +609,7 @@ class MenuModal extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${event.participantsCount} attending',
+                          '${event.participantsCount} personas',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 12,
@@ -675,7 +666,7 @@ class MenuModal extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 8),
                                 const Text(
-                                  'Event Location',
+                                  'Ubicación del Evento',
                                   style: TextStyle(
                                     color: Colors.white70,
                                     fontSize: 12,
@@ -724,8 +715,8 @@ class MenuModal extends StatelessWidget {
       if (controller.friends.isEmpty) {
         return _buildEmptyState(
           Icons.people,
-          'No Friends Yet',
-          'Add friends to see them here and connect on NightUp.',
+          'Sin amigos',
+          'Agrega amigos para verlos aquí y conéctate en NightUp.',
         );
       }
       return RefreshIndicator(
@@ -802,7 +793,7 @@ class MenuModal extends StatelessWidget {
                             if (friend.distance != null) ...[
                               const SizedBox(height: 4),
                               Text(
-                                '${friend.distance!.toStringAsFixed(1)} km away',
+                                '${friend.distance!.toStringAsFixed(1)} km de distancia',
                                 style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 12,
@@ -880,52 +871,37 @@ class MenuModal extends StatelessWidget {
 
   void _shareLocation(Business business) async {
     final locationText = '${business.name} - ${business.displayAddress}';
-    log('📍 Sharing business location: $locationText');
     Get.snackbar(
-      'Location Shared',
-      'Business location copied to clipboard',
+      'Ubicación compartida',
+      'Ubicación de la empresa copiada al portapapeles',
       snackPosition: SnackPosition.BOTTOM,
     );
   }
 
   void _shareLocationFromEvent(Event event) async {
     final locationText = '${event.title} - ${event.venue}';
-    log('📍 Sharing event location: $locationText');
     Get.snackbar(
-      'Location Shared',
-      'Event location copied to clipboard',
+      'Ubicación compartida',
+      'Ubicación del evento copiada al portapapeles',
       snackPosition: SnackPosition.BOTTOM,
     );
   }
 
-  // ✅ FUNCIÓN MODIFICADA CON MEJOR DEBUGGING
   void _openChatWithFriend(Friend friend) async {
     try {
-      log('💬 Opening chat with ${friend.username}');
-      log('   Friend ID: "${friend.id}"');
-      log('   Friend ID length: ${friend.id.length}');
-      log('   Friend ID type: ${friend.id.runtimeType}');
-      log('   Full friend object: ${friend.toString()}');
-
-      // Validar que el ID no esté vacío
       if (friend.id.isEmpty) {
         throw Exception('Friend ID is empty');
       }
-
-      // Validar que el ID tenga el formato correcto (MongoDB ObjectId tiene 24 caracteres)
       if (friend.id.length != 24) {
-        log('⚠️ Warning: Friend ID length is ${friend.id.length}, expected 24');
+        //nothing
       }
 
-      // 1. Asegurar que el ChatController existe
       if (!Get.isRegistered<ChatController>()) {
-        log('⚠️ ChatController not found, creating new instance');
         Get.put(ChatController());
       }
 
       final ChatController chatController = Get.find<ChatController>();
 
-      // 2. Mostrar loading con diseño mejorado
       Get.dialog(
         Center(
           child: Container(
@@ -980,38 +956,19 @@ class MenuModal extends StatelessWidget {
         barrierDismissible: false,
       );
 
-      // 3. Crear o encontrar la conversación
-      log('📡 Calling createPrivateChat with friendId: ${friend.id}');
       await chatController.createPrivateChat(friend.id);
-      log('✅ Private chat created/found successfully');
 
-      // 4. Cerrar loading
       if (Get.isDialogOpen ?? false) {
         Get.back();
       }
-
-      // 5. Cerrar el MenuModal
       Get.back();
 
-      // 6. Esperar un poco para asegurar que la UI se actualice
       await Future.delayed(const Duration(milliseconds: 300));
-
-      // 7. Navegar a la pantalla de chat
-      log('🚀 Navigating to ChatScreen');
       Get.to(() => const ChatScreen());
-
-      log('✅ Successfully navigated to chat with ${friend.username}');
     } catch (e, stackTrace) {
-      log('❌ Error opening chat with ${friend.username}');
-      log('Error details: $e');
-      log('Stack trace: $stackTrace');
-
-      // Cerrar loading si está abierto
       if (Get.isDialogOpen ?? false) {
         Get.back();
       }
-
-      // Mostrar error detallado al usuario
       String errorMessage = 'No se pudo abrir el chat con ${friend.username}';
 
       if (e.toString().contains('500')) {

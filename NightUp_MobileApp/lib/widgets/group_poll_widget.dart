@@ -42,7 +42,6 @@ class GroupPollWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
               Container(
@@ -95,8 +94,6 @@ class GroupPollWidget extends StatelessWidget {
           ),
 
           const SizedBox(height: 16),
-
-          // Pregunta
           Text(
             poll.question,
             style: const TextStyle(
@@ -108,7 +105,6 @@ class GroupPollWidget extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // Opciones
           ...poll.options.asMap().entries.map((entry) {
             final index = entry.key;
             final option = entry.value;
@@ -134,7 +130,6 @@ class GroupPollWidget extends StatelessWidget {
                   ),
                   child: Stack(
                     children: [
-                      // Barra de progreso
                       if (hasVoted || !poll.canVote)
                         ClipRRect(
                           borderRadius: BorderRadius.circular(11),
@@ -150,7 +145,6 @@ class GroupPollWidget extends StatelessWidget {
                           ),
                         ),
 
-                      // Contenido
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -158,7 +152,6 @@ class GroupPollWidget extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            // Radio/Checkbox
                             Icon(
                               isSelected
                                   ? Icons.check_circle
@@ -172,7 +165,6 @@ class GroupPollWidget extends StatelessWidget {
                             ),
                             const SizedBox(width: 12),
 
-                            // Texto de la opción
                             Expanded(
                               child: Text(
                                 option.text,
@@ -186,7 +178,6 @@ class GroupPollWidget extends StatelessWidget {
                               ),
                             ),
 
-                            // Porcentaje
                             if (hasVoted || !poll.canVote) ...[
                               const SizedBox(width: 8),
                               Text(
@@ -210,7 +201,6 @@ class GroupPollWidget extends StatelessWidget {
             );
           }).toList(),
 
-          // Footer
           if (poll.expiresAt != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -272,7 +262,6 @@ class GroupPollWidget extends StatelessWidget {
                 style: TextStyle(color: Colors.grey[400], fontSize: 13),
               ),
               const SizedBox(height: 12),
-              // Lista de votantes (aquí podrías cargar los nombres de usuarios)
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(

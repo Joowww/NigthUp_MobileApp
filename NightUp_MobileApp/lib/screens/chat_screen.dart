@@ -30,11 +30,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
   bool _showIndividualChat = false;
-
-  // Variables audios
   final AudioRecorderService _audioRecorder = AudioRecorderService();
   bool _isRecordingAudio = false;
-  // Variables edición
   bool _isEditing = false;
   String? _editingMessageId;
 
@@ -52,12 +49,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final args = Get.arguments;
     if (args != null && args is Map && args['conversationId'] != null) {
       final conversationId = args['conversationId'];
-      log(
-        '🚀 Navigating via Notification to: $conversationId',
-        name: 'ChatScreen',
-      );
 
-      // Esperar a que las conversaciones carguen si es necesario
       if (_chatController.conversations.isEmpty) {
         ever(_chatController.isLoading, (isLoading) {
           if (!isLoading && _chatController.conversations.isNotEmpty) {
@@ -97,8 +89,6 @@ class _ChatScreenState extends State<ChatScreen> {
     return _buildConversationsList();
   }
 
-  // ==================== LISTA DE CONVERSACIONES ====================
-
   Widget _buildConversationsList() {
     return Scaffold(
       backgroundColor: Colors.black,
@@ -106,11 +96,7 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           _buildHeader(),
           _buildSearchBar(),
-
-          // ✅ NIGHTBOT FIJO ARRIBA
           _buildAiConversationItem(),
-
-          // Divider decorativo
           Container(
             height: 8,
             decoration: BoxDecoration(
@@ -124,8 +110,6 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           ),
-
-          // Título de chats
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
@@ -176,8 +160,6 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
-
-          // Lista de conversaciones
           Expanded(
             child: Obx(() {
               if (_chatController.isLoading.value) {
@@ -221,7 +203,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ✅ NIGHTBOT AI MEJORADO
   Widget _buildAiConversationItem() {
     return GestureDetector(
       onTap: () => Get.to(() => const AiChatScreen()),
@@ -253,7 +234,6 @@ class _ChatScreenState extends State<ChatScreen> {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Avatar animado
               Container(
                 width: 60,
                 height: 60,
@@ -285,8 +265,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
               const SizedBox(width: 16),
-
-              // Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,8 +302,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Row(
-                      children: const [
+                    const Row(
+                      children: [
                         Icon(Icons.bolt, color: AppColors.neonPink, size: 16),
                         SizedBox(width: 6),
                         Expanded(
@@ -345,8 +323,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   ],
                 ),
               ),
-
-              // Flecha
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -434,7 +410,6 @@ class _ChatScreenState extends State<ChatScreen> {
               style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
             const SizedBox(height: 24),
-            // ✅ Botones con texto visible y sin overflow
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 12,
@@ -526,7 +501,6 @@ class _ChatScreenState extends State<ChatScreen> {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              // Avatar
               Stack(
                 children: [
                   Container(
@@ -575,8 +549,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
               const SizedBox(width: 12),
-
-              // Content
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -675,8 +647,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ==================== CHAT INDIVIDUAL ====================
-
   Widget _buildIndividualChat() {
     return Scaffold(
       backgroundColor: Colors.black,
@@ -769,7 +739,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     _chatController.messages.length +
                     (isGroup && groupPolls.isNotEmpty ? 1 : 0),
                 itemBuilder: (context, index) {
-                  // ✅ Mostrar encuestas del grupo al principio
                   if (index == 0 && isGroup && groupPolls.isNotEmpty) {
                     return Column(
                       children: groupPolls.map((poll) {
@@ -881,7 +850,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ✅ INPUT DE MENSAJE MEJORADO (con botón de imagen y emojis funcional)
   Widget _buildMessageInput() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -895,7 +863,6 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       child: Row(
         children: [
-          // ✅ Botón de imagen
           IconButton(
             icon: Container(
               padding: const EdgeInsets.all(8),
@@ -941,7 +908,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       },
                     ),
                   ),
-                  // ✅ Botón de emojis funcional
                   IconButton(
                     icon: const Icon(
                       Icons.emoji_emotions_outlined,
@@ -1017,12 +983,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       });
                     }
                   } else {
-                    Get.snackbar(
-                      'Nota de voz',
-                      'Mantén pulsado para grabar',
-                      snackPosition: SnackPosition.TOP,
-                      duration: const Duration(seconds: 1),
-                    );
+                    //nothing
                   }
                 },
                 child: Container(
@@ -1047,11 +1008,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   child: Center(
                     child: _isRecordingAudio
-                        ? const Icon(
-                            Icons.mic,
-                            color: Colors.white,
-                            size: 28,
-                          ) // Icono más grande al grabar
+                        ? const Icon(Icons.mic, color: Colors.white, size: 28)
                         : Icon(
                             canSend
                                 ? Icons.send_rounded
@@ -1069,9 +1026,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ==================== HEADERS ====================
-
-  // ✅ HEADER CON BOTONES (grupos/encuestas)
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
@@ -1098,7 +1052,6 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           ),
-          // ✅ Botón crear grupo
           IconButton(
             icon: Container(
               padding: const EdgeInsets.all(8),
@@ -1116,7 +1069,6 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             onPressed: _showCreateGroupDialog,
           ),
-          // ✅ Botón encuestas
           IconButton(
             icon: Container(
               padding: const EdgeInsets.all(8),
@@ -1180,7 +1132,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ✅ HEADER DEL CHAT MEJORADO (con botones para grupos)
   Widget _buildChatHeader() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
@@ -1271,10 +1222,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
             ),
-
-            // ✅ BOTONES DEL HEADER (solo en grupos)
             if (isGroup) ...[
-              // Botón crear encuesta
               IconButton(
                 icon: Container(
                   padding: const EdgeInsets.all(8),
@@ -1290,7 +1238,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 onPressed: () => _showCreatePollDialog(),
               ),
-              // Botón info del grupo
               IconButton(
                 icon: Container(
                   padding: const EdgeInsets.all(8),
@@ -1305,7 +1252,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 },
               ),
             ] else ...[
-              // Botón llamada (solo en chats privados)
               IconButton(
                 icon: Container(
                   padding: const EdgeInsets.all(8),
@@ -1319,7 +1265,6 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ],
 
-            // Menú opciones
             IconButton(
               icon: Container(
                 padding: const EdgeInsets.all(8),
@@ -1343,9 +1288,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ==================== DIALOGS ====================
-
-  // ✅ NUEVO: Diálogo para crear encuesta en grupo
   void _showCreatePollDialog() {
     final TextEditingController questionController = TextEditingController();
     final RxList<TextEditingController> optionControllers =
@@ -1377,7 +1319,6 @@ class _ChatScreenState extends State<ChatScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -1425,14 +1366,12 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
 
-              // Content
               Flexible(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Pregunta
                       const Text(
                         'Pregunta',
                         style: TextStyle(
@@ -1474,7 +1413,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
                       const SizedBox(height: 24),
 
-                      // Opciones
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -1582,8 +1520,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
               ),
-
-              // Footer
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -1682,12 +1618,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final RxBool isLoading = false.obs;
 
     if (_chatController.conversations.isEmpty) {
-      Get.snackbar(
-        'Cargando...',
-        'Espera un momento mientras cargamos tus contactos',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-      );
       return;
     }
 
@@ -1718,7 +1648,6 @@ class _ChatScreenState extends State<ChatScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -1766,15 +1695,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   ],
                 ),
               ),
-
-              // Content
               Flexible(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Nombre del grupo
                       const Text(
                         'Nombre del Grupo',
                         style: TextStyle(
@@ -1820,7 +1746,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
                       const SizedBox(height: 24),
 
-                      // Seleccionar amigos
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -1846,7 +1771,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Lista de conversaciones para seleccionar
                       Obx(() {
                         final privateConversations = _chatController
                             .conversations
@@ -1939,7 +1863,6 @@ class _ChatScreenState extends State<ChatScreen> {
                                       ),
                                       child: Row(
                                         children: [
-                                          // Avatar
                                           Container(
                                             width: 40,
                                             height: 40,
@@ -1965,7 +1888,6 @@ class _ChatScreenState extends State<ChatScreen> {
                                             ),
                                           ),
                                           const SizedBox(width: 12),
-                                          // Nombre
                                           Expanded(
                                             child: Text(
                                               conversation.displayName,
@@ -1980,7 +1902,6 @@ class _ChatScreenState extends State<ChatScreen> {
                                               ),
                                             ),
                                           ),
-                                          // Checkbox
                                           Container(
                                             width: 24,
                                             height: 24,
@@ -2018,8 +1939,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
               ),
-
-              // Footer con botones
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -2057,28 +1976,10 @@ class _ChatScreenState extends State<ChatScreen> {
                               ? null
                               : () async {
                                   if (groupNameController.text.trim().isEmpty) {
-                                    Get.snackbar(
-                                      'Error',
-                                      'Ingresa un nombre para el grupo',
-                                      snackPosition: SnackPosition.BOTTOM,
-                                      backgroundColor: Colors.red.withOpacity(
-                                        0.8,
-                                      ),
-                                      colorText: Colors.white,
-                                    );
                                     return;
                                   }
 
                                   if (selectedFriends.isEmpty) {
-                                    Get.snackbar(
-                                      'Error',
-                                      'Selecciona al menos un participante',
-                                      snackPosition: SnackPosition.BOTTOM,
-                                      backgroundColor: Colors.red.withOpacity(
-                                        0.8,
-                                      ),
-                                      colorText: Colors.white,
-                                    );
                                     return;
                                   }
 
@@ -2090,6 +1991,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     );
                                     Get.back();
                                   } catch (e) {
+                                    //nothing
                                   } finally {
                                     isLoading.value = false;
                                   }
@@ -2166,13 +2068,7 @@ class _ChatScreenState extends State<ChatScreen> {
           filteredFriends.value = friendships;
         }
       } catch (e) {
-        Get.snackbar(
-          'Error',
-          'No se pudieron cargar los amigos',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.8),
-          colorText: Colors.white,
-        );
+        //nothing
       } finally {
         isLoading.value = false;
       }
@@ -2229,7 +2125,6 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           child: Column(
             children: [
-              // Header
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -2277,8 +2172,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   ],
                 ),
               ),
-
-              // Search bar
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: TextField(
@@ -2471,15 +2364,12 @@ class _ChatScreenState extends State<ChatScreen> {
                           trailing: ElevatedButton.icon(
                             onPressed: () async {
                               try {
-                                // Crear el chat
                                 await _chatController.createPrivateChat(
                                   friendId,
                                 );
 
-                                // Recargar conversaciones para obtener la nueva
                                 await _chatController.fetchConversations();
 
-                                // Buscar la conversación con este usuario
                                 final conversation = _chatController
                                     .conversations
                                     .firstWhereOrNull(
@@ -2488,40 +2378,20 @@ class _ChatScreenState extends State<ChatScreen> {
                                           conv.participants.contains(friendId),
                                     );
 
-                                // Cerrar el diálogo
                                 Get.back();
 
                                 if (conversation != null) {
-                                  // Setear la conversación como actual
                                   _chatController.setCurrentConversation(
                                     conversation,
                                   );
-
-                                  // Abrir el chat
                                   setState(() {
                                     _showIndividualChat = true;
                                   });
                                 } else {
-                                  // Si no se encuentra, mostrar error
-                                  Get.snackbar(
-                                    'Error',
-                                    'No se pudo abrir el chat',
-                                    snackPosition: SnackPosition.BOTTOM,
-                                    backgroundColor: Colors.red.withOpacity(
-                                      0.8,
-                                    ),
-                                    colorText: Colors.white,
-                                  );
+                                  //nothing
                                 }
                               } catch (e) {
                                 Get.back();
-                                Get.snackbar(
-                                  'Error',
-                                  'No se pudo crear el chat: $e',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                  backgroundColor: Colors.red.withOpacity(0.8),
-                                  colorText: Colors.white,
-                                );
                               }
                             },
                             style: ElevatedButton.styleFrom(
@@ -2930,10 +2800,6 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               onTap: () {
                 Get.back();
-                Get.snackbar(
-                  'Próximamente',
-                  'Búsqueda en conversación en desarrollo',
-                );
               },
             ),
             ListTile(
@@ -2944,10 +2810,6 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               onTap: () {
                 Get.back();
-                Get.snackbar(
-                  'Próximamente',
-                  'Personalización de fondo en desarrollo',
-                );
               },
             ),
             ListTile(
@@ -2958,10 +2820,6 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               onTap: () {
                 Get.back();
-                Get.snackbar(
-                  'Próximamente',
-                  'Silenciar notificaciones en desarrollo',
-                );
               },
             ),
             const SizedBox(height: 12),
@@ -2970,8 +2828,6 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
-
-  // ==================== HELPERS ====================
 
   String _formatTime(DateTime dateTime) {
     final now = DateTime.now();

@@ -4,9 +4,6 @@ import '../models/poll.dart';
 
 class PollService extends GetxService {
   final ApiService _apiService = Get.find<ApiService>();
-
-  // ==================== CREAR ENCUESTA ====================
-
   Future<Poll> createPoll({
     required String question,
     required List<String> options,
@@ -27,8 +24,6 @@ class PollService extends GetxService {
 
     return Poll.fromJson(response.data);
   }
-
-  // ==================== OBTENER ENCUESTAS ACTIVAS ====================
 
   Future<List<Poll>> getActivePolls({
     int limit = 20,
@@ -53,8 +48,6 @@ class PollService extends GetxService {
     return [];
   }
 
-  // ==================== VOTAR EN ENCUESTA ====================
-
   Future<Poll> voteInPoll(String pollId, int optionIndex) async {
     final response = await _apiService.post(
       '/poll/$pollId/vote',
@@ -64,14 +57,10 @@ class PollService extends GetxService {
     return Poll.fromJson(response.data);
   }
 
-  // ==================== CERRAR ENCUESTA ====================
-
   Future<Poll> closePoll(String pollId) async {
     final response = await _apiService.patch('/poll/$pollId/close');
     return Poll.fromJson(response.data);
   }
-
-  // ==================== OBTENER RESULTADOS ====================
 
   Future<PollResults> getPollResults(String pollId) async {
     final response = await _apiService.get('/poll/$pollId/results');
